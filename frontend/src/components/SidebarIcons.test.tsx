@@ -35,9 +35,12 @@ function iconNames(markup: string) {
 
 describe('ícones das navegações laterais', () => {
   it('mostra ícones semânticos em todas as abas do Colaborador', () => {
-    const names = iconNames(renderArea('COLLABORATOR', '/colaborador'))
+    const markup = renderArea('COLLABORATOR', '/colaborador')
+    const names = iconNames(markup)
 
     expect(new Set(names)).toEqual(new Set(['dashboard', 'file-plus', 'history', 'calendar-off', 'bell', 'user']))
+    expect(markup).toContain('Avisos')
+    expect(markup).not.toContain('Quadro de Avisos')
   })
 
   it('mostra ícones semânticos em todas as abas da Supervisão', () => {
