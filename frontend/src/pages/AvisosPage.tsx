@@ -154,7 +154,7 @@ export function AvisosPage({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <PageContainer
-      title="Quadro de Avisos"
+      title="Avisos"
       description="Acompanhe comunicados importantes da Diretoria, do RH e da supervisão da operação."
       contained={false}
     >

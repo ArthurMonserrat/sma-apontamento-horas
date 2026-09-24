@@ -53,9 +53,24 @@ const supervisorNavigation: Array<{ id: ActiveView, label: string, icon: Navigat
   { id: 'entries', label: 'Gestão da Equipe', icon: 'users' },
   { id: 'requests', label: 'Solicitações', icon: 'inbox' },
   { id: 'history', label: 'Histórico', icon: 'history' },
-  { id: 'profile', label: 'Meu Perfil', icon: 'user' },
   { id: 'announcements', label: 'Avisos', icon: 'bell' },
+  { id: 'profile', label: 'Meu Perfil', icon: 'user' },
 ]
+
+const activeViewBySearchParam: Record<string, ActiveView> = {
+  solicitacoes: 'requests',
+  historico: 'history',
+  avisos: 'announcements',
+  perfil: 'profile',
+}
+
+const supervisorPathByView: Record<ActiveView, string> = {
+  entries: '/supervisor',
+  requests: '/supervisor?view=solicitacoes',
+  history: '/supervisor?view=historico',
+  announcements: '/supervisor?view=avisos',
+  profile: '/supervisor?view=perfil',
+}
 
 function readSupervisorProfile(): SupervisorProfile {
   if (typeof window === 'undefined') return defaultSupervisorProfile
@@ -261,7 +276,7 @@ export function SupervisorPage() {
   const today = getCorporateToday()
   const monthKey = getMonthKey(today)
   const monthRange = useMemo(() => getMonthRange(monthKey), [monthKey])
-  const [activeView, setActiveView] = useState<ActiveView>('entries')
+  const activeView = activeViewBySearchParam[searchParams.get('view') ?? ''] ?? 'entries'
   const [range, setRange] = useState(monthRange)
   const [appliedRange, setAppliedRange] = useState(monthRange)
   const [rangeError, setRangeError] = useState<string | null>(null)
@@ -279,13 +294,8 @@ export function SupervisorPage() {
     setAppliedRange(monthRange)
   }, [monthRange])
 
-  useEffect(() => {
-    setActiveView(searchParams.get('view') === 'avisos' ? 'announcements' : 'entries')
-  }, [searchParams])
-
   function changeActiveView(view: ActiveView) {
-    setActiveView(view)
-    navigate(view === 'announcements' ? '/supervisor?view=avisos' : '/supervisor')
+    navigate(supervisorPathByView[view])
   }
 
   const hasCustomRange = appliedRange.startDate !== monthRange.startDate || appliedRange.endDate !== monthRange.endDate
@@ -647,7 +657,7 @@ export function SupervisorPage() {
             )}
 
             {activeView === 'history' && <HistoryView entries={dashboard.entries} />}
-            {activeView === 'profile' && <SupervisorProfileView profile={supervisorProfile} onSave={updateSupervisorProfile} onStartTour={() => { setActiveView('entries'); startTour() }} />}
+            {activeView === 'profile' && <SupervisorProfileView profile={supervisorProfile} onSave={updateSupervisorProfile} onStartTour={() => { changeActiveView('entries'); startTour() }} />}
             {activeView === 'announcements' && <AvisosPage embedded />}
             </div>
           </div>

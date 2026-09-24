@@ -43,7 +43,7 @@ describe('ícones das navegações laterais', () => {
   it('mostra ícones semânticos em todas as abas da Supervisão', () => {
     const names = iconNames(renderArea('SUPERVISOR', '/supervisor'))
 
-    expect(names).toEqual(['users', 'inbox', 'history', 'user', 'bell'])
+    expect(names).toEqual(['users', 'inbox', 'history', 'bell', 'user'])
   })
 
   it('mostra ícones semânticos em todas as abas da Direção', () => {
