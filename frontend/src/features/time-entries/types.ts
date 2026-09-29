@@ -45,6 +45,7 @@ export interface TimeEntry {
   documentTypeCode: DocumentTypeCode
   durationMinutes: number
   details: string
+  signatureBase64?: string
   assignmentSnapshot: AssignmentSnapshot | null
   status: TimeEntryStatus
   version: number
@@ -68,6 +69,7 @@ export type CreateTimeEntryData = Pick<
   | 'documentTypeCode'
   | 'durationMinutes'
   | 'details'
+  | 'signatureBase64'
 > & {
   endDate?: string
   weekdaysOnly?: boolean

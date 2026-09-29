@@ -14,10 +14,29 @@ type RdoFormData = {
   hours: string
   minutes: string
   details: string
+  signatureBase64?: string
   ldDocument?: LdDocumentSnapshot
 }
 type RdoContext = { name: string; jobTitle?: string; clientName?: string; activityName?: string }
 export type RdoData = ReturnType<typeof buildRdoData>
+
+type DecodedSignature = {
+  bytes: Uint8Array
+  format: 'PNG' | 'JPEG'
+}
+
+const SIGNATURE_DATA_URL_PATTERN = /^data:image\/(png|jpeg);base64,([A-Za-z0-9+/=]+)$/
+
+function decodeSignatureDataUrl(signatureBase64?: string): DecodedSignature | null {
+  if (!signatureBase64) return null
+  const match = SIGNATURE_DATA_URL_PATTERN.exec(signatureBase64)
+  if (!match) return null
+  const binary = atob(match[2])
+  return {
+    bytes: Uint8Array.from(binary, (char) => char.charCodeAt(0)),
+    format: match[1] === 'jpeg' ? 'JPEG' : 'PNG',
+  }
+}
 
 export function buildRdoData(values: RdoFormData, context: RdoContext) {
   const entryDate = values.entryDate ?? values.startDate ?? ''
@@ -34,6 +53,7 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
     discipline: disciplines.find(([code]) => code === values.disciplineCode)?.[1] ?? '',
     documentType: values.documentTypeCode, client: context.clientName ?? '',
     projectCode: values.projectCode.trim(), activity: context.activityName ?? '', details: values.details.trim(),
+    signatureBase64: values.signatureBase64,
   }
 }
 
@@ -49,6 +69,7 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
   const width = pdf.internal.pageSize.getWidth() - margin * 2
   const bottom = pdf.internal.pageSize.getHeight() - 14
   const lineHeight = 4
+  const signature = decodeSignatureDataUrl(data.signatureBase64)
 
   const drawHeader = () => {
     pdf.setDrawColor(75)
@@ -132,6 +153,31 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
     return y
   }
 
+  const drawSignatureBlock = (y: number) => {
+    const center = margin + width / 2
+    const blockY = Math.min(y + 8, bottom - 23)
+    const lineY = blockY + 17
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(6.5)
+    pdf.setTextColor(80)
+    pdf.text('ASSINATURA DO RESPONSÁVEL', center, blockY, { align: 'center' })
+    if (signature) {
+      const image = pdf.getImageProperties(signature.bytes)
+      const maxSignatureWidth = 56
+      const maxSignatureHeight = 14
+      const imageRatio = image.width / image.height
+      const signatureWidth = Math.min(maxSignatureWidth, maxSignatureHeight * imageRatio)
+      const signatureHeight = signatureWidth / imageRatio
+      pdf.addImage(signature.bytes, signature.format, center - signatureWidth / 2, lineY - signatureHeight - 1, signatureWidth, signatureHeight)
+    }
+    pdf.setDrawColor(80)
+    pdf.line(center - 38, lineY, center + 38, lineY)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(7)
+    pdf.setTextColor(45)
+    pdf.text(data.professional, center, lineY + 4.5, { align: 'center' })
+  }
+
   const details = data.details ? pdf.splitTextToSize(data.details, width - 6) as string[] : []
   const pending = details.length ? [...details] : [' ']
   let page = 0
@@ -143,7 +189,7 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
     y = drawRow(y, [
       { label: 'ATIVIDADE REALIZADA', value: data.activity, width },
     ])
-    const availableLines = Math.max(1, Math.floor((bottom - y - 9) / lineHeight))
+    const availableLines = Math.max(1, Math.floor((bottom - y - 38) / lineHeight))
     const pageLines = pending.splice(0, availableLines)
     const detailHeight = Math.max(18, 7 + pageLines.length * lineHeight)
     pdf.setDrawColor(75)
@@ -156,6 +202,7 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
     pdf.setFontSize(8)
     pdf.setTextColor(20)
     pdf.text(pageLines, margin + 2, y + 8)
+    if (pending.length === 0) drawSignatureBlock(y + detailHeight)
     page += 1
   } while (pending.length)
 

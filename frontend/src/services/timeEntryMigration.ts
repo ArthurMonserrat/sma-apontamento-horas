@@ -51,6 +51,8 @@ const documentTypeCodes: readonly DocumentTypeCode[] = [
   '—', 'RN', 'GR', 'G', 'FD', 'DE', 'LM', 'DI', 'LC', 'LI', 'ET', 'MC', 'MO', 'MD', 'FG', 'LA', 'ES', 'CF',
 ]
 const timeEntryStatuses: readonly TimeEntry['status'][] = ['PENDING', 'APPROVED', 'REJECTED', 'ACTIVE', 'CANCELLED']
+const MAX_SIGNATURE_DATA_URL_LENGTH = 300_000
+const SIGNATURE_DATA_URL_PATTERN = /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/=]+$/
 
 function isAssignmentSnapshot(value: unknown): value is AssignmentSnapshot {
   if (!value || typeof value !== 'object') return false
@@ -87,6 +89,12 @@ function optionalString(value: unknown) {
   return typeof value === 'string' && value ? value : undefined
 }
 
+function isValidOptionalSignature(value: unknown) {
+  return value === undefined
+    || value === ''
+    || (typeof value === 'string' && value.length <= MAX_SIGNATURE_DATA_URL_LENGTH && SIGNATURE_DATA_URL_PATTERN.test(value))
+}
+
 function commonEntryIsInvalid(entry: Record<string, unknown>, collaboratorId: string) {
   return typeof entry.id !== 'string'
     || entry.collaboratorId !== collaboratorId
@@ -104,6 +112,7 @@ function commonEntryIsInvalid(entry: Record<string, unknown>, collaboratorId: st
     || Number(entry.durationMinutes) <= 0
     || Number(entry.durationMinutes) > MAX_ENTRY_MINUTES
     || typeof entry.details !== 'string'
+    || !isValidOptionalSignature(entry.signatureBase64)
     || (entry.assignmentSnapshot !== null && !isAssignmentSnapshot(entry.assignmentSnapshot))
     || !timeEntryStatuses.includes(entry.status as TimeEntry['status'])
     || !Number.isInteger(entry.version)
@@ -124,6 +133,7 @@ function sharedFields(entry: Record<string, unknown>, collaboratorId: string) {
     documentTypeCode: entry.documentTypeCode as DocumentTypeCode,
     durationMinutes: Number(entry.durationMinutes),
     details: (entry.details as string).trim(),
+    signatureBase64: typeof entry.signatureBase64 === 'string' ? entry.signatureBase64 : undefined,
     assignmentSnapshot: entry.assignmentSnapshot as AssignmentSnapshot | null,
     status: entry.status as TimeEntry['status'],
     version: Number(entry.version),

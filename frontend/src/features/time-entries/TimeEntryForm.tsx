@@ -5,6 +5,7 @@ import { FieldError, fieldClassName, TimeEntryFields } from './TimeEntryFields'
 import { useTimeEntryForm } from './useTimeEntryForm'
 import { LdSection } from '../document-list/LdSection'
 import { CreateRdoButton } from '../rdo/CreateRdoButton'
+import { SignaturePad } from '../../components/SignaturePad'
 
 export function TimeEntryForm({ entryId }: { entryId?: string }) {
   const [searchParams] = useSearchParams()
@@ -86,6 +87,8 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
           <FieldError id="edit-reason-error" message={controller.editReasonError} />
         </div>
       )}
+
+      <SignaturePad value={controller.values.signatureBase64} disabled={controller.isSubmitting} onChange={(signature) => controller.setField('signatureBase64', signature)} />
 
       <div className="flex flex-col-reverse gap-3 border-t ui-border pt-5 sm:flex-row sm:justify-end">
         <Link to="/colaborador/historico" className="rounded-xl border ui-border px-5 py-3 text-center text-sm font-bold ui-text hover:bg-[var(--color-surface-subtle)]">Voltar ao histórico</Link>

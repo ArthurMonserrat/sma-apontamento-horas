@@ -96,6 +96,19 @@ type ReadResult = {
   canWrite: boolean
 }
 
+const MAX_SIGNATURE_DATA_URL_LENGTH = 300_000
+const SIGNATURE_DATA_URL_PATTERN = /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/=]+$/
+
+function normalizeSignatureBase64(signatureBase64: CreateTimeEntryData['signatureBase64']) {
+  if (signatureBase64 === undefined || signatureBase64 === '') return undefined
+  if (typeof signatureBase64 !== 'string'
+    || signatureBase64.length > MAX_SIGNATURE_DATA_URL_LENGTH
+    || !SIGNATURE_DATA_URL_PATTERN.test(signatureBase64)) {
+    throw new Error('Assinatura digital inválida.')
+  }
+  return signatureBase64
+}
+
 function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryData {
   const { endDate: _endDate, weekdaysOnly: _weekdaysOnly, ...baseData } = data
   const projectCode = data.projectCode.trim()
@@ -114,7 +127,7 @@ function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryData {
   if (!Number.isInteger(data.durationMinutes) || data.durationMinutes <= 0 || data.durationMinutes > MAX_ENTRY_MINUTES) {
     throw new Error('Informe uma duração válida.')
   }
-  return { ...baseData, clientName, projectCode, details, contractorNumber: data.contractorNumber?.trim() }
+  return { ...baseData, clientName, projectCode, details, contractorNumber: data.contractorNumber?.trim(), signatureBase64: normalizeSignatureBase64(data.signatureBase64) }
 }
 
 function emptyStorage(): TimeEntryStorageV4 {
@@ -377,6 +390,7 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
       documentTypeCode: overrides.documentTypeCode ?? entry.documentTypeCode,
       durationMinutes: overrides.durationMinutes ?? entry.durationMinutes,
       details: overrides.details ?? entry.details,
+      signatureBase64: overrides.signatureBase64 ?? entry.signatureBase64,
     })
     await this.ensureMutable(collaborId, normalized.entryDate)
     await this.ensureDateAvailable(collaborId, entry.entryDate)

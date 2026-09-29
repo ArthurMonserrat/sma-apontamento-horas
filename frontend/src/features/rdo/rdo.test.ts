@@ -5,6 +5,7 @@ import { buildRdoData, downloadRdo, generateRdo, rdoFileName } from './rdo'
 const values = { entryDate: '2026-09-07', projectCode: 'Ab/001', clientName: 'Cliente de Teste', activityId: 'activity', disciplineCode: 'M', documentTypeCode: 'MD', contractorNumber: '  00-Ab/1  ', hours: '1', minutes: '30', details: '' }
 const context = { name: 'Profissional de Teste', jobTitle: 'Engenheira', clientName: 'Cliente de Teste', activityName: 'Análise de documento' }
 const logo = new Uint8Array(readFileSync(new URL('../../assets/brand/sma-logo.jpg', import.meta.url)))
+const signatureBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDyqiiiu880/9k='
 
 describe('RDO independente da gravação', () => {
   afterEach(() => {
@@ -40,6 +41,13 @@ describe('RDO independente da gravação', () => {
     expect(output).not.toContain('/ contrato')
     expect(pdf.getNumberOfPages()).toBe(1)
     expect(output).toContain('/Subtype /Image')
+  })
+  it('preserva assinatura digital opcional e renderiza no PDF', () => {
+    const data = buildRdoData({ ...values, signatureBase64 }, context)
+    expect(data.signatureBase64).toBe(signatureBase64)
+    const pdf = generateRdo(data, logo)
+    expect(pdf.output()).toMatch(/^%PDF-/)
+    expect(pdf.getNumberOfPages()).toBe(1)
   })
   it('quebra texto longo em páginas mantendo todas as palavras', () => {
     const pdf = generateRdo(buildRdoData({ ...values, details: 'Atividade de engenharia e automação. '.repeat(500) + 'ULTIMO_MARCADOR' }, context), logo)
