@@ -1,8 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { demoCollaborator } from '../../mocks/demoData'
+import { SessionContext } from '../session/sessionContext'
 import { HistoryFilters } from '../history/HistoryFilters'
 import type { HistoryFiltersValue } from '../history/useTimeEntryHistory'
+import { TimeEntryForm } from './TimeEntryForm'
 import { TimeEntryFields } from './TimeEntryFields'
 import type { TimeEntryFormValues } from './useTimeEntryForm'
 
@@ -83,5 +87,18 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('role="dialog"')
     expect(markup).toContain('aria-modal="true"')
     expect(markup).toContain('Cancelar apontamento?')
+  })
+
+  it('oferece o atalho para reutilizar o último apontamento em um novo lançamento', () => {
+    const markup = renderToStaticMarkup(
+      <MemoryRouter>
+        <SessionContext.Provider value={{ session: null, profile: demoCollaborator, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
+          <TimeEntryForm />
+        </SessionContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(markup).toContain('Usar último apontamento')
+    expect(markup).toContain('Dados de identificação serão preenchidos; data, duração e detalhamento permanecem para revisão.')
   })
 })

@@ -75,6 +75,8 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isReusingLastEntry, setIsReusingLastEntry] = useState(false)
+  const [reuseLastEntryMessage, setReuseLastEntryMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile || !sourceId) return
@@ -104,6 +106,43 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     if (field === 'editReason') setEditReasonError(null)
     else setErrors((current) => ({ ...current, [field]: undefined }))
   }, [])
+
+  const reuseLastEntry = async () => {
+    if (!profile || isReusingLastEntry || mode !== 'CREATE') return false
+    setIsReusingLastEntry(true)
+    setReuseLastEntryMessage(null)
+    try {
+      const { items } = await timeEntryService.list({
+        collaboratorId: profile.id,
+        startDate: '1900-01-01',
+        endDate: getCorporateToday(),
+        pageSize: 1,
+        filters: { status: 'ACTIVE' },
+      })
+      const lastEntry = items[0]
+      if (!lastEntry) {
+        setReuseLastEntryMessage('Ainda não há um apontamento anterior para reutilizar.')
+        return false
+      }
+      setValues((current) => ({
+        ...current,
+        clientName: lastEntry.clientName,
+        contractorNumber: lastEntry.contractorNumber ?? lastEntry.projectCode,
+        ldDocument: lastEntry.ldDocument,
+        activityId: lastEntry.activityId,
+        disciplineCode: lastEntry.disciplineCode,
+        documentTypeCode: lastEntry.documentTypeCode,
+      }))
+      setErrors({})
+      setReuseLastEntryMessage('Dados do último apontamento aplicados. Data, duração e detalhamento foram mantidos para revisão.')
+      return true
+    } catch {
+      setReuseLastEntryMessage('Não foi possível carregar o último apontamento. Tente novamente.')
+      return false
+    } finally {
+      setIsReusingLastEntry(false)
+    }
+  }
 
   const submit = async () => {
     if (!profile || isSubmitting) return false
@@ -221,9 +260,12 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     editReasonError,
     isLoading,
     isSubmitting,
+    isReusingLastEntry,
     submitError,
     successMessage,
+    reuseLastEntryMessage,
     setField,
+    reuseLastEntry,
     selectLdDocument: (document: LdDocument) => { setValues((current) => applyLdDocument(current, document)); setErrors({}) },
     clearLdDocument: () => setValues((current) => ({ ...current, clientName: '', ldDocument: undefined, documentTypeCode: isManualDocumentType(current.documentTypeCode) ? current.documentTypeCode : '' })),
     submit,

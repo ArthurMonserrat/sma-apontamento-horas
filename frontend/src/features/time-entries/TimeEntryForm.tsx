@@ -39,6 +39,19 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
       )}
       {controller.submitError && <p role="alert" className="ui-alert-danger rounded-xl p-4 text-sm font-semibold">{controller.submitError}</p>}
 
+      {controller.mode === 'CREATE' && (
+        <section className="flex flex-col gap-3 rounded-xl border ui-border ui-surface-subtle p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="reuse-last-entry-title">
+          <div>
+            <h2 id="reuse-last-entry-title" className="font-bold ui-heading">Apontamento recorrente</h2>
+            <p className="mt-1 text-sm ui-text-muted">Dados de identificação serão preenchidos; data, duração e detalhamento permanecem para revisão.</p>
+          </div>
+          <button type="button" onClick={() => void controller.reuseLastEntry()} disabled={controller.isReusingLastEntry} className="shrink-0 rounded-xl border ui-border px-4 py-2.5 text-sm font-bold ui-text hover:bg-[var(--color-surface)] disabled:cursor-not-allowed disabled:opacity-60">
+            {controller.isReusingLastEntry ? 'Carregando…' : 'Usar último apontamento'}
+          </button>
+          {controller.reuseLastEntryMessage && <p role="status" className="text-sm font-semibold ui-text-muted sm:col-span-2">{controller.reuseLastEntryMessage}</p>}
+        </section>
+      )}
+
       <LdSection selected={controller.values.ldDocument} onSelect={controller.selectLdDocument} onClear={controller.clearLdDocument} />
       <FieldError id="ld-document-error" message={controller.errors.ldDocument} />
       <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} onChange={controller.setField} />
