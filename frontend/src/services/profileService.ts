@@ -19,6 +19,7 @@ export type UpdateProfileInput = {
 export interface ProfileService {
   getById(collaboratorId: string): Promise<CollaboratorProfile | null>
   updateProfile(collaboratorId: string, input: UpdateProfileInput): Promise<CollaboratorProfile>
+  updateSignature(collaboratorId: string, assinaturaBase64: string): Promise<CollaboratorProfile>
   changeActiveSquad(collaboratorId: string, squadId: string): Promise<CollaboratorProfile>
   resolveAssignment(collaboratorId: string): AssignmentSnapshot | null
 }
@@ -30,6 +31,9 @@ type ProfileDependencies = {
   onPostCommitError?: PostCommitErrorHandler
 }
 
+const MAX_SIGNATURE_DATA_URL_LENGTH = 300_000
+const SIGNATURE_DATA_URL_PATTERN = /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/=]+$/
+
 function isProfile(value: unknown): value is CollaboratorProfile {
   if (!value || typeof value !== 'object') return false
   const profile = value as Record<string, unknown>
@@ -38,6 +42,12 @@ function isProfile(value: unknown): value is CollaboratorProfile {
     && typeof profile.jobTitle === 'string' && typeof profile.active === 'boolean' && typeof profile.activeSquadId === 'string'
     && Boolean(location) && location?.countryCode === 'BR' && typeof location.stateCode === 'string'
     && typeof location.city === 'string' && typeof location.timeZone === 'string'
+}
+
+function validateSignature(assinaturaBase64: string) {
+  if (assinaturaBase64.length > MAX_SIGNATURE_DATA_URL_LENGTH || !SIGNATURE_DATA_URL_PATTERN.test(assinaturaBase64)) {
+    throw new Error('Assinatura digital inválida.')
+  }
 }
 
 function notifyProfileUpdated() {
@@ -87,6 +97,16 @@ export class LocalProfileService implements ProfileService {
     const squad = demoSquads.find((item) => item.id === input.activeSquadId && item.active)
     if (!squad) throw new Error('A squad selecionada não está disponível.')
     const updated: CollaboratorProfile = { ...current, name, email, jobTitle, activeSquadId: input.activeSquadId }
+    this.storage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated))
+    notifyProfileUpdated()
+    return updated
+  }
+
+  async updateSignature(collaboratorId: string, assinaturaBase64: string) {
+    const current = this.read()
+    if (current.id !== collaboratorId) throw new Error('Perfil profissional não encontrado.')
+    validateSignature(assinaturaBase64)
+    const updated: CollaboratorProfile = { ...current, assinaturaBase64 }
     this.storage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated))
     notifyProfileUpdated()
     return updated

@@ -43,8 +43,8 @@ describe('RDO independente da gravação', () => {
     expect(output).toContain('/Subtype /Image')
   })
   it('preserva assinatura digital opcional e renderiza no PDF', () => {
-    const data = buildRdoData({ ...values, signatureBase64 }, context)
-    expect(data.signatureBase64).toBe(signatureBase64)
+    const data = buildRdoData(values, { ...context, assinaturaBase64: signatureBase64 })
+    expect(data.assinaturaBase64).toBe(signatureBase64)
     const pdf = generateRdo(data, logo)
     expect(pdf.output()).toMatch(/^%PDF-/)
     expect(pdf.getNumberOfPages()).toBe(1)

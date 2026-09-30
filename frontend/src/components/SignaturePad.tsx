@@ -4,6 +4,7 @@ type SignaturePadProps = {
   value?: string
   disabled?: boolean
   onChange: (signatureBase64?: string) => void
+  onConfirm?: (signatureBase64: string) => void
 }
 
 const CANVAS_WIDTH = 768
@@ -27,7 +28,7 @@ function getCanvasPoint(canvas: HTMLCanvasElement, event: ReactPointerEvent<HTML
   }
 }
 
-export function SignaturePad({ value, disabled = false, onChange }: SignaturePadProps) {
+export function SignaturePad({ value, disabled = false, onChange, onConfirm }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingRef = useRef(false)
   const hasUserDrawingRef = useRef(Boolean(value))
@@ -103,7 +104,9 @@ export function SignaturePad({ value, disabled = false, onChange }: SignaturePad
   const confirmSignature = () => {
     const canvas = canvasRef.current
     if (!canvas || !hasUserDrawingRef.current) return
-    onChange(canvas.toDataURL('image/png'))
+    const signature = canvas.toDataURL('image/png')
+    onChange(signature)
+    onConfirm?.(signature)
   }
 
   return (

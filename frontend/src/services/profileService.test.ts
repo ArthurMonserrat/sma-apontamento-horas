@@ -16,6 +16,7 @@ const entryData = {
   activityId: 'activity-project-design', disciplineCode: '—' as const, documentTypeCode: '—' as const,
   durationMinutes: 60, details: 'Atividade executada',
 }
+const signatureBase64 = 'data:image/png;base64,QUJDREVGRw=='
 
 describe('perfil e squad ativa', () => {
   it('carrega perfil ativo com localidade controlada', async () => {
@@ -61,5 +62,18 @@ describe('perfil e squad ativa', () => {
     await expect(service.changeActiveSquad(demoCollaborator.id, 'squad-electrical')).resolves.toMatchObject({ activeSquadId: 'squad-electrical' })
     await expect(service.getById(demoCollaborator.id)).resolves.toMatchObject({ activeSquadId: 'squad-electrical' })
     expect(onPostCommitError).toHaveBeenCalledOnce()
+  })
+
+  it('salva assinatura digital no perfil do colaborador', async () => {
+    const service = new LocalProfileService({ storage: new MemoryStorage() })
+
+    await expect(service.updateSignature(demoCollaborator.id, signatureBase64)).resolves.toMatchObject({ assinaturaBase64: signatureBase64 })
+    await expect(service.getById(demoCollaborator.id)).resolves.toMatchObject({ assinaturaBase64: signatureBase64 })
+  })
+
+  it('rejeita assinatura digital fora do formato de imagem data URL', async () => {
+    const service = new LocalProfileService({ storage: new MemoryStorage() })
+
+    await expect(service.updateSignature(demoCollaborator.id, 'assinatura')).rejects.toThrow(/assinatura/i)
   })
 })

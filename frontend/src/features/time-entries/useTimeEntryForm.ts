@@ -25,7 +25,6 @@ export type TimeEntryFormValues = {
   hours: string
   minutes: string
   details: string
-  signatureBase64?: string
   editReason: string
 }
 
@@ -41,7 +40,6 @@ const emptyValues = (entryDate: string): TimeEntryFormValues => ({
   hours: '',
   minutes: '',
   details: '',
-  signatureBase64: undefined,
   editReason: '',
 })
 
@@ -59,7 +57,6 @@ function valuesFromEntry(entry: TimeEntry): TimeEntryFormValues {
     hours: String(Math.floor(entry.durationMinutes / 60)),
     minutes: String(entry.durationMinutes % 60),
     details: entry.details,
-    signatureBase64: entry.signatureBase64,
     editReason: '',
   }
 }
@@ -171,7 +168,6 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       documentTypeCode: values.documentTypeCode as CreateTimeEntryData['documentTypeCode'],
       durationMinutes: hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
       details: values.details,
-      signatureBase64: values.signatureBase64,
     }
     let canMutateDate = true
     let dateBlock = { blocked: false } as Awaited<ReturnType<typeof entryDateAvailabilityService.getBlock>>

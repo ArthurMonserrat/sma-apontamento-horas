@@ -16,7 +16,8 @@ export function CreateRdoButton({ values }: { values: TimeEntryFormValues }) {
       const { buildRdoData, generateRdo, rdoFileName, downloadRdo } = await import('./rdo')
       const data = buildRdoData({ ...values, projectCode: values.contractorNumber ?? '' }, { name: profile.name, jobTitle: profile.jobTitle,
         clientName: values.clientName,
-        activityName: demoActivities.find((activity) => activity.id === values.activityId)?.name })
+        activityName: demoActivities.find((activity) => activity.id === values.activityId)?.name,
+        assinaturaBase64: profile.assinaturaBase64 })
       const response = await fetch(logoUrl)
       if (!response.ok) throw new Error('Não foi possível carregar a logo do RDO.')
       const pdf = generateRdo(data, new Uint8Array(await response.arrayBuffer()))

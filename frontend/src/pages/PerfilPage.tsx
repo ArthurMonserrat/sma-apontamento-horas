@@ -7,6 +7,7 @@ import { WorkloadHistory } from '../features/workloads/WorkloadHistory'
 import { WorkloadRequestForm, type WorkloadFormField } from '../features/workloads/WorkloadRequestForm'
 import { getCorporateToday } from '../shared/utils/date'
 import { useTour } from '../components/tourContext'
+import { SignaturePad } from '../components/SignaturePad'
 
 type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; justification: string }
 type ProfileForm = { name: string; email: string; jobTitle: string; activeSquadId: string }
@@ -32,6 +33,8 @@ export function PerfilPage() {
   const [form, setForm] = useState<WorkloadForm>(initialForm)
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
   const [isEditing, setEditing] = useState(false)
+  const [isEditingSignature, setEditingSignature] = useState(false)
+  const [signatureDraft, setSignatureDraft] = useState<string | undefined>()
   const [feedback, setFeedback] = useState<string | null>(null)
   const [operationError, setOperationError] = useState<string | null>(null)
 
@@ -70,6 +73,19 @@ export function PerfilPage() {
       setEditing(false)
     } catch (error) {
       setOperationError(error instanceof Error ? error.message : 'Não foi possível salvar o perfil.')
+    }
+  }
+
+  async function saveSignature(signatureBase64: string) {
+    setFeedback(null)
+    setOperationError(null)
+    try {
+      await profileState.updateSignature(signatureBase64)
+      setSignatureDraft(undefined)
+      setEditingSignature(false)
+      setFeedback('Assinatura atualizada. Ela será utilizada nos próximos RDOs.')
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Não foi possível salvar a assinatura.')
     }
   }
 
@@ -131,6 +147,40 @@ export function PerfilPage() {
             onFieldChange={updateField}
             onSubmit={() => void submitWorkload()}
           />
+          <section className="rounded-2xl border ui-border ui-surface p-5" aria-labelledby="signature-title">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 id="signature-title" className="text-lg font-extrabold ui-heading">Minha Assinatura</h2>
+                <p className="mt-1 text-sm ui-text-muted">Desenhe a sua assinatura abaixo. Ela será utilizada automaticamente nos seus Relatórios Diários de Obra (RDO).</p>
+              </div>
+              {profileState.data.profile.assinaturaBase64 && !isEditingSignature && (
+                <button type="button" onClick={() => { setSignatureDraft(undefined); setEditingSignature(true) }} className="ui-button-secondary" disabled={profileState.isSaving}>
+                  Refazer assinatura
+                </button>
+              )}
+            </div>
+            {profileState.data.profile.assinaturaBase64 && !isEditingSignature ? (
+              <div className="mt-4 rounded-xl border ui-border bg-white p-3">
+                <img src={profileState.data.profile.assinaturaBase64} alt="Assinatura cadastrada" className="mx-auto block max-h-32 max-w-full object-contain" />
+              </div>
+            ) : (
+              <div className="mt-4">
+                <SignaturePad
+                  value={signatureDraft}
+                  disabled={profileState.isSaving}
+                  onChange={setSignatureDraft}
+                  onConfirm={(signature) => void saveSignature(signature)}
+                />
+                {profileState.data.profile.assinaturaBase64 && (
+                  <div className="mt-3 flex justify-end">
+                    <button type="button" className="ui-button-secondary" disabled={profileState.isSaving} onClick={() => { setSignatureDraft(undefined); setEditingSignature(false) }}>
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
           <WorkloadHistory versions={profileState.data.workloadVersions} requests={profileState.data.workloadRequests} />
         </div>
       )}

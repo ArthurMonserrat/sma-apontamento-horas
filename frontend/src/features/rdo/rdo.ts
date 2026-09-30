@@ -14,10 +14,9 @@ type RdoFormData = {
   hours: string
   minutes: string
   details: string
-  signatureBase64?: string
   ldDocument?: LdDocumentSnapshot
 }
-type RdoContext = { name: string; jobTitle?: string; clientName?: string; activityName?: string }
+type RdoContext = { name: string; jobTitle?: string; clientName?: string; activityName?: string; assinaturaBase64?: string }
 export type RdoData = ReturnType<typeof buildRdoData>
 
 type DecodedSignature = {
@@ -53,7 +52,7 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
     discipline: disciplines.find(([code]) => code === values.disciplineCode)?.[1] ?? '',
     documentType: values.documentTypeCode, client: context.clientName ?? '',
     projectCode: values.projectCode.trim(), activity: context.activityName ?? '', details: values.details.trim(),
-    signatureBase64: values.signatureBase64,
+    assinaturaBase64: context.assinaturaBase64,
   }
 }
 
@@ -69,7 +68,7 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
   const width = pdf.internal.pageSize.getWidth() - margin * 2
   const bottom = pdf.internal.pageSize.getHeight() - 14
   const lineHeight = 4
-  const signature = decodeSignatureDataUrl(data.signatureBase64)
+  const signature = decodeSignatureDataUrl(data.assinaturaBase64)
 
   const drawHeader = () => {
     pdf.setDrawColor(75)
