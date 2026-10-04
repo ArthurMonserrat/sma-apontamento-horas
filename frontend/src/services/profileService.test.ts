@@ -74,6 +74,17 @@ describe('perfil e squad ativa', () => {
   it('rejeita assinatura digital fora do formato de imagem data URL', async () => {
     const service = new LocalProfileService({ storage: new MemoryStorage() })
 
-    await expect(service.updateSignature(demoCollaborator.id, 'assinatura')).rejects.toThrow(/assinatura/i)
+    await expect(service.updateSignature(demoCollaborator.id, 'data:image/png;base64,AB=CD'))
+      .rejects.toThrow('A assinatura deve ser uma imagem PNG ou JPEG em formato data URL.')
+  })
+
+  it('rejeita assinatura maior que o limite antes de persistir', async () => {
+    const service = new LocalProfileService({ storage: new MemoryStorage() })
+    const prefix = 'data:image/png;base64,'
+    const oversizedSignature = `${prefix}${'A'.repeat(300_001 - prefix.length)}`
+
+    await expect(service.updateSignature(demoCollaborator.id, oversizedSignature))
+      .rejects.toThrow('A assinatura deve ter no máximo 300.000 caracteres.')
+    await expect(service.getById(demoCollaborator.id)).resolves.not.toHaveProperty('assinaturaBase64')
   })
 })

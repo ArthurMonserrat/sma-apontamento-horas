@@ -32,7 +32,7 @@ type ProfileDependencies = {
 }
 
 const MAX_SIGNATURE_DATA_URL_LENGTH = 300_000
-const SIGNATURE_DATA_URL_PATTERN = /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/=]+$/
+const SIGNATURE_DATA_URL_PATTERN = /^data:image\/(?:png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/i
 
 function isProfile(value: unknown): value is CollaboratorProfile {
   if (!value || typeof value !== 'object') return false
@@ -45,8 +45,11 @@ function isProfile(value: unknown): value is CollaboratorProfile {
 }
 
 function validateSignature(assinaturaBase64: string) {
-  if (assinaturaBase64.length > MAX_SIGNATURE_DATA_URL_LENGTH || !SIGNATURE_DATA_URL_PATTERN.test(assinaturaBase64)) {
-    throw new Error('Assinatura digital inválida.')
+  if (assinaturaBase64.length > MAX_SIGNATURE_DATA_URL_LENGTH) {
+    throw new Error('A assinatura deve ter no máximo 300.000 caracteres.')
+  }
+  if (!SIGNATURE_DATA_URL_PATTERN.test(assinaturaBase64)) {
+    throw new Error('A assinatura deve ser uma imagem PNG ou JPEG em formato data URL.')
   }
 }
 
