@@ -1,3 +1,5 @@
+import type { AssignmentSnapshot } from '../squads/types'
+
 export type SupervisorApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export type SupervisorPendingEntry = {
@@ -9,6 +11,8 @@ export type SupervisorPendingEntry = {
   durationMinutes: number
   status: SupervisorApprovalStatus
   activityName?: string
+  details?: string
+  assignmentSnapshot?: AssignmentSnapshot | null
   rejectionReason?: string
   decidedAt?: string
   decidedBy?: string

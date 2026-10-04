@@ -9,7 +9,11 @@ import { TIME_OFF_STORAGE_KEY } from '../services/timeOffService'
 import { TIME_ENTRY_STORAGE_KEY } from '../services/timeEntryService'
 import { getMonthKey } from '../shared/utils/date'
 import { diretoriaService } from '../services/diretoriaService'
+import { squadService } from '../services/squadService'
+import { supervisorService } from '../services/supervisorService'
 import type { SupervisorPendingEntry } from '../features/supervisor/types'
+import type { Squad } from '../features/squads/types'
+import { ManagerCalendar } from '../features/calendar/ManagerCalendar'
 import { formatMinutes } from '../features/time-entries/domain'
 import { useTour } from '../components/tourContext'
 import { AvisosPage } from './AvisosPage'
@@ -125,6 +129,8 @@ export function DiretoriaPage() {
   const [entries, setEntries] = useState<DiretoriaEntry[]>([])
   const [absences, setAbsences] = useState<DiretoriaAbsence[]>([])
   const [escalatedEntries, setEscalatedEntries] = useState<SupervisorPendingEntry[]>([])
+  const [managerEntries, setManagerEntries] = useState<SupervisorPendingEntry[]>([])
+  const [managerSquads, setManagerSquads] = useState<Array<Pick<Squad, 'id' | 'name'>>>([])
   const currentMonth = getMonthKey(new Date().toISOString().slice(0, 10))
 
   useEffect(() => {
@@ -139,6 +145,22 @@ export function DiretoriaPage() {
     setEntries(storedEntries)
     setAbsences(storedAbsences)
     void diretoriaService.listEscalatedEntries().then(setEscalatedEntries).catch(() => setEscalatedEntries([]))
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void Promise.all([supervisorService.listEntries(), squadService.listActive()])
+      .then(([loadedEntries, loadedSquads]) => {
+        if (!active) return
+        setManagerEntries(loadedEntries)
+        setManagerSquads(loadedSquads.map(({ id, name }) => ({ id, name })))
+      })
+      .catch(() => {
+        if (!active) return
+        setManagerEntries([])
+        setManagerSquads([])
+      })
+    return () => { active = false }
   }, [])
 
   const projectHours = useMemo(() => {
@@ -224,6 +246,13 @@ export function DiretoriaPage() {
                 </ResponsiveContainer>
               </div>
             </section>
+
+            <ManagerCalendar
+              entries={managerEntries}
+              collaborators={[]}
+              squads={managerSquads}
+              role="DIRECTOR_ADMIN"
+            />
             </>}
           </div>
         </main>

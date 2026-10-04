@@ -319,6 +319,8 @@ export class LocalStorageSupervisorService implements SupervisorService {
       entryDate: entry.entryDate,
       projectCode: entry.projectCode,
       durationMinutes: entry.durationMinutes,
+      details: entry.details,
+      assignmentSnapshot: entry.assignmentSnapshot,
       activityName: entry.activityId,
       sourceStatus: entry.status,
       rejectionReason: entry.status === 'CANCELLED' ? entry.cancelReason ?? 'Apontamento cancelado pelo colaborador.' : undefined,

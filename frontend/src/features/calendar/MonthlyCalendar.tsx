@@ -12,6 +12,8 @@ type MonthlyCalendarProps = {
   onMonthChange: (monthKey: string) => void
   onSelectDate: (date: string) => void
   onOpenDate?: (date: string, hasEntries: boolean) => void
+  managerDayLabels?: Record<string, string>
+  onOpenManagerDay?: (date: string) => void
 }
 
 const weekdayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -22,7 +24,7 @@ function monthLabel(monthKey: string) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-export function MonthlyCalendar({ monthKey, selectedDate, days, onMonthChange, onSelectDate, onOpenDate }: MonthlyCalendarProps) {
+export function MonthlyCalendar({ monthKey, selectedDate, days, onMonthChange, onSelectDate, onOpenDate, managerDayLabels, onOpenManagerDay }: MonthlyCalendarProps) {
   const summaries = new Map(days.map((day) => [day.date, day]))
   const gridCells = getMonthGridCells(monthKey)
 
@@ -50,14 +52,18 @@ export function MonthlyCalendar({ monthKey, selectedDate, days, onMonthChange, o
           const presentation = calendarStatePresentation[state]
           const worked = formatMinutes(summary?.workedMinutes ?? 0)
           const expected = formatMinutes(summary?.expectedMinutes ?? 0)
-          const ariaLabel = `${formatDatePtBr(date)}: ${presentation.label}; ${worked} apontadas de ${expected} previstas`
+          const managerDayLabel = managerDayLabels?.[date]
+          const ariaLabel = `${formatDatePtBr(date)}: ${presentation.label}; ${worked} apontadas de ${expected} previstas${managerDayLabel ? `; ${managerDayLabel}` : ''}`
           return (
             <button
               key={cell.key}
               type="button"
               data-calendar-day={date}
               data-calendar-state={state}
-              onClick={() => onSelectDate(date)}
+              onClick={() => {
+                onSelectDate(date)
+                if (managerDayLabel) onOpenManagerDay?.(date)
+              }}
               onDoubleClick={() => onOpenDate?.(date, (summary?.workedMinutes ?? 0) > 0)}
               aria-label={ariaLabel}
               aria-pressed={selectedDate === date}
@@ -70,6 +76,7 @@ export function MonthlyCalendar({ monthKey, selectedDate, days, onMonthChange, o
                 <span className="sr-only sm:not-sr-only">{presentation.label}</span>
               </span>
               <span className="mt-1 block text-[9px] font-semibold sm:text-[10px]">{worked}/{expected}</span>
+              {managerDayLabel && <span className="mt-1 block truncate text-[9px] font-bold leading-tight text-[var(--color-primary)] sm:text-[10px]">{managerDayLabel}</span>}
             </button>
           )
         })}

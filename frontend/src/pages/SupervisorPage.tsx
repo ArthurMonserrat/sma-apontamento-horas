@@ -7,6 +7,7 @@ import { BrandMark } from '../components/BrandMark'
 import { StatusBadge } from '../components/StatusBadge'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { BalancePeriodFilter } from '../features/calendar/BalancePeriodFilter'
+import { ManagerCalendar } from '../features/calendar/ManagerCalendar'
 import { RejectionDialog } from '../features/supervisor/RejectionDialog'
 import { SupervisorEntriesTable } from '../features/supervisor/SupervisorEntriesTable'
 import { SupervisorRequestsTable } from '../features/supervisor/SupervisorRequestsTable'
@@ -523,6 +524,11 @@ export function SupervisorPage() {
             {activeView === 'entries' && (
               <>
                 <div className="tour-prazo min-h-1"><ApprovalDeadlineBanner pendingCount={dashboard.entries.filter((entry) => entry.status === 'PENDING').length} /></div>
+                <ManagerCalendar
+                  entries={dashboard.entries}
+                  collaborators={dashboard.collaborators}
+                  role="SUPERVISOR"
+                />
                 <BalancePeriodFilter
                   startDate={range.startDate}
                   endDate={range.endDate}
