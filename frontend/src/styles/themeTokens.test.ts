@@ -304,7 +304,7 @@ describe('tokens institucionais e contraste', () => {
     expect(stylesheet).toContain('.brand-mark__image-frame')
     expect(stylesheet).toContain('background: #FFFFFF')
     expect(stylesheet).not.toContain('.dark .brand-mark img')
-    expect(stylesheet).not.toContain('mix-blend-mode')
+    expect(stylesheet).toContain('.brand-mark--transparent img')
     expect(stylesheet).not.toContain('filter: invert')
   })
 

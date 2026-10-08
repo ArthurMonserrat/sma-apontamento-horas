@@ -143,6 +143,6 @@ describe('redirect', () => {
       'sma_session=access-token; Path=/; HttpOnly; Secure; SameSite=Lax',
     );
     expect(response.statusCode).toBe(302);
-    expect(response.headers.Location).toBe('https://app.example.test/colaborador');
+    expect(response.headers.Location).toBe('https://app.example.test/portal');
   });
 });

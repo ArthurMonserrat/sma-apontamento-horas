@@ -5,7 +5,7 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import { getDemoHomePath } from '../features/session/routePolicy'
 import { useSession } from '../features/session/useSession'
 
-const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || '/login'
+const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || '/selecao-perfil'
 
 export function Portal() {
   const { instance, accounts } = useMsal()

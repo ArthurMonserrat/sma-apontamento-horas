@@ -21,6 +21,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/portal" replace />} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route path="/selecao-perfil" element={<LoginPage />} />
       <Route path="/portal" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><Portal /></ProtectedRoute>} />
       <Route path="/avisos" element={<ProtectedRoute allowedRoles={['SUPERVISOR', 'DIRECTOR_ADMIN']}><ManagerNoticesRedirect /></ProtectedRoute>} />
       <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['COLLABORATOR']}><AppLayout /></ProtectedRoute>}>
