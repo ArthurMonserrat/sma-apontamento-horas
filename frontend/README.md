@@ -19,7 +19,7 @@ Frontend corporativo da SM&A com perfis de Colaborador, Supervisor e Diretor/Adm
 
 | Perfil | Rota inicial | Conteúdo |
 |---|---|---|
-| Sem sessão | `/login` | seleção do perfil corporativo |
+| Sem sessão | `/` | landing do Ecossistema SM&A com seleção dos bancos |
 | Colaborador | `/colaborador` | apontamentos, saldos, histórico, folgas e perfil |
 | Supervisor | `/supervisor` | gestão da equipe, solicitações, histórico e perfil |
 | Diretor/Administração | `/administracao` | painel macro e gerenciamento de equipes |
@@ -39,7 +39,7 @@ O Vite exibirá no terminal o endereço local da aplicação.
 
 Para executar o teste opt-in contra a LD real sem copiar o anexo para o repositório, defina `SMA_LD_REFERENCE` com o caminho externo do arquivo antes de `npm test`. Os demais testes usam apenas dados sintéticos.
 
-Os repositórios locais escondem o acesso ao `localStorage`, de modo que possam ser substituídos por uma API. A sessão atual usa `sma:demo-session:v2`. Na primeira execução sem uma sessão `v2` válida, a sessão legada `v1` é invalidada de forma idempotente e a aplicação volta a `/login`; essa migração não apaga apontamentos, perfil, folgas, cargas, aprovações ou tema.
+Os repositórios locais escondem o acesso ao `localStorage`, de modo que possam ser substituídos por uma API. A sessão atual usa `sma:demo-session:v2`. Na primeira execução sem uma sessão `v2` válida, a sessão legada `v1` é invalidada de forma idempotente e a aplicação volta à landing `/`; essa migração não apaga apontamentos, perfil, folgas, cargas, aprovações ou tema.
 
 Apontamentos usam `sma:time-entries:v4`; na primeira leitura necessária, a aplicação migra de forma encadeada `v1 → v2 → v3 → v4`, grava, relê e valida cada etapa e preserva `v1`/`v2`/`v3` como backups. A etapa `v3 → v4` substitui o antigo `clientId` por `clientName`, converte os IDs demonstrativos conhecidos e preserva IDs desconhecidos como texto. Depois de validar `v4`, consultas normais não combinam versões. Perfil, cargas, folgas, aprovações, notificações e auditoria usam chaves versionadas próprias.
 

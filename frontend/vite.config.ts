@@ -22,7 +22,7 @@ export default defineConfig({
         name: 'SM&A Horas',
         short_name: 'SM&A Horas',
         description: 'Sistema corporativo de apontamento e banco de horas da SM&A.',
-        start_url: `${publicBasePath}colaborador`,
+        start_url: publicBasePath,
         display: 'standalone',
         theme_color: '#0A161E',
         background_color: '#0A161E',

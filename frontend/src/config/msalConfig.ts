@@ -17,3 +17,7 @@ export const msalConfig: Configuration = {
     cacheLocation: 'localStorage',
   },
 }
+
+export const loginRequest = {
+  scopes: ['User.Read'],
+}

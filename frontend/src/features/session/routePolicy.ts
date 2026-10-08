@@ -72,6 +72,6 @@ export function resolvePublicOnlyDemoRoute(
   return {
     to: typeof from === 'string' && canAccessDemoPath(session.role, from)
       ? from
-      : session.authProvider === 'microsoft' ? '/portal' : getDemoHomePath(session.role),
+      : session.authProvider === 'microsoft' ? '/' : getDemoHomePath(session.role),
   }
 }

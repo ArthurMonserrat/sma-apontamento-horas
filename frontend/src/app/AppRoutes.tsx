@@ -2,12 +2,12 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '../components/AppLayout'
 import { ColaboradorPage } from '../pages/ColaboradorPage'
 import { HistoricoPage } from '../pages/HistoricoPage'
-import { LoginPage } from '../pages/LoginPage'
+import { EcosystemLogin } from '../pages/EcosystemLogin'
+import { ProfileSelectionPage } from '../pages/ProfileSelectionPage'
 import { NovoApontamentoPage } from '../pages/NovoApontamentoPage'
 import { PerfilPage } from '../pages/PerfilPage'
 import { FolgasPage } from '../pages/FolgasPage'
 import { ProtectedRoute } from '../features/session/ProtectedRoute'
-import { PublicOnlyRoute } from '../features/session/PublicOnlyRoute'
 import { SupervisorPage } from '../pages/SupervisorPage'
 import { DiretoriaPage } from '../pages/DiretoriaPage'
 import { EquipesPage } from '../pages/EquipesPage'
@@ -19,9 +19,9 @@ import { Portal } from '../pages/Portal'
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/portal" replace />} />
-      <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
-      <Route path="/selecao-perfil" element={<LoginPage />} />
+      <Route path="/" element={<EcosystemLogin />} />
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/selecao-perfil" element={<ProfileSelectionPage />} />
       <Route path="/portal" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><Portal /></ProtectedRoute>} />
       <Route path="/avisos" element={<ProtectedRoute allowedRoles={['SUPERVISOR', 'DIRECTOR_ADMIN']}><ManagerNoticesRedirect /></ProtectedRoute>} />
       <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['COLLABORATOR']}><AppLayout /></ProtectedRoute>}>
@@ -37,7 +37,7 @@ export function AppRoutes() {
       <Route path="/administracao" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><DiretoriaPage /></ProtectedRoute>} />
       <Route path="/administracao/equipes" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><EquipesPage /></ProtectedRoute>} />
       <Route path="/administracao/relatorios" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><RelatoriosPage /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

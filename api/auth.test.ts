@@ -120,7 +120,7 @@ describe('redirect', () => {
     expect(response.body).toEqual({ error: 'Microsoft authorization was not completed.' });
   });
 
-  test('stores only the access token in a protected cookie and redirects to the collaborator area', async () => {
+  test('stores only the access token in a protected cookie and redirects to the ecosystem landing page', async () => {
     msal.acquireTokenByCode.mockResolvedValue({ accessToken: 'access-token' });
     setEnvironment({
       CLIENT_ID: 'client-id',
@@ -143,6 +143,6 @@ describe('redirect', () => {
       'sma_session=access-token; Path=/; HttpOnly; Secure; SameSite=Lax',
     );
     expect(response.statusCode).toBe(302);
-    expect(response.headers.Location).toBe('https://app.example.test/portal');
+    expect(response.headers.Location).toBe('https://app.example.test/');
   });
 });
