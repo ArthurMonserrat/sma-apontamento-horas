@@ -19,6 +19,8 @@ const collaboratorSession: DemoSession = {
   explicitLoginAt: '2026-07-21T15:30:00.000Z',
   isDemo: true,
   version: 2,
+  email: 'colaborador@sma.com',
+  authProvider: 'microsoft',
 }
 
 const supervisorSession: DemoSession = {
@@ -26,6 +28,8 @@ const supervisorSession: DemoSession = {
   id: 'demo-supervisor-001',
   name: 'Supervisor',
   role: 'SUPERVISOR',
+  email: 'supervisor@sma.com',
+  authProvider: 'microsoft',
 }
 
 function renderLayout() {

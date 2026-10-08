@@ -16,6 +16,8 @@ function renderArea(role: DemoRole, path: string) {
     explicitLoginAt: '2026-09-15T00:00:00.000Z',
     isDemo: true,
     version: 2,
+    email: `${role.toLowerCase()}@sma.com`,
+    authProvider: 'microsoft',
   }
 
   return renderToStaticMarkup(

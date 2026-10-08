@@ -1,0 +1,24 @@
+{
+  "name": "SM&A Horas",
+  "short_name": "SM&A Horas",
+  "description": "Sistema corporativo de apontamento e banco de horas da SM&A.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0A161E",
+  "background_color": "#0A161E",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/sma-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/sma-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -21,7 +21,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<EcosystemLogin />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/selecao-perfil" element={<ProfileSelectionPage />} />
+      <Route path="/selecao-perfil" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><ProfileSelectionPage /></ProtectedRoute>} />
       <Route path="/portal" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><Portal /></ProtectedRoute>} />
       <Route path="/avisos" element={<ProtectedRoute allowedRoles={['SUPERVISOR', 'DIRECTOR_ADMIN']}><ManagerNoticesRedirect /></ProtectedRoute>} />
       <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['COLLABORATOR']}><AppLayout /></ProtectedRoute>}>

@@ -24,6 +24,8 @@ function sessionFor(role: DemoRole): DemoSession {
     explicitLoginAt: NOW,
     isDemo: true,
     version: 2,
+    email: `${role.toLowerCase()}@sma.com`,
+    authProvider: 'microsoft',
   }
 }
 

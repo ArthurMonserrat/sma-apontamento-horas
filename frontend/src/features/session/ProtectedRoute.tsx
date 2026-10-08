@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { msalInstance } from '../../config/authConfig'
+import { hasAuthenticatedSession } from './authGuard'
 import { resolveProtectedDemoRoute } from './routePolicy'
 import type { DemoRole } from './types'
 import { useSession } from './useSession'
@@ -14,6 +16,7 @@ type ProtectedRouteProps = {
 export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: ProtectedRouteProps) {
   const { session, isLoading } = useSession()
   const location = useLocation()
+  const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0] ?? null
 
   if (isLoading) {
     return (
@@ -23,8 +26,13 @@ export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: P
     )
   }
 
+  if (!hasAuthenticatedSession(session, account)) {
+    return <Navigate to="/" replace />
+  }
+
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />
+    const canEnterBeforeProfileSelection = location.pathname === '/selecao-perfil' || location.pathname === '/portal'
+    return canEnterBeforeProfileSelection ? children : <Navigate to="/" replace />
   }
 
   const redirect = resolveProtectedDemoRoute(session, allowedRoles, location)
