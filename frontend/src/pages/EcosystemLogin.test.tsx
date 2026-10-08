@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../app/themeContext'
 import { DemoSessionProvider } from '../features/session/DemoSessionProvider'
 import { EcosystemLogin } from './EcosystemLogin'
-import { getEcosystemModulePath } from './ecosystemModules'
+import { getEcosystemModulePath, toMicrosoftSessionInput } from './ecosystemModules'
 
 vi.mock('@azure/msal-react', () => ({
   useMsal: () => ({
     accounts: [],
-    inProgress: 'none',
+    inProgress: 'startup',
     instance: { getActiveAccount: () => null },
   }),
 }))
@@ -30,13 +30,26 @@ describe('EcosystemLogin', () => {
 
     expect(markup).toContain('Ecossistema SM&amp;A')
     expect(markup).toContain('Selecione o sistema que deseja acessar')
+    expect(markup).toContain('flex flex-col items-center justify-center gap-3')
     expect(markup).toContain('Banco de Horas 1')
     expect(markup).toContain('Banco de Horas 2 (Campo e Estudos)')
     expect(markup).not.toContain('Escolha seu perfil')
+    expect(markup).toContain('Acessar Banco 1')
+    expect(markup).toContain('Acessar Banco 2')
+    expect(markup).not.toContain('Autenticando...')
   })
 
   it('mantém destinos distintos para a seleção de cada banco', () => {
     expect(getEcosystemModulePath('BANCO_1')).toBe('/selecao-perfil?modulo=banco1')
     expect(getEcosystemModulePath('BANCO_2')).toBe('/selecao-perfil?modulo=banco2')
+  })
+
+  it('prepara nome e e-mail da conta Microsoft para a sessão global', () => {
+    expect(toMicrosoftSessionInput({ homeAccountId: 'account-1', name: 'Ana SM&A', username: 'ana@sma.com' })).toEqual({
+      id: 'account-1',
+      name: 'Ana SM&A',
+      email: 'ana@sma.com',
+      role: 'COLLABORATOR',
+    })
   })
 })

@@ -3,7 +3,7 @@ import { demoSessionService } from '../../services/demoSessionService'
 import { demoCollaborator } from '../../mocks/demoData'
 import { PROFILE_UPDATED_EVENT, profileService } from '../../services/profileService'
 import { SessionContext } from './sessionContext'
-import type { DemoRole, DemoSession } from './types'
+import type { DemoRole, DemoSession, MicrosoftSessionInput } from './types'
 import type { CollaboratorProfile } from '../profile/types'
 
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
@@ -69,7 +69,15 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [session])
 
+  const signInWithMicrosoft = (input: MicrosoftSessionInput) => {
+    const created = demoSessionService.signInWithMicrosoft(input)
+    setSession(created)
+    return created
+  }
   const signIn = (role: DemoRole) => {
+    if (session?.authProvider === 'microsoft' && session.email) {
+      return signInWithMicrosoft({ id: session.id, name: session.name, email: session.email, role })
+    }
     const created = demoSessionService.signIn(role)
     setSession(created)
     return created
@@ -81,5 +89,5 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setProfile(null)
   }
 
-  return <SessionContext.Provider value={{ session, profile, isLoading, signIn, signOut }}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={{ session, profile, isLoading, signIn, signInWithMicrosoft, signOut }}>{children}</SessionContext.Provider>
 }

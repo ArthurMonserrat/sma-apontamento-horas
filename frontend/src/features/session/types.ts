@@ -1,5 +1,12 @@
 export type DemoRole = 'COLLABORATOR' | 'SUPERVISOR' | 'DIRECTOR_ADMIN'
 
+export type MicrosoftSessionInput = {
+  id: string
+  name: string
+  email: string
+  role: DemoRole
+}
+
 export type DemoSession = {
   id: string
   name: string
