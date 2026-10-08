@@ -483,6 +483,15 @@
     padding: 0.5rem;
   }
 
+  .brand-mark--transparent .brand-mark__image-frame {
+    background: transparent;
+    padding: 0;
+  }
+
+  .brand-mark--transparent img {
+    mix-blend-mode: multiply;
+  }
+
   .brand-mark--compact .brand-mark__image-frame {
     padding: 0.25rem;
   }

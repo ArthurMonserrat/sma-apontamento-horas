@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/BrandMark'
 import { ThemeToggle } from '../components/ThemeToggle'
-import { canAccessDemoPath, getDemoHomePath } from '../features/session/routePolicy'
+import { canAccessDemoPath } from '../features/session/routePolicy'
 import type { DemoRole } from '../features/session/types'
 import { useSession } from '../features/session/useSession'
 
@@ -25,9 +25,7 @@ export function LoginPage() {
 
   const enterProfile = (role: DemoRole) => {
     signIn(role)
-    const destination = typeof from === 'string' && canAccessDemoPath(role, from)
-      ? from
-      : getDemoHomePath(role)
+    const destination = typeof from === 'string' && canAccessDemoPath(role, from) ? from : '/portal'
     navigate(destination, { replace: true })
   }
 

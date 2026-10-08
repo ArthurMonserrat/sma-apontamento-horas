@@ -45,6 +45,7 @@ export function getDemoHomePath(role: DemoRole) {
 export function canAccessDemoPath(role: DemoRole, path: string) {
   const pathname = getSafePathname(path)
   if (!pathname) return false
+  if (pathname === '/portal') return true
   if (pathname === '/avisos') return role === 'SUPERVISOR' || role === 'DIRECTOR_ADMIN'
   const homePath = getDemoHomePath(role)
   return pathname === homePath || pathname.startsWith(`${homePath}/`)
@@ -71,6 +72,6 @@ export function resolvePublicOnlyDemoRoute(
   return {
     to: typeof from === 'string' && canAccessDemoPath(session.role, from)
       ? from
-      : getDemoHomePath(session.role),
+      : session.authProvider === 'microsoft' ? '/portal' : getDemoHomePath(session.role),
   }
 }

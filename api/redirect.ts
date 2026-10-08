@@ -40,7 +40,7 @@ export async function redirect(req: VercelRequest, res: VercelResponse): Promise
         secure: process.env.NODE_ENV === 'production',
       }),
     );
-    res.redirect(`${settings.frontendUrl.replace(/\/$/, '')}/colaborador`);
+    res.redirect(`${settings.frontendUrl.replace(/\/$/, '')}/portal`);
   } catch {
     res.status(500).json({ error: 'Authentication could not be completed.' });
   }
