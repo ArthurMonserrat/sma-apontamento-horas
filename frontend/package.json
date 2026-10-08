@@ -14,8 +14,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@azure/msal-browser": "^5.17.3",
-    "@azure/msal-react": "^5.5.4",
+    "@azure/msal-browser": "^5.25.0",
+    "@azure/msal-react": "^5.7.2",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "jspdf": "4.2.1",

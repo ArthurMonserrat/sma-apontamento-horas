@@ -1,10 +1,10 @@
 import { PublicClientApplication, type Configuration } from '@azure/msal-browser'
 
-const clientId = import.meta.env.VITE_CLIENT_ID || import.meta.env.VITE_MSAL_CLIENT_ID || ''
-const tenantId = import.meta.env.VITE_TENANT_ID || import.meta.env.VITE_MSAL_TENANT_ID || 'TENANT_ID'
+const clientId = import.meta.env.VITE_MSAL_CLIENT_ID || ''
+const tenantId = import.meta.env.VITE_MSAL_TENANT_ID || 'TENANT_ID'
 
 if (!clientId) {
-  console.warn('[MSAL] VITE_CLIENT_ID ainda não foi configurado pela equipe de TI.')
+  console.warn('[MSAL] VITE_MSAL_CLIENT_ID ainda não foi configurado pela equipe de TI.')
 }
 
 export const msalConfig: Configuration = {
