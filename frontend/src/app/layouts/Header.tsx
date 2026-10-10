@@ -1,8 +1,8 @@
 import { forwardRef } from 'react'
 import { ThemeToggle } from './ThemeToggle'
-import { useSession } from '../features/session/useSession'
-import { BrandMark } from './BrandMark'
-import { OfflineStatusIndicator } from './OfflineStatusIndicator'
+import { useSession } from '../../features/session/useSession'
+import { BrandMark } from '../../shared/ui/BrandMark'
+import { OfflineStatusIndicator } from '../../components/OfflineStatusIndicator'
 
 type HeaderProps = {
   isMenuOpen: boolean

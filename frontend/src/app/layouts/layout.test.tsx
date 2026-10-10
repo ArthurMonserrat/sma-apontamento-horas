@@ -1,15 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ThemeContext } from '../app/themeContext'
-import { demoCollaborator } from '../mocks/demoData'
-import { SessionContext } from '../features/session/sessionContext'
-import { ProtectedRoute } from '../features/session/ProtectedRoute'
-import { PublicOnlyRoute } from '../features/session/PublicOnlyRoute'
-import type { DemoSession } from '../features/session/types'
+import { ThemeContext } from '../providers/themeContext'
+import { demoCollaborator } from '../../mocks/demoData'
+import { SessionContext } from '../../features/session/sessionContext'
+import { ProtectedRoute } from '../../features/session/ProtectedRoute'
+import { PublicOnlyRoute } from '../../features/session/PublicOnlyRoute'
+import type { DemoSession } from '../../features/session/types'
 import { AppLayout } from './AppLayout'
 import { closeDrawerAfterNavigation, focusDrawerInitialElement, restoreDrawerTriggerFocus, scheduleDrawerTriggerFocus, shouldCloseDrawerForKey } from './drawer'
-import { PageContainer } from './PageContainer'
+import { PageContainer } from '../../shared/ui/PageContainer'
 
 const collaboratorSession: DemoSession = {
   id: demoCollaborator.id,

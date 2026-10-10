@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { NavigationIcon, type NavigationIconName } from './NavigationIcon'
+import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
 
 type DirectorSidebarProps = {
   onSignOut: () => void

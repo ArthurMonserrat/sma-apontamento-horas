@@ -36,8 +36,8 @@ const sharedSources = import.meta.glob('../shared/**/*.{ts,tsx}', {
 }) as Record<string, string>
 
 const legacyDebt = {
-  components: 20,
-  hooks: 1,
+  components: 1,
+  hooks: 0,
   mocks: 2,
   data: 1,
   sharedUtils: 0,

@@ -1,7 +1,7 @@
 import { useMsal } from '@azure/msal-react'
 import { useNavigate } from 'react-router-dom'
-import { BrandMark } from '../components/BrandMark'
-import { ThemeToggle } from '../components/ThemeToggle'
+import { BrandMark } from '../shared/ui/BrandMark'
+import { ThemeToggle } from '../app/layouts/ThemeToggle'
 import { getDemoHomePath } from '../features/session/routePolicy'
 import { useSession } from '../features/session/useSession'
 

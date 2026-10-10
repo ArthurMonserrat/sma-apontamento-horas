@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import officialLogo from '../assets/brand/sma-logo.jpg'
+import officialLogo from '../../assets/brand/sma-logo.jpg'
 
 type BrandMarkProps = {
   alt?: string

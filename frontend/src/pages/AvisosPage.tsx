@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PageContainer } from '../components/PageContainer'
+import { PageContainer } from '../shared/ui/PageContainer'
 import { useSession } from '../features/session/useSession'
 import { CriarAviso } from '../features/announcements/CriarAviso'
 import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../features/announcements/types'

@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useMsal } from '@azure/msal-react'
 import SignatureCanvas from 'react-signature-canvas'
 import { useNavigate } from 'react-router-dom'
-import { PageContainer } from '../components/PageContainer'
+import { PageContainer } from '../shared/ui/PageContainer'
 import { useProfile } from '../features/collaborator/useProfile'
 import { ProfileSummary } from '../features/profile/ProfileSummary'
 import { WorkloadHistory } from '../features/workloads/WorkloadHistory'
 import { WorkloadRequestForm, type WorkloadFormField } from '../features/workloads/WorkloadRequestForm'
 import { getCorporateToday } from '../shared/lib/date'
-import { useTour } from '../components/tourContext'
+import { useTour } from '../app/providers/tourContext'
 
 type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; justification: string }
 type ProfileForm = { name: string; email: string; jobTitle: string; activeSquadId: string }

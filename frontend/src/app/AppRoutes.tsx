@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { AppLayout } from '../components/AppLayout'
+import { AppLayout } from './layouts/AppLayout'
 import { ColaboradorPage } from '../pages/ColaboradorPage'
 import { HistoricoPage } from '../pages/HistoricoPage'
 import { EcosystemLogin } from '../pages/EcosystemLogin'

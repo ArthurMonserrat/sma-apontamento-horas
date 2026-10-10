@@ -1,7 +1,7 @@
 import { formatDatePtBr } from '../../shared/lib/date'
 import { formatMinutes } from '../time-entries/domain'
 import type { WorkloadChangeRequest, WorkloadVersion } from './types'
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { workloadRequestStatusPresentation } from '../status/presentation'
 
 type WorkloadHistoryProps = {

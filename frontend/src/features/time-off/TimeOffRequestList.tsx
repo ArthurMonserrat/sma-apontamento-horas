@@ -1,6 +1,6 @@
 import type { TimeOffRequest } from './types'
 import { formatDatePtBr } from '../../shared/lib/date'
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { timeOffStatusPresentation } from '../status/presentation'
 
 function formatPeriod(request: TimeOffRequest) {

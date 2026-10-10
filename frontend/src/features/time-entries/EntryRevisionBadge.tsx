@@ -1,5 +1,5 @@
 import { CORPORATE_TIME_ZONE } from '../../config/business'
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { revisionStatusPresentation } from '../status/presentation'
 
 type RevisionProps = {

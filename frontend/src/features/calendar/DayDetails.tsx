@@ -4,7 +4,7 @@ import { formatDatePtBr } from '../../shared/lib/date'
 import { formatMinutes, formatSignedMinutes } from '../time-entries/domain'
 import type { TimeOffRequest } from '../time-off/types'
 import { CalendarStateBadge } from './CalendarStateBadge'
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { approvalStatusPresentation, nonApplicableApprovalPresentation } from '../status/presentation'
 
 const eventLabels: Record<CalendarEvent['type'], string> = {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { EntryDocumentDetails } from '../time-entries/EntryDocumentDetails'
 import { Link } from 'react-router-dom'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { demoActivities } from '../../mocks/demoData'
 import { formatDatePtBr } from '../../shared/lib/date'
 import { formatMinutes } from '../time-entries/domain'
@@ -14,7 +14,7 @@ import { getCalendarVisualState } from '../calendar/domain'
 import { HistoryPeriodSummary } from './HistoryPeriodSummary'
 import { getHistoryEntryActions } from './entryActions'
 import { EntryRevisionBadge, EntryRevisionDetails } from '../time-entries/EntryRevisionBadge'
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { approvalStatusPresentation, nonApplicableApprovalPresentation, timeEntryStatusPresentation } from '../status/presentation'
 
 export function TimeEntryHistory() {

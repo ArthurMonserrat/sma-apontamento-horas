@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { PageContainer } from '../components/PageContainer'
+import { PageContainer } from '../shared/ui/PageContainer'
 import { DailyEntryList } from '../features/collaborator/DailyEntryList'
 import { BalanceSummaryCards } from '../features/collaborator/BalanceSummaryCards'
 import { useCollaboratorDashboard } from '../features/collaborator/useCollaboratorDashboard'

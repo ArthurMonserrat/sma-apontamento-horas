@@ -5,7 +5,7 @@ import directorSource from '../pages/DiretoriaPage.tsx?raw'
 import teamsSource from '../pages/EquipesPage.tsx?raw'
 import reportsSource from '../pages/RelatoriosPage.tsx?raw'
 import announcementsSource from '../pages/AvisosPage.tsx?raw'
-import sidebarSource from '../components/DirectorSidebar.tsx?raw'
+import sidebarSource from './layouts/DirectorSidebar.tsx?raw'
 
 describe('navegação da gestão', () => {
   it('mantém Avisos dentro da shell do perfil que está autenticado', () => {
@@ -16,9 +16,9 @@ describe('navegação da gestão', () => {
   })
 
   it('mantém somente uma opção ativa e impede que cards vizinhos expandam na edição', () => {
-    expect(directorSource).toContain("import { DirectorSidebar } from '../components/DirectorSidebar'")
-    expect(teamsSource).toContain("import { DirectorSidebar } from '../components/DirectorSidebar'")
-    expect(reportsSource).toContain("import { DirectorSidebar } from '../components/DirectorSidebar'")
+    expect(directorSource).toContain("import { DirectorSidebar } from '../app/layouts/DirectorSidebar'")
+    expect(teamsSource).toContain("import { DirectorSidebar } from '../app/layouts/DirectorSidebar'")
+    expect(reportsSource).toContain("import { DirectorSidebar } from '../app/layouts/DirectorSidebar'")
     expect(sidebarSource).toContain('aria-current={isActive ? \'page\' : undefined}')
     expect(teamsSource).toContain('items-start')
     expect(teamsSource).toContain('text-white')

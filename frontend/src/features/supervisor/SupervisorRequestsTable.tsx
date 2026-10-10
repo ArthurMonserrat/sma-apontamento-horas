@@ -1,4 +1,4 @@
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { timeOffStatusPresentation } from '../status/presentation'
 import type { SupervisorTimeOffRequest } from './types'
 

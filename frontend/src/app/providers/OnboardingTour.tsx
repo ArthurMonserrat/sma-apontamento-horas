@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Joyride, STATUS, type EventData, type Step } from 'react-joyride'
 import { useLocation } from 'react-router-dom'
-import { useSession } from '../features/session/useSession'
+import { useSession } from '../../features/session/useSession'
 import { TourContext } from './tourContext'
 
 const collaboratorSteps: Step[] = [

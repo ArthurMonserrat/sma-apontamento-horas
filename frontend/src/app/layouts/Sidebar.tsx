@@ -1,10 +1,10 @@
 import type { KeyboardEventHandler } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { collaboratorNavigation } from '../mocks/navigation'
-import { useSession } from '../features/session/useSession'
-import { profileService } from '../services/profileService'
-import { InstallAppButton } from './InstallAppButton'
-import { NavigationIcon } from './NavigationIcon'
+import { collaboratorNavigation } from '../../mocks/navigation'
+import { useSession } from '../../features/session/useSession'
+import { profileService } from '../../services/profileService'
+import { InstallAppButton } from '../../shared/ui/InstallAppButton'
+import { NavigationIcon } from '../../shared/ui/NavigationIcon'
 
 type SidebarContentProps = {
   onNavigate: () => void

@@ -1,4 +1,4 @@
-import { StatusBadge } from '../../components/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { formatMinutes } from '../time-entries/domain'
 import type { SupervisorPendingEntry } from './types'
 

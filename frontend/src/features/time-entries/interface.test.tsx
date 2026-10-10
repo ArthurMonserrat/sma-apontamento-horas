@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { demoCollaborator } from '../../mocks/demoData'
 import { SessionContext } from '../session/sessionContext'
 import { HistoryFilters } from '../history/HistoryFilters'

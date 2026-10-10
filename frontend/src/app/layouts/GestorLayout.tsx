@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { BrandMark } from './BrandMark'
+import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from './ThemeToggle'
-import { useSession } from '../features/session/useSession'
-import { NavigationIcon } from './NavigationIcon'
+import { useSession } from '../../features/session/useSession'
+import { NavigationIcon } from '../../shared/ui/NavigationIcon'
 
 export function GestorLayout() {
   const [isMenuOpen, setMenuOpen] = useState(false)

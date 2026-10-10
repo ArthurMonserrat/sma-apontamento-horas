@@ -1,4 +1,4 @@
-import type { NavigationIconName } from '../components/NavigationIcon'
+import type { NavigationIconName } from '../shared/ui/NavigationIcon'
 
 export type NavigationItem = {
   label: string

@@ -1,4 +1,4 @@
-import { PageContainer } from '../components/PageContainer'
+import { PageContainer } from '../shared/ui/PageContainer'
 import { TimeEntryHistory } from '../features/history/TimeEntryHistory'
 
 export function HistoricoPage() {

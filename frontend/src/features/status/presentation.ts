@@ -1,4 +1,4 @@
-import type { StatusTone } from '../../components/StatusBadge'
+import type { StatusTone } from '../../shared/ui/StatusBadge'
 import type { DayApprovalStatus } from '../approvals/types'
 import type { TimeEntryStatus } from '../time-entries/types'
 import type { TimeOffRequestStatus } from '../time-off/types'

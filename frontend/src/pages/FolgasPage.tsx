@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ConfirmDialog } from '../components/ConfirmDialog'
-import { PageContainer } from '../components/PageContainer'
+import { ConfirmDialog } from '../shared/ui/ConfirmDialog'
+import { PageContainer } from '../shared/ui/PageContainer'
 import { addDays } from '../shared/lib/date'
 import { TimeOffRequestForm } from '../features/time-off/TimeOffRequestForm'
 import { TimeOffRequestList } from '../features/time-off/TimeOffRequestList'
