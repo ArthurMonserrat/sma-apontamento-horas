@@ -1,5 +1,5 @@
 import type { SupervisorPendingEntry } from '../features/supervisor/types'
-import { supervisorService } from './supervisorService'
+import { supervisorService } from '../features/supervisor/infrastructure/supervisorService'
 
 export interface DiretoriaService {
   listEscalatedEntries(): Promise<SupervisorPendingEntry[]>

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AuditEvent } from '../features/audit/types'
-import { demoCollaborator } from '../demo/fixtures/demoData'
+import type { AuditEvent } from '../../audit/types'
+import { demoCollaborator } from '../../../demo/fixtures/demoData'
 import { LocalProfileService } from './profileService'
-import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
-import { LocalStorageTimeEntryService } from '../features/time-entries'
+import type { StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
+import { LocalStorageTimeEntryService } from '../../time-entries'
 
 class MemoryStorage implements StorageLike {
   private values = new Map<string, string>()

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { LocalStorageSupervisorService } from './supervisorService'
-import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
-import { TIME_ENTRY_STORAGE_KEY } from '../features/time-entries'
-import { TIME_OFF_STORAGE_KEY } from './timeOffService'
+import type { StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
+import { TIME_ENTRY_STORAGE_KEY } from '../../time-entries'
+import { TIME_OFF_STORAGE_KEY } from '../../time-off/infrastructure/timeOffService'
 
 function createMemoryStorage(): StorageLike {
   const values = new Map<string, string>()

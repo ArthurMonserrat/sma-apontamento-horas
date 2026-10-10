@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supervisorService } from '../../services/supervisorService'
+import { supervisorService } from './infrastructure/supervisorService'
 import type {
   SupervisorDashboardSummary,
   SupervisorPendingEntry,

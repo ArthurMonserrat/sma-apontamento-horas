@@ -39,6 +39,11 @@ const legacyStorage = {
   ...import.meta.glob('../services/storage.ts', { eager: true, query: '?raw', import: 'default' }),
   ...import.meta.glob('../services/storage.test.ts', { eager: true, query: '?raw', import: 'default' }),
 }
+const legacyServices = import.meta.glob('../services/*.{ts,tsx}', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+})
 const sharedSources = import.meta.glob('../shared/**/*.{ts,tsx}', {
   eager: true,
   query: '?raw',
@@ -54,6 +59,7 @@ const legacyDebt = {
   appRoutes: 0,
   sharedUtils: 0,
   storage: 0,
+  services: 14,
 }
 
 const allowedSharedFeatureImports = [
@@ -83,6 +89,7 @@ describe('architectural boundaries', () => {
       appRoutes: Object.keys(legacyAppRoutes).length,
       sharedUtils: Object.keys(legacySharedUtils).length,
       storage: Object.keys(legacyStorage).length,
+      services: Object.keys(legacyServices).length,
     }).toEqual(legacyDebt)
   })
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { demoSessionService } from '../../services/demoSessionService'
 import { demoCollaborator } from '../../demo/fixtures/demoData'
-import { PROFILE_UPDATED_EVENT, profileService } from '../../services/profileService'
+import { PROFILE_UPDATED_EVENT, profileService } from '../profile/infrastructure/profileService'
 import { SessionContext } from './sessionContext'
 import type { DemoRole, DemoSession, MicrosoftSessionInput } from './types'
 import type { CollaboratorProfile } from '../profile/types'

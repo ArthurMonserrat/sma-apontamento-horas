@@ -2,7 +2,7 @@ import type { KeyboardEventHandler } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { collaboratorNavigation } from '../../demo/fixtures/navigation'
 import { useSession } from '../../features/session/useSession'
-import { profileService } from '../../services/profileService'
+import { profileService } from '../../features/profile/infrastructure/profileService'
 import { InstallAppButton } from '../../shared/ui/InstallAppButton'
 import { NavigationIcon } from '../../shared/ui/NavigationIcon'
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AuditEvent, SupervisorNotification } from '../features/audit/types'
-import type { AssignmentSnapshot } from '../features/squads/types'
+import type { AuditEvent, SupervisorNotification } from '../../audit/types'
+import type { AssignmentSnapshot } from '../../squads/types'
 import { LocalWorkloadService } from './workloadService'
-import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
+import type { StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 
 class MemoryStorage implements StorageLike {
   private values = new Map<string, string>()

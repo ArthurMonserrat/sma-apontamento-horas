@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { timeOffService } from '../../services/timeOffService'
+import { timeOffService } from './infrastructure/timeOffService'
 import { addDays, getCorporateToday } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import type { AbsenceType, TimeOffRequest } from './types'
