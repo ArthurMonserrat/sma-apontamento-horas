@@ -9,7 +9,7 @@ describe('workspace test scripts', () => {
 
     expect(packageJson.scripts).toMatchObject({
       'test:api': 'vitest run --dir api',
-      'test:frontend': 'npm --prefix frontend test',
+      'test:frontend': 'npm --prefix frontend run test --',
       test: 'npm run test:api && npm run test:frontend',
     });
   });
