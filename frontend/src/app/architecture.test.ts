@@ -48,8 +48,8 @@ const sharedSources = import.meta.glob('../shared/**/*.{ts,tsx}', {
 const legacyDebt = {
   components: 1,
   hooks: 0,
-  mocks: 2,
-  data: 1,
+  mocks: 0,
+  data: 0,
   topLevelPages: 0,
   appRoutes: 0,
   sharedUtils: 0,

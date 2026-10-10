@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../../mocks/demoData'
+import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../../demo/fixtures/demoData'
 import { ProfileSummary } from './ProfileSummary'
 import { SquadSelector } from './SquadSelector'
 import { WorkloadHistory } from '../workloads/WorkloadHistory'

@@ -1,6 +1,6 @@
 import type { KeyboardEventHandler } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { collaboratorNavigation } from '../../mocks/navigation'
+import { collaboratorNavigation } from '../../demo/fixtures/navigation'
 import { useSession } from '../../features/session/useSession'
 import { profileService } from '../../services/profileService'
 import { InstallAppButton } from '../../shared/ui/InstallAppButton'

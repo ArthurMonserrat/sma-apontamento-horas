@@ -17,7 +17,7 @@ import { ApprovalDeadlineBanner } from '../../features/supervisor/ApprovalDeadli
 import { useSession } from '../../features/session/useSession'
 import { formatMinutes } from '../../features/time-entries/domain'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
-import { getAllColaboradores } from '../../data/mockDEP'
+import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
 import { useTour } from '../../app/providers/tourContext'
 import { AvisosPage } from '../administration/AvisosPage'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'

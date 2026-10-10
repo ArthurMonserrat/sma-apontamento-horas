@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useSession } from '../session/useSession'
 import { ANNOUNCEMENTS_STORAGE_KEY, ANNOUNCEMENTS_UPDATED_EVENT } from '../../services/announcementService'
-import { getAllColaboradores } from '../../data/mockDEP'
-import { demoSquads } from '../../mocks/demoData'
+import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
+import { demoSquads } from '../../demo/fixtures/demoData'
 import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from './types'
 
 const urgencyOptions: Array<{ value: ComunicadoTipo, label: string }> = [

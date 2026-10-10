@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AuditEvent } from '../features/audit/types'
-import { demoCollaborator } from '../mocks/demoData'
+import { demoCollaborator } from '../demo/fixtures/demoData'
 import { LocalProfileService } from './profileService'
 import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
 import { LocalStorageTimeEntryService } from './timeEntryService'

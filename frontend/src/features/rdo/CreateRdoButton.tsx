@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSession } from '../session/useSession'
-import { demoActivities } from '../../mocks/demoData'
+import { demoActivities } from '../../demo/fixtures/demoData'
 import type { TimeEntryFormValues } from '../time-entries/useTimeEntryForm'
 import logoUrl from '../../assets/brand/sma-logo.jpg'
 

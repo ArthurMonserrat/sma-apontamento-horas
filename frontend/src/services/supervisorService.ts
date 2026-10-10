@@ -6,7 +6,7 @@ import type {
   SupervisorRequestSummary,
   SupervisorTimeOffRequest,
 } from '../features/supervisor/types'
-import { demoAssignmentSnapshot, demoCollaborator } from '../mocks/demoData'
+import { demoAssignmentSnapshot, demoCollaborator } from '../demo/fixtures/demoData'
 import { TIME_ENTRY_STORAGE_KEY } from './timeEntryService'
 import { normalizeTimeEntry, type TimeEntryStorageV4 } from './timeEntryMigration'
 import { TIME_OFF_STORAGE_KEY, timeOffService, type TimeOffStorage } from './timeOffService'

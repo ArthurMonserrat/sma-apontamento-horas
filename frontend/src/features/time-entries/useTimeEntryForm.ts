@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { demoActivities } from '../../mocks/demoData'
+import { demoActivities } from '../../demo/fixtures/demoData'
 import { dayApprovalService } from '../../services/dayApprovalService'
 import { entryDateAvailabilityService } from '../../services/entryDateAvailabilityService'
 import { timeEntryService } from '../../services/timeEntryService'

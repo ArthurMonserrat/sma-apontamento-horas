@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { useProfile } from '../../features/collaborator/useProfile'
-import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../../mocks/demoData'
+import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../../demo/fixtures/demoData'
 import { PerfilPage } from './PerfilPage'
 
 const { useProfileMock } = vi.hoisted(() => ({ useProfileMock: vi.fn() }))

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { demoActivities } from '../../mocks/demoData'
+import { demoActivities } from '../../demo/fixtures/demoData'
 import type { CreateTimeEntryData } from '../../shared/types/domain'
 import {
   areValidDurationParts,

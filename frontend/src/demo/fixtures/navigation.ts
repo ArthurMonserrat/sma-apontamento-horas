@@ -1,4 +1,4 @@
-import type { NavigationItem } from '../types/navigation'
+import type { NavigationItem } from '../../types/navigation'
 
 export const collaboratorNavigation: NavigationItem[] = [
   { label: 'Visão geral', icon: 'dashboard', path: '/colaborador' },

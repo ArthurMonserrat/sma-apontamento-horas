@@ -2,7 +2,7 @@ import type { AuditEvent, SupervisorNotification } from '../features/audit/types
 import type { AssignmentSnapshot } from '../features/squads/types'
 import type { WorkloadChangeRequest, WorkloadVersion } from '../features/workloads/types'
 import { getWorkloadForDate } from '../features/workloads/domain'
-import { demoWorkloadVersions } from '../mocks/demoData'
+import { demoWorkloadVersions } from '../demo/fixtures/demoData'
 import { getCorporateToday, isIsoDate } from '../shared/lib/date'
 import { auditService } from './auditService'
 import { notificationService } from './notificationService'

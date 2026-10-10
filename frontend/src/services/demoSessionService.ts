@@ -1,5 +1,5 @@
 import type { DemoRole, DemoSession } from '../features/session/types'
-import { demoCollaborator } from '../mocks/demoData'
+import { demoCollaborator } from '../demo/fixtures/demoData'
 
 const SESSION_KEY = 'sma:demo-session:v2'
 const LEGACY_SESSION_KEY = 'sma:demo-session:v1'

@@ -1,5 +1,5 @@
 import type { ChangeEvent, FormEvent } from 'react'
-import { demoActivities } from '../../mocks/demoData'
+import { demoActivities } from '../../demo/fixtures/demoData'
 import { fieldClassName } from '../time-entries/TimeEntryFields'
 import type { HistoryFiltersValue } from './useTimeEntryHistory'
 

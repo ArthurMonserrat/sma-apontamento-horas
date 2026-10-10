@@ -4,7 +4,7 @@ import { BrandMark } from '../../shared/ui/BrandMark'
 import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { useSession } from '../../features/session/useSession'
-import { organogramaDEP, type DEPColaborador, type DEPGerencia, type DEPSquad } from '../../data/mockDEP'
+import { organogramaDEP, type DEPColaborador, type DEPGerencia, type DEPSquad } from '../../demo/fixtures/mockDEP'
 import { exportGeneralHoursReport, exportSquadHoursReport } from '../../services/excelExportService'
 
 const ORGANOGRAMA_STORAGE_KEY = 'organograma_editavel_sma'

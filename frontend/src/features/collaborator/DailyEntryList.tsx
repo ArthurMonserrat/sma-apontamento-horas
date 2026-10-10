@@ -1,4 +1,4 @@
-import { demoActivities } from '../../mocks/demoData'
+import { demoActivities } from '../../demo/fixtures/demoData'
 import type { TimeEntry } from '../../shared/types/domain'
 import { formatMinutes, isCountableTimeEntryStatus } from '../time-entries/domain'
 import { EntryRevisionBadge } from '../time-entries/EntryRevisionBadge'

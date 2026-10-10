@@ -1,4 +1,4 @@
-import { demoActivities } from '../../mocks/demoData'
+import { demoActivities } from '../../demo/fixtures/demoData'
 import type { TimeEntryValidationErrors } from './types'
 import type { TimeEntryFormValues } from './useTimeEntryForm'
 import { disciplines, documentTypes, isManualDocumentType } from './documentCatalog'

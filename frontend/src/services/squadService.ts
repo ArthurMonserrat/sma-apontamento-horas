@@ -1,4 +1,4 @@
-import { demoSquads, demoSupervisors } from '../mocks/demoData'
+import { demoSquads, demoSupervisors } from '../demo/fixtures/demoData'
 
 export const squadService = {
   async listActive() {
