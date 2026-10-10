@@ -5,10 +5,12 @@ import { PROFILE_UPDATED_EVENT, profileService } from '../profile/infrastructure
 import { SessionContext } from './sessionContext'
 import type { DemoRole, DemoSession, MicrosoftSessionInput } from './types'
 import type { CollaboratorProfile } from '../profile/types'
+import { getCorporateProfile, mapCorporateRole } from '../auth/authService'
 
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DemoSession | null>(null)
   const [profile, setProfile] = useState<CollaboratorProfile | null>(null)
+  const [corporateProfile, setCorporateProfile] = useState<NonNullable<DemoSession['corporateProfile']> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -19,6 +21,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       if (localSession) {
         if (!cancelled) {
           setSession(localSession)
+          setCorporateProfile(localSession.corporateProfile ?? null)
           setIsLoading(false)
         }
         return
@@ -69,17 +72,24 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [session])
 
-  const signInWithMicrosoft = (input: MicrosoftSessionInput) => {
-    const created = demoSessionService.signInWithMicrosoft(input)
+  const signInWithMicrosoft = async (input: MicrosoftSessionInput) => {
+    const loadedProfile = await getCorporateProfile(input.email, input.name)
+    const created = demoSessionService.signInWithMicrosoft({
+      ...input,
+      role: mapCorporateRole(loadedProfile.role),
+      corporateProfile: loadedProfile,
+    })
     setSession(created)
+    setCorporateProfile(loadedProfile)
     return created
   }
   const signIn = (role: DemoRole) => {
     if (session?.authProvider === 'microsoft' && session.email) {
-      return signInWithMicrosoft({ id: session.id, name: session.name, email: session.email, role })
+      return session
     }
     const created = demoSessionService.signIn(role)
     setSession(created)
+    setCorporateProfile(null)
     return created
   }
   const signOut = () => {
@@ -87,7 +97,8 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     demoSessionService.signOut()
     setSession(null)
     setProfile(null)
+    setCorporateProfile(null)
   }
 
-  return <SessionContext.Provider value={{ session, profile, isLoading, signIn, signInWithMicrosoft, signOut }}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, signIn, signInWithMicrosoft, signOut }}>{children}</SessionContext.Provider>
 }

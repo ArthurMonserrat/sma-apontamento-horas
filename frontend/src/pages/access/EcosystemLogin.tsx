@@ -32,7 +32,7 @@ export function EcosystemLogin() {
       const account = getActiveAccount() ?? (await instance.loginPopup(loginRequest)).account
       if (!account) throw new Error('A autenticação não retornou uma conta válida.')
       instance.setActiveAccount(account)
-      signInWithMicrosoft?.(toMicrosoftSessionInput(account))
+      if (signInWithMicrosoft) await signInWithMicrosoft(toMicrosoftSessionInput(account))
 
       const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
       if (/^https?:\/\//i.test(destination)) {

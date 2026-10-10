@@ -18,12 +18,13 @@ const ACCESS_PROFILES: readonly AccessProfile[] = [
 ]
 
 export function ProfileSelectionPage() {
-  const { signIn } = useSession()
+  const { signIn, corporateProfile } = useSession()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: unknown } | null)?.from
 
   const enterProfile = (role: DemoRole) => {
+    if (corporateProfile?.role === 'colaborador' && role !== 'COLLABORATOR') return
     signIn(role)
     const destination = typeof from === 'string' && canAccessDemoPath(role, from) ? from : getDemoHomePath(role)
     navigate(destination, { replace: true })
@@ -45,7 +46,13 @@ export function ProfileSelectionPage() {
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-secondary)]">Perfil de acesso</p>
               <h2 className="mt-3 text-xl font-extrabold text-[var(--color-text)]">{profile.name}</h2>
               <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">{profile.description}</p>
-              <button type="button" onClick={() => enterProfile(profile.role)} className="ui-button-primary mt-6 w-full">Entrar como {profile.name}</button>
+              {corporateProfile?.role === 'colaborador' && profile.role !== 'COLLABORATOR' ? (
+                <button type="button" disabled aria-disabled="true" className="ui-button-primary mt-6 flex w-full cursor-not-allowed items-center justify-center gap-2 opacity-60" title="Perfil não autorizado para esta conta">
+                  <span aria-hidden="true">🔒</span> Perfil não autorizado
+                </button>
+              ) : (
+                <button type="button" onClick={() => enterProfile(profile.role)} className="ui-button-primary mt-6 w-full">Entrar como {profile.name}</button>
+              )}
             </article>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import type { DemoRole, DemoSession } from '../types'
+import type { CorporateProfile, DemoRole, DemoSession } from '../types'
 import { demoCollaborator } from '../../../demo/fixtures/demoData'
 
 const SESSION_KEY = 'sma:demo-session:v2'
@@ -23,7 +23,7 @@ export interface SessionStorage {
 export interface DemoSessionService {
   restore(): DemoSession | null
   signIn(role: DemoRole): DemoSession
-  signInWithMicrosoft(input: { id: string; name: string; email: string; role: DemoRole }): DemoSession
+  signInWithMicrosoft(input: { id: string; name: string; email: string; role: DemoRole; corporateProfile?: CorporateProfile }): DemoSession
   signOut(): void
 }
 
@@ -99,7 +99,7 @@ export class LocalDemoSessionService implements DemoSessionService {
     return session
   }
 
-  signInWithMicrosoft({ id, name, email, role }: { id: string; name: string; email: string; role: DemoRole }): DemoSession {
+  signInWithMicrosoft({ id, name, email, role, corporateProfile }: { id: string; name: string; email: string; role: DemoRole; corporateProfile?: CorporateProfile }): DemoSession {
     const timestamp = this.now()
     const session: DemoSession = {
       id,
@@ -111,6 +111,7 @@ export class LocalDemoSessionService implements DemoSessionService {
       isDemo: false,
       version: 2,
       authProvider: 'microsoft',
+      corporateProfile,
     }
     this.write(SESSION_KEY, JSON.stringify(session))
     return session
