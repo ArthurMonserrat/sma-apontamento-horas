@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { DemoRole, DemoSession } from '../features/session/types'
+import type { DemoRole, DemoSession } from '../types'
 import { createBrowserSessionStorage, LocalDemoSessionService, type SessionStorage } from './demoSessionService'
 
 const SESSION_KEY = 'sma:demo-session:v2'

@@ -5,7 +5,7 @@ import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { useSession } from '../../features/session/useSession'
 import { organogramaDEP, type DEPColaborador, type DEPGerencia, type DEPSquad } from '../../demo/fixtures/mockDEP'
-import { exportGeneralHoursReport, exportSquadHoursReport } from '../../services/excelExportService'
+import { exportGeneralHoursReport, exportSquadHoursReport } from '../../features/reports/infrastructure/excelExportService'
 
 const ORGANOGRAMA_STORAGE_KEY = 'organograma_editavel_sma'
 const cargoOptions = ['Engenheiro', 'Projetista', 'Desenhista', 'Estagiário', 'Estagiário 4h']

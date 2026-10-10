@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { demoSessionService } from '../../services/demoSessionService'
+import { demoSessionService } from './infrastructure/demoSessionService'
 import { demoCollaborator } from '../../demo/fixtures/demoData'
 import { PROFILE_UPDATED_EVENT, profileService } from '../profile/infrastructure/profileService'
 import { SessionContext } from './sessionContext'

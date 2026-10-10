@@ -10,7 +10,7 @@ import { formatMinutes, formatSignedMinutes } from '../../features/time-entries/
 import type { ReportEntry, ReportStatus, ReportSupervisor } from '../../features/reports/types'
 import { eachIsoDate, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../../shared/lib/date'
 import { TIME_ENTRY_STORAGE_KEY } from '../../features/time-entries'
-import { exportDirectorateReport, type DirectorateReportRow } from '../../services/excelExportService'
+import { exportDirectorateReport, type DirectorateReportRow } from '../../features/reports/infrastructure/excelExportService'
 
 const statusOptions: Array<{ value: '' | ReportStatus, label: string }> = [
   { value: '', label: 'Todos os status' }, { value: 'PENDING', label: 'Pendente' }, { value: 'APPROVED', label: 'Aprovado' }, { value: 'REJECTED', label: 'Rejeitado' },

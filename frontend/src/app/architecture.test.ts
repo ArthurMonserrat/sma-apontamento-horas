@@ -59,7 +59,7 @@ const legacyDebt = {
   appRoutes: 0,
   sharedUtils: 0,
   storage: 0,
-  services: 5,
+  services: 1,
 }
 
 const allowedSharedFeatureImports = [
