@@ -11,7 +11,7 @@ import type { CompetencyState, DayApproval } from '../types'
 import type { AuditEvent } from '../../audit/types'
 import { getCorporateToday, getMonthKey } from '../../../shared/lib/date'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
-import { auditService } from '../../../services/auditService'
+import { auditService } from '../../audit/infrastructure/auditService'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from '../../../services/postCommit'
 
 const APPROVAL_STORAGE_KEY = 'sma:day-approvals:v1'

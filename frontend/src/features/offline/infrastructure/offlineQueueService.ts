@@ -1,5 +1,5 @@
 import localforage from 'localforage'
-import type { CreateTimeEntryData } from '../features/time-entries/types'
+import type { CreateTimeEntryData } from '../../time-entries/types'
 
 export const OFFLINE_QUEUE_STORE_NAME = 'sync_queue_horas'
 export const OFFLINE_QUEUE_UPDATED_EVENT = 'sma:offline-queue-updated'

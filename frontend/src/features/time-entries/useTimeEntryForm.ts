@@ -10,7 +10,7 @@ import { useSession } from '../session/useSession'
 import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } from './domain'
 import { applyLdDocument, type LdDocument } from '../document-list/ldImport'
 import { isManualDocumentType } from './documentCatalog'
-import { offlineQueueService } from '../../services/offlineQueueService'
+import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
 
 export type TimeEntryFormValues = {
   startDate: string

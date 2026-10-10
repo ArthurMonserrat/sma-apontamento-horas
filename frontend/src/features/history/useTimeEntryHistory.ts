@@ -14,8 +14,8 @@ import {
   type EntrySituationFilter,
   type HistoryPeriodMode,
 } from './domain'
-import { calendarEventService } from '../../services/calendarEventService'
-import { holidayProvider } from '../../services/holidayProvider'
+import { calendarEventService } from '../calendar/infrastructure/calendarEventService'
+import { holidayProvider } from '../calendar/infrastructure/holidayProvider'
 import { profileService } from '../profile/infrastructure/profileService'
 import { timeOffService } from '../time-off/infrastructure/timeOffService'
 import { workloadService } from '../workloads/infrastructure/workloadService'

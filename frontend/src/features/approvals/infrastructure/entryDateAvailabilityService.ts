@@ -1,7 +1,7 @@
 import { resolveEntryDateBlock, type EntryDateBlock } from '../../calendar/entryDatePolicy'
 import type { CalendarEvent } from '../../calendar/types'
-import { calendarEventService } from '../../../services/calendarEventService'
-import { holidayProvider } from '../../../services/holidayProvider'
+import { calendarEventService } from '../../calendar/infrastructure/calendarEventService'
+import { holidayProvider } from '../../calendar/infrastructure/holidayProvider'
 import { profileService } from '../../profile/infrastructure/profileService'
 
 export interface EntryDateAvailabilityService {

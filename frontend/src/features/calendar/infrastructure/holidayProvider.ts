@@ -1,5 +1,5 @@
-import type { Holiday } from '../features/calendar/types'
-import type { WorkLocation } from '../features/profile/types'
+import type { Holiday } from '../types'
+import type { WorkLocation } from '../../profile/types'
 
 export interface HolidayProvider {
   list(location: WorkLocation, startDate: string, endDate: string): Promise<Holiday[]>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { canDeleteAnnouncement, isAnnouncementHiddenForUser } from './announcementService'
-import type { Comunicado } from '../features/announcements/types'
+import type { Comunicado } from '../types'
 
 const announcement = { id: 'a-1', autorId: 'supervisor-1' } as Comunicado
 

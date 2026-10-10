@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
 import { timeEntryService } from '../time-entries'
-import { OFFLINE_QUEUE_UPDATED_EVENT, offlineQueueService } from '../../services/offlineQueueService'
+import { OFFLINE_QUEUE_UPDATED_EVENT, offlineQueueService } from './infrastructure/offlineQueueService'
 import { OfflineSyncContext } from './offlineSyncContext'
 
 export function OfflineSyncProvider({ children }: PropsWithChildren) {

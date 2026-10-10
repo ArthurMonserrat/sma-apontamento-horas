@@ -51,7 +51,7 @@ const sharedSources = import.meta.glob('../shared/**/*.{ts,tsx}', {
 }) as Record<string, string>
 
 const legacyDebt = {
-  components: 1,
+  components: 0,
   hooks: 0,
   mocks: 0,
   data: 0,
@@ -59,7 +59,7 @@ const legacyDebt = {
   appRoutes: 0,
   sharedUtils: 0,
   storage: 0,
-  services: 14,
+  services: 5,
 }
 
 const allowedSharedFeatureImports = [

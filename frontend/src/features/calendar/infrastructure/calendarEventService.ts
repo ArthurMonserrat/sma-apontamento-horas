@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '../features/calendar/types'
+import type { CalendarEvent } from '../types'
 
 export interface CalendarEventService {
   listByRange(collaboratorId: string, startDate: string, endDate: string): Promise<CalendarEvent[]>

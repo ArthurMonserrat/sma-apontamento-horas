@@ -1,5 +1,5 @@
-import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../features/announcements/types'
-import type { DemoRole } from '../features/session/types'
+import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../types'
+import type { DemoRole } from '../../session/types'
 
 export const ANNOUNCEMENTS_STORAGE_KEY = 'avisos_sistema'
 export const ANNOUNCEMENTS_UPDATED_EVENT = 'sma:announcements-updated'

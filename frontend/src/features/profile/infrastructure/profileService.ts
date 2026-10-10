@@ -2,7 +2,7 @@ import type { AuditEvent } from '../../audit/types'
 import type { CollaboratorProfile } from '../types'
 import type { AssignmentSnapshot } from '../../squads/types'
 import { demoCollaborator, demoSquads, demoSupervisors } from '../../../demo/fixtures/demoData'
-import { auditService } from '../../../services/auditService'
+import { auditService } from '../../audit/infrastructure/auditService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from '../../../services/postCommit'
 

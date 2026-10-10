@@ -1,4 +1,4 @@
-import { useOfflineSync } from '../features/offline/offlineSyncContext'
+import { useOfflineSync } from '../offlineSyncContext'
 
 export function OfflineStatusIndicator() {
   const { isOnline, pendingCount } = useOfflineSync()

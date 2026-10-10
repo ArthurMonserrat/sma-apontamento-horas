@@ -1,5 +1,5 @@
-import type { SupervisorNotification } from '../features/audit/types'
-import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
+import type { SupervisorNotification } from '../../audit/types'
+import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 
 const NOTIFICATION_STORAGE_KEY = 'sma:supervisor-notifications:v1'
 
