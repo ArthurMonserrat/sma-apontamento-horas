@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { timeEntryService } from '../time-entries'
 import { workloadService } from '../workloads/infrastructure/workloadService'
-import type { DailySummary, TimeEntry } from '../../shared/types/domain'
+import type { DailySummary } from '../../shared/types/domain'
+import type { TimeEntry } from '../time-entries/types'
 import { useSession } from '../session/useSession'
 
 type DashboardState = {

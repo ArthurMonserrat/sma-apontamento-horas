@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import type { CollaboratorProfile } from '../../shared/types/domain'
+import type { CollaboratorProfile } from '../profile/types'
 import type { DemoRole, DemoSession, MicrosoftSessionInput } from './types'
 
 export type DemoSignIn = (role: DemoRole) => DemoSession

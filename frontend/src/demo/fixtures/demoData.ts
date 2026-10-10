@@ -1,7 +1,7 @@
 import type { AssignmentSnapshot, Squad, Supervisor } from '../../features/squads/types'
 import type { WorkloadVersion } from '../../features/workloads/types'
-import type { WorkLocation } from '../../features/profile/types'
-import type { Activity, Client, CollaboratorProfile } from '../../shared/types/domain'
+import type { CollaboratorProfile, WorkLocation } from '../../features/profile/types'
+import type { Activity, Client } from '../../shared/types/domain'
 
 const weekdayMinutes = 480
 

@@ -62,10 +62,7 @@ const legacyDebt = {
   services: 1,
 }
 
-const allowedSharedFeatureImports = [
-  '../shared/types/domain.ts -> ../../features/profile/types',
-  '../shared/types/domain.ts -> ../../features/time-entries/types',
-]
+const allowedSharedFeatureImports: string[] = []
 
 function sharedFeatureImports() {
   const imports = Object.entries(sharedSources).flatMap(([file, source]) =>

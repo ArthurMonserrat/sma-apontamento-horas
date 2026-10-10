@@ -1,5 +1,5 @@
 import { demoActivities } from '../../demo/fixtures/demoData'
-import type { TimeEntry } from '../../shared/types/domain'
+import type { TimeEntry } from '../time-entries/types'
 import { formatMinutes, isCountableTimeEntryStatus } from '../time-entries/domain'
 import { EntryRevisionBadge } from '../time-entries/EntryRevisionBadge'
 import { EntryDocumentDetails } from '../time-entries/EntryDocumentDetails'

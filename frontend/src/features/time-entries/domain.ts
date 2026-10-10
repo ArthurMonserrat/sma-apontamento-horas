@@ -1,12 +1,8 @@
-import type {
-  Activity,
-  CreateTimeEntryData,
-  TimeEntryValidationErrors,
-} from '../../shared/types/domain'
+import type { Activity } from '../../shared/types/domain'
 import { MAX_CLIENT_NAME_LENGTH } from '../../config/business'
 import { compareIsoDates, eachIsoDate, isIsoDate, isWeekend } from '../../shared/lib/date'
 import { isAllowedDocumentType, isDisciplineCode, isLdDocumentSnapshot } from './documentCatalog'
-import type { TimeEntryStatus } from './types'
+import type { CreateTimeEntryData, TimeEntryStatus, TimeEntryValidationErrors } from './types'
 
 export const MAX_ENTRY_MINUTES = 24 * 60
 export const MAX_PROJECT_CODE_LENGTH = 80
