@@ -8,7 +8,7 @@ describe('workspace test scripts', () => {
     ) as { scripts?: Record<string, string> };
 
     expect(packageJson.scripts).toMatchObject({
-      'test:api': 'vitest run api',
+      'test:api': 'vitest run --dir api',
       'test:frontend': 'npm --prefix frontend test',
       test: 'npm run test:api && npm run test:frontend',
     });

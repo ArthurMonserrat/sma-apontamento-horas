@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LocalStorageSupervisorService } from './supervisorService'
 import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
-import { TIME_ENTRY_STORAGE_KEY } from './timeEntryService'
+import { TIME_ENTRY_STORAGE_KEY } from '../features/time-entries'
 import { TIME_OFF_STORAGE_KEY } from './timeOffService'
 
 function createMemoryStorage(): StorageLike {

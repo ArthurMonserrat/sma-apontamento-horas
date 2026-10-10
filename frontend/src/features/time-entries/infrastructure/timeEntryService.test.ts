@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AuditEvent } from '../features/audit/types'
-import type { AssignmentSnapshot } from '../features/squads/types'
-import type { CreateTimeEntryData } from '../features/time-entries/types'
+import type { AuditEvent } from '../../audit/types'
+import type { AssignmentSnapshot } from '../../squads/types'
+import type { CreateTimeEntryData } from '../types'
 import {
   LEGACY_V1_TIME_ENTRY_STORAGE_KEY,
   LEGACY_V2_TIME_ENTRY_STORAGE_KEY,

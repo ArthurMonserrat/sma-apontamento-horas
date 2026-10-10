@@ -1,8 +1,8 @@
-import { resolveEntryDateBlock, type EntryDateBlock } from '../features/calendar/entryDatePolicy'
-import type { CalendarEvent } from '../features/calendar/types'
-import { calendarEventService } from './calendarEventService'
-import { holidayProvider } from './holidayProvider'
-import { profileService } from './profileService'
+import { resolveEntryDateBlock, type EntryDateBlock } from '../../calendar/entryDatePolicy'
+import type { CalendarEvent } from '../../calendar/types'
+import { calendarEventService } from '../../../services/calendarEventService'
+import { holidayProvider } from '../../../services/holidayProvider'
+import { profileService } from '../../../services/profileService'
 
 export interface EntryDateAvailabilityService {
   getBlock(collaboratorId: string, date: string): Promise<EntryDateBlock>

@@ -3,7 +3,7 @@ import type { AuditEvent } from '../features/audit/types'
 import { demoCollaborator } from '../demo/fixtures/demoData'
 import { LocalProfileService } from './profileService'
 import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
-import { LocalStorageTimeEntryService } from './timeEntryService'
+import { LocalStorageTimeEntryService } from '../features/time-entries'
 
 class MemoryStorage implements StorageLike {
   private values = new Map<string, string>()

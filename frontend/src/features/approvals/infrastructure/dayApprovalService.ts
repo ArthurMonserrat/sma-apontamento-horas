@@ -6,13 +6,13 @@ import {
   reopenCompetency as reopenCompetencyTransition,
   reopenDay as reopenDayTransition,
   requestCorrection as requestCorrectionTransition,
-} from '../features/approvals/domain'
-import type { CompetencyState, DayApproval } from '../features/approvals/types'
-import type { AuditEvent } from '../features/audit/types'
-import { getCorporateToday, getMonthKey } from '../shared/lib/date'
-import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
-import { auditService } from './auditService'
-import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from './postCommit'
+} from '../domain'
+import type { CompetencyState, DayApproval } from '../types'
+import type { AuditEvent } from '../../audit/types'
+import { getCorporateToday, getMonthKey } from '../../../shared/lib/date'
+import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
+import { auditService } from '../../../services/auditService'
+import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from '../../../services/postCommit'
 
 const APPROVAL_STORAGE_KEY = 'sma:day-approvals:v1'
 const COMPETENCY_STORAGE_KEY = 'sma:competencies:v1'

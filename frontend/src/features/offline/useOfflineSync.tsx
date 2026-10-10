@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react'
-import { timeEntryService } from '../../services/timeEntryService'
+import { timeEntryService } from '../time-entries'
 import { OFFLINE_QUEUE_UPDATED_EVENT, offlineQueueService } from '../../services/offlineQueueService'
 import { OfflineSyncContext } from './offlineSyncContext'
 

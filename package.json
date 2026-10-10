@@ -5,7 +5,7 @@
   "scripts": {
     "build": "npm install --prefix frontend && npm --prefix frontend run build",
     "test": "npm run test:api && npm run test:frontend",
-    "test:api": "vitest run api",
+    "test:api": "vitest run --dir api",
     "test:frontend": "npm --prefix frontend test",
     "typecheck": "tsc --noEmit"
   },

@@ -9,7 +9,7 @@ import { ReportsHierarchy } from '../../features/reports/ReportsHierarchy'
 import { formatMinutes, formatSignedMinutes } from '../../features/time-entries/domain'
 import type { ReportEntry, ReportStatus, ReportSupervisor } from '../../features/reports/types'
 import { eachIsoDate, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../../shared/lib/date'
-import { TIME_ENTRY_STORAGE_KEY } from '../../services/timeEntryService'
+import { TIME_ENTRY_STORAGE_KEY } from '../../features/time-entries'
 import { exportDirectorateReport, type DirectorateReportRow } from '../../services/excelExportService'
 
 const statusOptions: Array<{ value: '' | ReportStatus, label: string }> = [

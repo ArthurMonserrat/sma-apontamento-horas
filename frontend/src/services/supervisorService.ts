@@ -7,8 +7,8 @@ import type {
   SupervisorTimeOffRequest,
 } from '../features/supervisor/types'
 import { demoAssignmentSnapshot, demoCollaborator } from '../demo/fixtures/demoData'
-import { TIME_ENTRY_STORAGE_KEY } from './timeEntryService'
-import { normalizeTimeEntry, type TimeEntryStorageV4 } from './timeEntryMigration'
+import { TIME_ENTRY_STORAGE_KEY } from '../features/time-entries'
+import { normalizeTimeEntry, type TimeEntryStorageV4 } from '../features/time-entries'
 import { TIME_OFF_STORAGE_KEY, timeOffService, type TimeOffStorage } from './timeOffService'
 import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 import { getDaysUntilMonthClosing } from '../shared/lib/date'

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { timeEntryService } from '../../services/timeEntryService'
+import { timeEntryService } from '../time-entries'
 import { workloadService } from '../../services/workloadService'
 import type { DailySummary, TimeEntry } from '../../shared/types/domain'
 import { useSession } from '../session/useSession'
