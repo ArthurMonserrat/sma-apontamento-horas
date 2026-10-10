@@ -1,4 +1,6 @@
 export interface VercelRequest {
+  method?: string;
+  body?: unknown;
   query: Record<string, string | string[] | undefined>;
   headers?: Record<string, string | string[] | undefined>;
   cookies?: Record<string, string | undefined>;

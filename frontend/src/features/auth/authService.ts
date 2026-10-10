@@ -1,42 +1,28 @@
-import { supabase } from '../../config/supabaseClient'
 import type { CorporateProfile, DemoRole } from '../session/types'
 
-const PROFILE_NOT_FOUND = 'PGRST116'
-
-function requireSupabaseClient() {
-  if (!supabase) {
-    throw new Error('Supabase não está configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.')
-  }
-  return supabase
+type ProvisionResponse = {
+  profile?: CorporateProfile
+  error?: string
 }
 
 /**
- * Obtém a autorização corporativa pelo e-mail autenticado no Microsoft.
- * Novos usuários entram como colaborador (JIT); o cliente nunca escolhe o papel.
+ * O navegador nunca acessa o Supabase diretamente. O BFF valida a sessão
+ * Microsoft e executa o provisionamento usando a service role no servidor.
  */
 export async function getCorporateProfile(email: string, fullName: string): Promise<CorporateProfile> {
-  const client = requireSupabaseClient()
-  const normalizedEmail = email.trim()
-  const normalizedName = fullName.trim() || normalizedEmail
+  const response = await fetch('/api/provision', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, fullName }),
+  })
 
-  const existing = await client
-    .from('profiles')
-    .select('*')
-    .eq('email', normalizedEmail)
-    .single()
+  const payload = await response.json().catch(() => null) as ProvisionResponse | null
+  if (!response.ok || !payload?.profile) {
+    throw new Error(payload?.error ?? 'O perfil corporativo não foi retornado pelo servidor.')
+  }
 
-  if (existing.data) return existing.data as CorporateProfile
-  if (existing.error && existing.error.code !== PROFILE_NOT_FOUND) throw existing.error
-
-  const created = await client
-    .from('profiles')
-    .insert([{ email: normalizedEmail, full_name: normalizedName, role: 'colaborador', active: true }])
-    .select()
-    .single()
-
-  if (created.error) throw created.error
-  if (!created.data) throw new Error('O perfil corporativo não foi retornado após o provisionamento.')
-  return created.data as CorporateProfile
+  return payload.profile
 }
 
 export function mapCorporateRole(role: CorporateProfile['role']): DemoRole {
