@@ -10,7 +10,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
   }
 })
 
-vi.mock('./AppRoutes', () => ({ AppRoutes: () => <div data-routes="app" /> }))
+vi.mock('./routes/AppRoutes', () => ({ AppRoutes: () => <div data-routes="app" /> }))
 vi.mock('./providers/OnboardingTour', () => ({ OnboardingTour: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('../features/offline/useOfflineSync', () => ({ OfflineSyncProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 

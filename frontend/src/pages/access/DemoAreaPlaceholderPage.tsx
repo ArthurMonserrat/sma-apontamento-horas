@@ -1,8 +1,8 @@
 import { useNavigate, type NavigateFunction } from 'react-router-dom'
-import { BrandMark } from '../shared/ui/BrandMark'
-import { ThemeToggle } from '../app/layouts/ThemeToggle'
-import type { DemoRole } from '../features/session/types'
-import { useSession } from '../features/session/useSession'
+import { BrandMark } from '../../shared/ui/BrandMark'
+import { ThemeToggle } from '../../app/layouts/ThemeToggle'
+import type { DemoRole } from '../../features/session/types'
+import { useSession } from '../../features/session/useSession'
 
 export type DemoPlaceholderRole = Exclude<DemoRole, 'COLLABORATOR'>
 

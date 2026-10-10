@@ -1,4 +1,4 @@
-import type { DemoRole, MicrosoftSessionInput } from '../features/session/types'
+import type { DemoRole, MicrosoftSessionInput } from '../../features/session/types'
 
 export type EcosystemModule = 'BANCO_1' | 'BANCO_2'
 

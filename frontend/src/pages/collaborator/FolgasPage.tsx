@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { ConfirmDialog } from '../shared/ui/ConfirmDialog'
-import { PageContainer } from '../shared/ui/PageContainer'
-import { addDays } from '../shared/lib/date'
-import { TimeOffRequestForm } from '../features/time-off/TimeOffRequestForm'
-import { TimeOffRequestList } from '../features/time-off/TimeOffRequestList'
-import { useTimeOffRequests } from '../features/time-off/useTimeOffRequests'
-import type { TimeOffRequest } from '../features/time-off/types'
-import { fieldClassName } from '../features/time-entries/TimeEntryFields'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
+import { PageContainer } from '../../shared/ui/PageContainer'
+import { addDays } from '../../shared/lib/date'
+import { TimeOffRequestForm } from '../../features/time-off/TimeOffRequestForm'
+import { TimeOffRequestList } from '../../features/time-off/TimeOffRequestList'
+import { useTimeOffRequests } from '../../features/time-off/useTimeOffRequests'
+import type { TimeOffRequest } from '../../features/time-off/types'
+import { fieldClassName } from '../../features/time-entries/TimeEntryFields'
 
 export function FolgasPage() {
   const controller = useTimeOffRequests()

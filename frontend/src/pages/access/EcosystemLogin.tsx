@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useMsal } from '@azure/msal-react'
 import { useNavigate } from 'react-router-dom'
-import { loginRequest } from '../config/msalConfig'
-import { BrandMark } from '../shared/ui/BrandMark'
-import { ThemeToggle } from '../app/layouts/ThemeToggle'
+import { loginRequest } from '../../config/msalConfig'
+import { BrandMark } from '../../shared/ui/BrandMark'
+import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { getEcosystemModulePath, toMicrosoftSessionInput, type EcosystemModule } from './ecosystemModules'
-import { useSession } from '../features/session/useSession'
+import { useSession } from '../../features/session/useSession'
 
 const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePath('BANCO_2')
 

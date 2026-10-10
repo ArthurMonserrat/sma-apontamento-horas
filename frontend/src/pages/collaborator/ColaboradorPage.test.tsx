@@ -1,9 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { demoCollaborator } from '../mocks/demoData'
-import { SessionContext } from '../features/session/sessionContext'
-import type { DemoSession } from '../features/session/types'
+import { demoCollaborator } from '../../mocks/demoData'
+import { SessionContext } from '../../features/session/sessionContext'
+import type { DemoSession } from '../../features/session/types'
 import { ColaboradorPage } from './ColaboradorPage'
 
 const collaboratorSession: DemoSession = {

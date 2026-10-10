@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { PageContainer } from '../shared/ui/PageContainer'
-import { useSession } from '../features/session/useSession'
-import { CriarAviso } from '../features/announcements/CriarAviso'
-import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../features/announcements/types'
-import { ANNOUNCEMENTS_UPDATED_EVENT, canDeleteAnnouncement, deleteAnnouncement, hideAnnouncementForUser, isAnnouncementHiddenForUser, readAnnouncements } from '../services/announcementService'
+import { PageContainer } from '../../shared/ui/PageContainer'
+import { useSession } from '../../features/session/useSession'
+import { CriarAviso } from '../../features/announcements/CriarAviso'
+import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../../features/announcements/types'
+import { ANNOUNCEMENTS_UPDATED_EVENT, canDeleteAnnouncement, deleteAnnouncement, hideAnnouncementForUser, isAnnouncementHiddenForUser, readAnnouncements } from '../../services/announcementService'
 
 const comunicadosMock: Comunicado[] = [
   {

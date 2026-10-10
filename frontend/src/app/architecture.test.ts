@@ -20,6 +20,16 @@ const legacyData = import.meta.glob('../data/**/*.{ts,tsx}', {
   query: '?raw',
   import: 'default',
 })
+const legacyTopLevelPages = import.meta.glob('../pages/*.{ts,tsx}', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+})
+const legacyAppRoutes = import.meta.glob('./AppRoutes*.{ts,tsx}', {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+})
 const legacySharedUtils = import.meta.glob('../shared/utils/**/*.{ts,tsx}', {
   eager: true,
   query: '?raw',
@@ -40,6 +50,8 @@ const legacyDebt = {
   hooks: 0,
   mocks: 2,
   data: 1,
+  topLevelPages: 0,
+  appRoutes: 0,
   sharedUtils: 0,
   storage: 0,
 }
@@ -67,6 +79,8 @@ describe('architectural boundaries', () => {
       hooks: Object.keys(legacyHooks).length,
       mocks: Object.keys(legacyMocks).length,
       data: Object.keys(legacyData).length,
+      topLevelPages: Object.keys(legacyTopLevelPages).length,
+      appRoutes: Object.keys(legacyAppRoutes).length,
       sharedUtils: Object.keys(legacySharedUtils).length,
       storage: Object.keys(legacyStorage).length,
     }).toEqual(legacyDebt)

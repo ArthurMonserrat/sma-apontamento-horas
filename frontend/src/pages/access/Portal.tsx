@@ -1,9 +1,9 @@
 import { useMsal } from '@azure/msal-react'
 import { useNavigate } from 'react-router-dom'
-import { BrandMark } from '../shared/ui/BrandMark'
-import { ThemeToggle } from '../app/layouts/ThemeToggle'
-import { getDemoHomePath } from '../features/session/routePolicy'
-import { useSession } from '../features/session/useSession'
+import { BrandMark } from '../../shared/ui/BrandMark'
+import { ThemeToggle } from '../../app/layouts/ThemeToggle'
+import { getDemoHomePath } from '../../features/session/routePolicy'
+import { useSession } from '../../features/session/useSession'
 
 const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || '/selecao-perfil'
 

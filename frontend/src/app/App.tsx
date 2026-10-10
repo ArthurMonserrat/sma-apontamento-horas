@@ -1,5 +1,5 @@
 import { BrowserRouter } from 'react-router-dom'
-import { AppRoutes } from './AppRoutes'
+import { AppRoutes } from './routes/AppRoutes'
 import { OnboardingTour } from './providers/OnboardingTour'
 import { OfflineSyncProvider } from '../features/offline/useOfflineSync'
 

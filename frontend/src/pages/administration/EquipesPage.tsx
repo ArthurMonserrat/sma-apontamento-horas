@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BrandMark } from '../shared/ui/BrandMark'
-import { DirectorSidebar } from '../app/layouts/DirectorSidebar'
-import { ThemeToggle } from '../app/layouts/ThemeToggle'
-import { useSession } from '../features/session/useSession'
-import { organogramaDEP, type DEPColaborador, type DEPGerencia, type DEPSquad } from '../data/mockDEP'
-import { exportGeneralHoursReport, exportSquadHoursReport } from '../services/excelExportService'
+import { BrandMark } from '../../shared/ui/BrandMark'
+import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
+import { ThemeToggle } from '../../app/layouts/ThemeToggle'
+import { useSession } from '../../features/session/useSession'
+import { organogramaDEP, type DEPColaborador, type DEPGerencia, type DEPSquad } from '../../data/mockDEP'
+import { exportGeneralHoursReport, exportSquadHoursReport } from '../../services/excelExportService'
 
 const ORGANOGRAMA_STORAGE_KEY = 'organograma_editavel_sma'
 const cargoOptions = ['Engenheiro', 'Projetista', 'Desenhista', 'Estagiário', 'Estagiário 4h']

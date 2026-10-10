@@ -2,14 +2,14 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { useProfile } from '../features/collaborator/useProfile'
-import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../mocks/demoData'
+import type { useProfile } from '../../features/collaborator/useProfile'
+import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../../mocks/demoData'
 import { PerfilPage } from './PerfilPage'
 
 const { useProfileMock } = vi.hoisted(() => ({ useProfileMock: vi.fn() }))
-vi.mock('../features/collaborator/useProfile', () => ({ useProfile: useProfileMock }))
+vi.mock('../../features/collaborator/useProfile', () => ({ useProfile: useProfileMock }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }))
-vi.mock('../app/providers/tourContext', () => ({ useTour: () => ({ startTour: vi.fn() }) }))
+vi.mock('../../app/providers/tourContext', () => ({ useTour: () => ({ startTour: vi.fn() }) }))
 
 const signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
 let container: HTMLDivElement

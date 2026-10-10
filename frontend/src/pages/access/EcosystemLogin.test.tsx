@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { ThemeContext } from '../app/providers/themeContext'
-import { DemoSessionProvider } from '../features/session/DemoSessionProvider'
+import { ThemeContext } from '../../app/providers/themeContext'
+import { DemoSessionProvider } from '../../features/session/DemoSessionProvider'
 import { EcosystemLogin } from './EcosystemLogin'
 import { getEcosystemModulePath, toMicrosoftSessionInput } from './ecosystemModules'
 

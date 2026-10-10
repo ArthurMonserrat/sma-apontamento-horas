@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import appRoutesSource from './AppRoutes.tsx?raw'
-import supervisorSource from '../pages/SupervisorPage.tsx?raw'
-import directorSource from '../pages/DiretoriaPage.tsx?raw'
-import teamsSource from '../pages/EquipesPage.tsx?raw'
-import reportsSource from '../pages/RelatoriosPage.tsx?raw'
-import announcementsSource from '../pages/AvisosPage.tsx?raw'
+import appRoutesSource from './routes/AppRoutes?raw'
+import supervisorSource from '../pages/supervisor/SupervisorPage?raw'
+import directorSource from '../pages/administration/DiretoriaPage?raw'
+import teamsSource from '../pages/administration/EquipesPage?raw'
+import reportsSource from '../pages/administration/RelatoriosPage?raw'
+import announcementsSource from '../pages/administration/AvisosPage?raw'
 import sidebarSource from './layouts/DirectorSidebar.tsx?raw'
 
 describe('navegação da gestão', () => {
@@ -16,9 +16,9 @@ describe('navegação da gestão', () => {
   })
 
   it('mantém somente uma opção ativa e impede que cards vizinhos expandam na edição', () => {
-    expect(directorSource).toContain("import { DirectorSidebar } from '../app/layouts/DirectorSidebar'")
-    expect(teamsSource).toContain("import { DirectorSidebar } from '../app/layouts/DirectorSidebar'")
-    expect(reportsSource).toContain("import { DirectorSidebar } from '../app/layouts/DirectorSidebar'")
+    expect(directorSource).toContain("import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'")
+    expect(teamsSource).toContain("import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'")
+    expect(reportsSource).toContain("import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'")
     expect(sidebarSource).toContain('aria-current={isActive ? \'page\' : undefined}')
     expect(teamsSource).toContain('items-start')
     expect(teamsSource).toContain('text-white')
