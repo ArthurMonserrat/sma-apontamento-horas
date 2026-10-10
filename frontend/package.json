@@ -16,6 +16,7 @@
   "dependencies": {
     "@azure/msal-browser": "^5.25.0",
     "@azure/msal-react": "^5.7.2",
+    "@supabase/supabase-js": "^2.117.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "jspdf": "4.2.1",
