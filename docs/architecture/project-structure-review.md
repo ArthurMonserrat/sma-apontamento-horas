@@ -278,6 +278,22 @@ Esta árvore é um mapa de destino, não uma ordem para criar diretórios vazios
 
 Cada movimentação deve ser um commit mecânico separado de alteração de comportamento, com consumidores migrados e compatibilidade preservada. Evitar mover todos os arquivos numa única PR.
 
+## 4.1 Fase de reorganização executada em 10/10/2026
+
+A reorganização mecânica aprovada foi executada sem alterar rotas, textos visíveis, regras de negócio, formatos persistidos ou dependências. O estado atual difere da fotografia usada nos achados acima nos seguintes pontos:
+
+- composição global separada em `app/layouts`, `app/providers` e `app/routes`;
+- páginas agrupadas em `pages/access`, `pages/collaborator`, `pages/supervisor` e `pages/administration`;
+- UI genérica em `shared/ui`, storage em `shared/infrastructure/storage` e datas em `shared/lib/date`;
+- fixtures explicitamente demonstrativas em `demo/fixtures`;
+- adaptadores co-localizados em `features/<capacidade>/infrastructure`;
+- APIs públicas de apontamentos e aprovações adicionadas nos módulos proprietários;
+- dependência invertida removida de `shared/types/domain.ts`;
+- `services/` reduzido a `postCommit.ts`, mantido provisoriamente por ser transversal;
+- teste arquitetural e scripts separados de API/frontend adicionados.
+
+A reorganização melhora ownership, paralelismo entre desenvolvedores e substituição futura de adapters, mas não transforma automaticamente todas as páginas em composição pura. `SupervisorPage`, `DiretoriaPage`, `EquipesPage` e `RelatoriosPage` ainda preservam leituras locais e/ou projeções de negócio para manter o comportamento; a extração dessas responsabilidades continua sendo dívida planejada. Também não resolve os riscos funcionais P0 já documentados: autenticação/autorização, autoridade de aprovação, saldo canônico e persistência durável continuam exigindo especificações próprias.
+
 ## 5. Evolução para operação corporativa
 
 | Capacidade | Situação atual | Condição para amadurecer |
@@ -350,16 +366,16 @@ Para cada fatia: testes de comportamento antes/depois, diff restrito, revisão p
 
 ## 7. Verificações e limites das evidências
 
-- Frontend `npm test -- --reporter=dot`: **341 testes aprovados**, 1 ignorado; 50 arquivos aprovados, 1 ignorado. Teste ignorado é o opt-in da LD real, dependente de anexo externo.
-- Raiz `npm test -- --reporter=dot`: **falhou**, exit 1, por worker de `PerfilPage.test.tsx` não resolver `jsdom` a partir do Vitest da raiz. Demais contagens não tornam essa execução aprovada.
-- Isolamento `npm test -- api`: **6 testes aprovados em 2 arquivos**. Confirma o problema de descoberta/ambiente entre pacotes; não instalar jsdom na raiz como correção automática.
-- Frontend lint e TypeScript: passaram; API `npm run typecheck`: passou. Typecheck sem strict não equivale a validação estrita.
-- Build frontend: **aprovado**, incluindo postbuild e PWA; **1.157 módulos transformados**. Chunk principal de **2.247,24 kB** (gzip **652,55 kB**), aviso de chunks acima de 500 kB e aviso de tempo em plugins. São evidências para medir e dividir carregamento, não motivo para reescrita. Precache de 16 entradas, 3.078,92 KiB.
+- Frontend `npm run test:frontend`: **348 testes aprovados**, 1 ignorado; 52 arquivos aprovados, 1 ignorado. O teste ignorado continua sendo o opt-in da LD real, dependente de anexo externo.
+- API `npm run test:api`: **7 testes aprovados em 3 arquivos**. A opção `--dir api` impede que o Vitest raiz descubra testes do frontend por coincidência de nome.
+- Raiz `npm test`: aprovada e executa explicitamente API e frontend em sequência.
+- Frontend lint e TypeScript: aprovados; raiz/API `npm run typecheck`: aprovada. Typecheck sem strict não equivale a validação estrita.
+- Build frontend: **aprovado**, incluindo postbuild e PWA; **1.159 módulos transformados**. Chunk principal de **2.247,24 kB** (gzip **652,55 kB**) e aviso de chunk acima de 500 kB permanecem. São evidências para medir e dividir carregamento, não motivo para reescrita. Precache de 16 entradas, 3.078,92 KiB.
 - Inspeção de ciclos: nenhum encontrado no escopo estático descrito em R10.
 - Sem instalação/atualização de dependências. Os comandos usaram o `node_modules` disponível: Vite reportou 8.1.4, dentro da faixa declarada; não foi uma reinstalação limpa por lockfile, nem certificação de supply chain.
-- Testes emitiram avisos de client ID MSAL ausente e falhas de storage simuladas. Não foi autenticada uma conta Microsoft real.
+- Smoke visual da landing aprovado em desktop e largura mobile de 390 px, nos temas claro e escuro, sem erro no console. O ambiente local emitiu somente os avisos já conhecidos de `VITE_MSAL_CLIENT_ID` ausente; por isso não foi possível autenticar uma conta Microsoft real nem navegar manualmente pelas áreas protegidas nesta execução. A tabela de paths, papéis permitidos e fallback possui teste automatizado de caracterização; isso não equivale a um smoke visual completo das três áreas.
 - Testes aprovados demonstram os cenários cobertos, não eliminam os achados de autorização, cruzamento entre services ou falha após gravação.
-- `git diff --check`: aprovado. Estado final esperado: somente `docs/architecture/project-structure-review.md` novo; nenhum arquivo funcional modificado. Como o relatório é untracked, foi conferido também diretamente para espaços finais/conflitos, sem staging.
+- `git diff --check`: aprovado após a reorganização. Arquivos gerados em `dist/` e dependências permanecem ignorados.
 
 ## 8. Respostas objetivas
 

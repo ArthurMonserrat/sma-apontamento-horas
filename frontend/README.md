@@ -15,6 +15,35 @@ Frontend corporativo da SM&A com perfis de Colaborador, Supervisor e Diretor/Adm
 - áreas funcionais para Colaborador, Supervisor e Diretoria/Administração;
 - tema claro/escuro e layout responsivo.
 
+## Organização do código
+
+O frontend é um monólito modular organizado por responsabilidade:
+
+```text
+src/
+├── app/
+│   ├── layouts/       # shells e navegação dos perfis
+│   ├── providers/     # tema e composição global
+│   └── routes/        # tabela de rotas e guards
+├── pages/
+│   ├── access/        # entrada e seleção de perfil
+│   ├── collaborator/  # composição das telas do Colaborador
+│   ├── supervisor/    # composição da área da Supervisão
+│   └── administration/ # composição da Diretoria/Administração
+├── features/          # domínio, UI e adaptadores por capacidade
+├── shared/
+│   ├── infrastructure/storage/
+│   ├── lib/date/
+│   └── ui/
+├── demo/fixtures/     # dados exclusivamente demonstrativos
+├── assets/
+└── styles/
+```
+
+`pages` é a fronteira de composição pretendida, enquanto regras e adaptadores novos devem pertencer às respectivas `features`. Nesta fase mecânica, as páginas gerenciais ainda preservam alguma leitura de `localStorage` e lógica de projeção; essa dívida permanece registrada na auditoria para extração incremental, sem alteração de comportamento. `shared` não importa `features`, `pages`, `demo` ou `app`. As fixtures em `demo/fixtures` não são fonte corporativa. O diretório legado `services/` mantém temporariamente apenas `postCommit.ts`, cuja responsabilidade é transversal e ainda não possui owner definitivo.
+
+O teste `src/app/architecture.test.ts` protege a independência de `shared`, os marcos modulares e os diretórios horizontais já migrados. Ele não substitui a extração futura da lógica ainda presente nas páginas gerenciais.
+
 ## Perfis e rotas
 
 | Perfil | Rota inicial | Conteúdo |
@@ -49,11 +78,16 @@ Feriados e eventos profissionais vêm de fontes locais determinísticas. Eles n�
 
 ## Validação
 
+A partir da raiz do repositório:
+
 ```bash
+npm run test:api
+npm run test:frontend
 npm run typecheck
-npm run lint
 npm test
-npm run build
+npm --prefix frontend run lint
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
 ```
 
 O build é gerado em `dist/`, que permanece ignorado pelo Git. `node_modules/` também não é versionado.
