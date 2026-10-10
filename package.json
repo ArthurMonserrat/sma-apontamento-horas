@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "npm install --prefix frontend && npm --prefix frontend run build",
-    "test": "vitest run",
+    "test": "npm run test:api && npm run test:frontend",
+    "test:api": "vitest run api",
+    "test:frontend": "npm --prefix frontend test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
