@@ -6,7 +6,7 @@ import {
   TIME_OFF_STORAGE_KEY,
   type TimeOffStorage,
 } from './timeOffService'
-import type { StorageLike } from './storage'
+import type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
 
 class MemoryStorage implements StorageLike {
   private values = new Map<string, string>()

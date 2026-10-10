@@ -1,4 +1,4 @@
-import { formatDatePtBr } from '../../shared/utils/date'
+import { formatDatePtBr } from '../../shared/lib/date'
 import { formatMinutes } from '../time-entries/domain'
 import type { WorkloadChangeRequest, WorkloadVersion } from './types'
 import { StatusBadge } from '../../components/StatusBadge'

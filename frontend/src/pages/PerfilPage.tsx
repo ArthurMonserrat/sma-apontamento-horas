@@ -7,7 +7,7 @@ import { useProfile } from '../features/collaborator/useProfile'
 import { ProfileSummary } from '../features/profile/ProfileSummary'
 import { WorkloadHistory } from '../features/workloads/WorkloadHistory'
 import { WorkloadRequestForm, type WorkloadFormField } from '../features/workloads/WorkloadRequestForm'
-import { getCorporateToday } from '../shared/utils/date'
+import { getCorporateToday } from '../shared/lib/date'
 import { useTour } from '../components/tourContext'
 
 type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; justification: string }

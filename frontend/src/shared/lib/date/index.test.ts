@@ -8,7 +8,7 @@ import {
   getMonthRange,
   isIsoDate,
   isWeekend,
-} from './date'
+} from './index'
 
 describe('prazos de fechamento', () => {
   it('calcula o último dia do mês e os dias restantes', () => {

@@ -6,8 +6,8 @@ import type { AssignmentSnapshot } from '../features/squads/types'
 import type { CreateTimeEntryData, DisciplineCode, DocumentTypeCode, TimeEntry } from '../features/time-entries/types'
 import { expandTimeEntryDates } from '../features/time-entries/domain'
 import type { WorkloadVersion } from '../features/workloads/types'
-import { isIsoDate } from '../shared/utils/date'
-import { createBrowserStorage, type StorageLike } from './storage'
+import { isIsoDate } from '../shared/lib/date'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 import { auditService } from './auditService'
 import { dayApprovalService } from './dayApprovalService'
 import { profileService } from './profileService'
@@ -26,7 +26,7 @@ import {
 } from './timeEntryMigration'
 
 export { LEGACY_V1_TIME_ENTRY_STORAGE_KEY, LEGACY_V2_TIME_ENTRY_STORAGE_KEY, LEGACY_V3_TIME_ENTRY_STORAGE_KEY } from './timeEntryMigration'
-export type { StorageLike } from './storage'
+export type { StorageLike } from '../shared/infrastructure/storage/browserStorage'
 
 export const TIME_ENTRY_STORAGE_KEY = 'apontamentos_sma'
 

@@ -9,8 +9,8 @@ import {
 } from '../features/approvals/domain'
 import type { CompetencyState, DayApproval } from '../features/approvals/types'
 import type { AuditEvent } from '../features/audit/types'
-import { getCorporateToday, getMonthKey } from '../shared/utils/date'
-import { createBrowserStorage, type StorageLike } from './storage'
+import { getCorporateToday, getMonthKey } from '../shared/lib/date'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 import { auditService } from './auditService'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from './postCommit'
 

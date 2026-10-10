@@ -4,7 +4,7 @@ import type {
   TimeEntryValidationErrors,
 } from '../../shared/types/domain'
 import { MAX_CLIENT_NAME_LENGTH } from '../../config/business'
-import { compareIsoDates, eachIsoDate, isIsoDate, isWeekend } from '../../shared/utils/date'
+import { compareIsoDates, eachIsoDate, isIsoDate, isWeekend } from '../../shared/lib/date'
 import { isAllowedDocumentType, isDisciplineCode, isLdDocumentSnapshot } from './documentCatalog'
 import type { TimeEntryStatus } from './types'
 

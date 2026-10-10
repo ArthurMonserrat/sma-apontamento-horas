@@ -3,7 +3,7 @@ import type { CollaboratorProfile } from '../features/profile/types'
 import type { AssignmentSnapshot } from '../features/squads/types'
 import { demoCollaborator, demoSquads, demoSupervisors } from '../mocks/demoData'
 import { auditService } from './auditService'
-import { createBrowserStorage, type StorageLike } from './storage'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from './postCommit'
 
 const PROFILE_STORAGE_KEY = 'sma:collaborator-profile:v1'

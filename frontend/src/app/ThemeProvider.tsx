@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ThemeContext, type Theme } from './themeContext'
-import { createBrowserStorage } from '../services/storage'
+import { createBrowserStorage } from '../shared/infrastructure/storage/browserStorage'
 
 const themeStorage = createBrowserStorage()
 

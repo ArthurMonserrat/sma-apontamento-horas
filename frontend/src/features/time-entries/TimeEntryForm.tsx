@@ -1,6 +1,6 @@
 import { useEffect, useRef, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getCorporateToday } from '../../shared/utils/date'
+import { getCorporateToday } from '../../shared/lib/date'
 import { FieldError, fieldClassName, TimeEntryFields } from './TimeEntryFields'
 import { useTimeEntryForm } from './useTimeEntryForm'
 import { LdSection } from '../document-list/LdSection'

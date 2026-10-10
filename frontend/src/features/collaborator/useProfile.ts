@@ -5,7 +5,7 @@ import type { WorkloadChangeRequest, WorkloadVersion } from '../workloads/types'
 import { profileService } from '../../services/profileService'
 import { squadService } from '../../services/squadService'
 import { workloadService } from '../../services/workloadService'
-import { getCorporateToday } from '../../shared/utils/date'
+import { getCorporateToday } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 
 type ProfileData = {

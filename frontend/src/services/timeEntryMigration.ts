@@ -2,7 +2,7 @@ import { MAX_CLIENT_NAME_LENGTH, MAX_ENTRY_MINUTES, MAX_PROJECT_CODE_LENGTH } fr
 import type { AssignmentSnapshot } from '../features/squads/types'
 import type { DisciplineCode, DocumentTypeCode, TimeEntry } from '../features/time-entries/types'
 import { isAllowedDocumentType, isDisciplineCode, isLdDocumentSnapshot } from '../features/time-entries/documentCatalog'
-import { isIsoDate } from '../shared/utils/date'
+import { isIsoDate } from '../shared/lib/date'
 
 export const LEGACY_V1_TIME_ENTRY_STORAGE_KEY = 'sma:time-entries:v1'
 export const LEGACY_V2_TIME_ENTRY_STORAGE_KEY = 'sma:time-entries:v2'

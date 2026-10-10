@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PageContainer } from '../components/PageContainer'
-import { addDays } from '../shared/utils/date'
+import { addDays } from '../shared/lib/date'
 import { TimeOffRequestForm } from '../features/time-off/TimeOffRequestForm'
 import { TimeOffRequestList } from '../features/time-off/TimeOffRequestList'
 import { useTimeOffRequests } from '../features/time-off/useTimeOffRequests'

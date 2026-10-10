@@ -1,4 +1,4 @@
-import { CORPORATE_TIME_ZONE } from '../../config/business'
+import { CORPORATE_TIME_ZONE } from '../../../config/business'
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/
 

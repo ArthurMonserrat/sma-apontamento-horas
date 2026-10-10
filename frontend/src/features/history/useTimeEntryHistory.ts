@@ -5,7 +5,7 @@ import { timeEntryService } from '../../services/timeEntryService'
 import type { DayApproval } from '../approvals/types'
 import { isDayApprovalApplicable } from '../approvals/domain'
 import type { DisciplineCode, DocumentTypeCode, TimeEntry } from '../time-entries/types'
-import { getCorporateToday, getMonthKey, isIsoDate } from '../../shared/utils/date'
+import { getCorporateToday, getMonthKey, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import {
   getInitialHistoryPagination,

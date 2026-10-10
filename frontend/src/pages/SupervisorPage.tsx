@@ -16,7 +16,7 @@ import { useSupervisorDashboard } from '../features/supervisor/useSupervisorDash
 import { ApprovalDeadlineBanner } from '../features/supervisor/ApprovalDeadlineBanner'
 import { useSession } from '../features/session/useSession'
 import { formatMinutes } from '../features/time-entries/domain'
-import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../shared/utils/date'
+import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../shared/lib/date'
 import { getAllColaboradores } from '../data/mockDEP'
 import { useTour } from '../components/tourContext'
 import { AvisosPage } from './AvisosPage'

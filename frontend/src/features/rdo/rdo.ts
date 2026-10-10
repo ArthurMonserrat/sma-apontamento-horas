@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf'
 import { disciplines } from '../time-entries/documentCatalog'
 import { areValidDurationParts, formatMinutes } from '../time-entries/domain'
 import type { LdDocumentSnapshot } from '../time-entries/types'
-import { formatDatePtBr, isIsoDate } from '../../shared/utils/date'
+import { formatDatePtBr, isIsoDate } from '../../shared/lib/date'
 
 type RdoFormData = {
   entryDate?: string

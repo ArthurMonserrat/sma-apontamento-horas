@@ -7,7 +7,7 @@ import { formatMinutes } from '../features/time-entries/domain'
 import type { TimeEntry } from '../features/time-entries/types'
 import { normalizeTimeEntry, type TimeEntryStorageV4 } from './timeEntryMigration'
 import { TIME_ENTRY_STORAGE_KEY } from './timeEntryService'
-import { createBrowserStorage, type StorageLike } from './storage'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 
 const COLLABORATOR_PROFILE_STORAGE_KEY = 'sma:collaborator-profile:v1'
 

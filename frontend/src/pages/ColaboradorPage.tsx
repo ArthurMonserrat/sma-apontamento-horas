@@ -9,7 +9,7 @@ import { DayDetails } from '../features/calendar/DayDetails'
 import { BalancePeriodFilter } from '../features/calendar/BalancePeriodFilter'
 import { useSession } from '../features/session/useSession'
 import { formatMinutes } from '../features/time-entries/domain'
-import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../shared/utils/date'
+import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../shared/lib/date'
 
 export function ColaboradorPage() {
   const { profile } = useSession()

@@ -25,6 +25,10 @@ const legacySharedUtils = import.meta.glob('../shared/utils/**/*.{ts,tsx}', {
   query: '?raw',
   import: 'default',
 })
+const legacyStorage = {
+  ...import.meta.glob('../services/storage.ts', { eager: true, query: '?raw', import: 'default' }),
+  ...import.meta.glob('../services/storage.test.ts', { eager: true, query: '?raw', import: 'default' }),
+}
 const sharedSources = import.meta.glob('../shared/**/*.{ts,tsx}', {
   eager: true,
   query: '?raw',
@@ -36,7 +40,8 @@ const legacyDebt = {
   hooks: 1,
   mocks: 2,
   data: 1,
-  sharedUtils: 2,
+  sharedUtils: 0,
+  storage: 0,
 }
 
 const allowedSharedFeatureImports = [
@@ -63,6 +68,7 @@ describe('architectural boundaries', () => {
       mocks: Object.keys(legacyMocks).length,
       data: Object.keys(legacyData).length,
       sharedUtils: Object.keys(legacySharedUtils).length,
+      storage: Object.keys(legacyStorage).length,
     }).toEqual(legacyDebt)
   })
 

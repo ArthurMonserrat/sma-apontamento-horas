@@ -1,4 +1,4 @@
-import { getMonthRange, isIsoDate } from '../../shared/utils/date'
+import { getMonthRange, isIsoDate } from '../../shared/lib/date'
 import type { TimeEntryStatus } from '../time-entries/types'
 
 export type HistoryPeriodMode = 'DAY' | 'MONTH' | 'RANGE' | 'ALL'

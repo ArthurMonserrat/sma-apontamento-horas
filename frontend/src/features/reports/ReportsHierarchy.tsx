@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { formatDatePtBr } from '../../shared/utils/date'
+import { formatDatePtBr } from '../../shared/lib/date'
 import { formatMinutes, formatSignedMinutes } from '../time-entries/domain'
 import type { ReportCollaborator, ReportSupervisor } from './types'
 

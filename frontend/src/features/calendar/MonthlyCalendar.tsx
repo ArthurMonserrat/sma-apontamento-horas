@@ -1,5 +1,5 @@
 import { formatMinutes } from '../time-entries/domain'
-import { formatDatePtBr } from '../../shared/utils/date'
+import { formatDatePtBr } from '../../shared/lib/date'
 import { getMonthGridCells, shiftMonth } from './domain'
 import type { DailySummary } from './types'
 import { CalendarLegend } from './CalendarLegend'

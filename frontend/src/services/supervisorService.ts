@@ -10,8 +10,8 @@ import { demoAssignmentSnapshot, demoCollaborator } from '../mocks/demoData'
 import { TIME_ENTRY_STORAGE_KEY } from './timeEntryService'
 import { normalizeTimeEntry, type TimeEntryStorageV4 } from './timeEntryMigration'
 import { TIME_OFF_STORAGE_KEY, timeOffService, type TimeOffStorage } from './timeOffService'
-import { createBrowserStorage, type StorageLike } from './storage'
-import { getDaysUntilMonthClosing } from '../shared/utils/date'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
+import { getDaysUntilMonthClosing } from '../shared/lib/date'
 
 export const SUPERVISOR_APPROVAL_STORAGE_KEY = 'sma:supervisor-approvals:v1'
 

@@ -1,4 +1,4 @@
-import { compareIsoDates, eachIsoDate } from '../../shared/utils/date'
+import { compareIsoDates, eachIsoDate } from '../../shared/lib/date'
 import type { TimeEntry } from '../time-entries/types'
 import type { TimeOffRequest } from '../time-off/types'
 import { requestAppliesToDate } from '../time-off/types'

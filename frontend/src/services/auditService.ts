@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../features/audit/types'
-import { createBrowserStorage, type StorageLike } from './storage'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 
 const AUDIT_STORAGE_KEY = 'sma:audit-events:v1'
 

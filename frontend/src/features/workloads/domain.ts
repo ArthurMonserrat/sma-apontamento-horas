@@ -1,4 +1,4 @@
-import { isWeekend } from '../../shared/utils/date'
+import { isWeekend } from '../../shared/lib/date'
 import type { WorkloadVersion } from './types'
 
 export function getWorkloadForDate(versions: WorkloadVersion[], date: string) {

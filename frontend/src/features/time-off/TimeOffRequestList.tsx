@@ -1,5 +1,5 @@
 import type { TimeOffRequest } from './types'
-import { formatDatePtBr } from '../../shared/utils/date'
+import { formatDatePtBr } from '../../shared/lib/date'
 import { StatusBadge } from '../../components/StatusBadge'
 import { timeOffStatusPresentation } from '../status/presentation'
 

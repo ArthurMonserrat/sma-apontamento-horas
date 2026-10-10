@@ -1,4 +1,4 @@
-import { getDaysUntilMonthClosing } from '../../shared/utils/date'
+import { getDaysUntilMonthClosing } from '../../shared/lib/date'
 
 type ApprovalDeadlineBannerProps = {
   pendingCount: number

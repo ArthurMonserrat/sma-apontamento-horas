@@ -2,11 +2,11 @@ import type { AuditEvent, SupervisorNotification } from '../features/audit/types
 import type { AssignmentSnapshot } from '../features/squads/types'
 import type { AbsenceType, TimeOffRequest } from '../features/time-off/types'
 import { requestOverlapsRange } from '../features/time-off/types'
-import { getCorporateToday, isIsoDate } from '../shared/utils/date'
+import { getCorporateToday, isIsoDate } from '../shared/lib/date'
 import { auditService } from './auditService'
 import { notificationService } from './notificationService'
 import { profileService } from './profileService'
-import { createBrowserStorage, type StorageLike } from './storage'
+import { createBrowserStorage, type StorageLike } from '../shared/infrastructure/storage/browserStorage'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from './postCommit'
 
 export const TIME_OFF_STORAGE_KEY = 'ausencias_sma'

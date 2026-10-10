@@ -5,7 +5,7 @@ import { entryDateAvailabilityService } from '../../services/entryDateAvailabili
 import { timeEntryService } from '../../services/timeEntryService'
 import type { CreateTimeEntryData, TimeEntry, TimeEntryValidationErrors } from './types'
 import { expandTimeEntryDates } from './domain'
-import { getCorporateToday, isIsoDate } from '../../shared/utils/date'
+import { getCorporateToday, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } from './domain'
 import { applyLdDocument, type LdDocument } from '../document-list/ldImport'

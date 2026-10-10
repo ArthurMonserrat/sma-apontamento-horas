@@ -8,7 +8,7 @@ import { organogramaDEP } from '../data/mockDEP'
 import { ReportsHierarchy } from '../features/reports/ReportsHierarchy'
 import { formatMinutes, formatSignedMinutes } from '../features/time-entries/domain'
 import type { ReportEntry, ReportStatus, ReportSupervisor } from '../features/reports/types'
-import { eachIsoDate, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../shared/utils/date'
+import { eachIsoDate, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../shared/lib/date'
 import { TIME_ENTRY_STORAGE_KEY } from '../services/timeEntryService'
 import { exportDirectorateReport, type DirectorateReportRow } from '../services/excelExportService'
 

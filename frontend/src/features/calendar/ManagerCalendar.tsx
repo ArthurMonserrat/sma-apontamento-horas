@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Squad } from '../squads/types'
 import type { SupervisorPendingEntry } from '../supervisor/types'
 import { formatMinutes } from '../time-entries/domain'
-import { eachIsoDate, formatDatePtBr, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../../shared/utils/date'
+import { eachIsoDate, formatDatePtBr, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../../shared/lib/date'
 import { MonthlyCalendar } from './MonthlyCalendar'
 import type { CalendarVisualState, DailySummary } from './types'
 

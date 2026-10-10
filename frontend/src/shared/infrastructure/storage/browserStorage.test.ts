@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createResilientStorage, type StorageLike } from './storage'
+import { createResilientStorage, type StorageLike } from './browserStorage'
 
 describe('storage resiliente', () => {
   it('usa memória quando o getter do storage primário lança', () => {

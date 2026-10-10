@@ -1,6 +1,6 @@
 import type { DayApproval } from '../approvals/types'
 import type { CalendarEvent, DailySummary } from './types'
-import { formatDatePtBr } from '../../shared/utils/date'
+import { formatDatePtBr } from '../../shared/lib/date'
 import { formatMinutes, formatSignedMinutes } from '../time-entries/domain'
 import type { TimeOffRequest } from '../time-off/types'
 import { CalendarStateBadge } from './CalendarStateBadge'

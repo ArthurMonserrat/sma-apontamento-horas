@@ -1,4 +1,4 @@
-import { formatDatePtBr } from '../../shared/utils/date'
+import { formatDatePtBr } from '../../shared/lib/date'
 import type { CalendarEvent, PeriodSummary } from '../calendar/types'
 import type { TimeOffRequest } from '../time-off/types'
 import { formatMinutes, formatSignedMinutes } from '../time-entries/domain'
