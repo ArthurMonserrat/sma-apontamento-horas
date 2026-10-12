@@ -103,6 +103,8 @@ O cliente Supabase será configurado com `flowType: 'pkce'`. O fluxo PKCE dever�
 
 O redirecionamento será aceito somente para URLs explicitamente cadastradas no Supabase Auth e no aplicativo Azure. O ambiente de produção e o ambiente local terão listas separadas; não será permitido redirecionamento arbitrário recebido do navegador.
 
+Como o frontend atual usa `HashRouter`, o redirect efetivo deverá apontar para a rota hash cadastrada (por exemplo, `https://<origin>/#/auth/callback`) ou para uma rota equivalente previamente validada pelo ambiente. A implementação não poderá assumir uma rota pathname que o roteador atual não consiga resolver.
+
 ### 4.2 Callback
 
 Será criada uma rota pública `/auth/callback` responsável por:

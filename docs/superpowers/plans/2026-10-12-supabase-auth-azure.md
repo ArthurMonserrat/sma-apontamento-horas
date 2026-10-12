@@ -13,11 +13,12 @@
 ## Global Constraints
 
 - O Supabase Auth será a autoridade de sessão corporativa; o Microsoft Entra ID será apenas o provedor externo configurado no Supabase Auth.
-- O fluxo OAuth usará exatamente `openid profile email`, `flowType: 'pkce'` e redirects explicitamente allowlisted por ambiente.
+- O fluxo OAuth usará exatamente `openid profile email`, `flowType: 'pkce'` e redirects explicitamente allowlisted por ambiente; como o app usa `HashRouter`, o callback será cadastrado na forma hash efetivamente resolvida pelo roteador.
 - A autorização corporativa ficará bloqueada por padrão até a integração definitiva com `access_preapprovals`, identidade Microsoft validada e provisionamento idempotente.
 - `CORPORATE_AUTHORIZATION_READY=true` isoladamente nunca poderá liberar acesso nesta etapa; o código manterá um bloqueio de implementação até que esses três mecanismos existam e sejam revisados.
 - Um perfil existente, isoladamente, não poderá liberar acesso mesmo quando a configuração de ambiente estiver como `true`.
 - O modo demonstrativo continuará com `isDemo: true`, dados locais e isolamento explícito de endpoints corporativos.
+- A entrada explícita para o modo demonstrativo continuará disponível sem transformar a demo em autenticação corporativa.
 - O `SUPABASE_SERVICE_ROLE_KEY` permanecerá somente em código server-side e nunca será exposto em `VITE_*`, bundle, localStorage ou testes de navegador.
 - MSAL/BFF legado só poderá operar com `ENABLE_LEGACY_MSAL=true` em ambiente não produtivo; em produção os endpoints deverão bloquear sem criar sessão, cookie ou perfil.
 - Nenhuma migration, alteração de dados, alteração dos cinco pré-cadastros, deploy, push ou merge será executada nesta etapa de implementação local.
@@ -50,7 +51,7 @@ Arquivos novos e papéis definidos antes da implementação:
 
 Arquivos existentes a modificar somente quando o teste exigir:
 
-- `frontend/src/pages/access/EcosystemLogin.tsx` — iniciar somente OAuth Supabase; falha não usa fallback MSAL.
+- `frontend/src/pages/access/EcosystemLogin.tsx` — iniciar somente OAuth Supabase; falha não usa fallback MSAL e mantém entrada explícita da demonstração.
 - `frontend/src/app/routes/AppRoutes.tsx` — registrar `/auth/callback` e manter rotas demo.
 - `frontend/src/features/session/DemoSessionProvider.tsx` — separar sessão Supabase de demo, observar expiração e remover restauração MSAL corporativa.
 - `frontend/src/features/session/ProtectedRoute.tsx`, `authGuard.ts`, `types.ts` — aceitar apenas demo explícita ou perfil Supabase já autorizado.
@@ -120,7 +121,7 @@ Arquivos existentes a modificar somente quando o teste exigir:
 - Test: `frontend/src/features/auth/infrastructure/supabaseSessionService.test.ts`, `frontend/src/pages/access/AuthCallbackPage.test.tsx`
 
 **Interfaces:**
-- `startCorporateOAuth(): Promise<{ error: Error | null }>` — chama `signInWithOAuth({ provider: 'azure', options: { redirectTo, scopes: 'openid profile email' } })`.
+- `startCorporateOAuth(): Promise<{ error: Error | null }>` — chama `signInWithOAuth({ provider: 'azure', options: { redirectTo, scopes: 'openid profile email' } })`, usando callback hash allowlisted quando o `HashRouter` estiver ativo.
 - `exchangeCallbackCode(code: string): Promise<{ error: Error | null }>` — uma troca por código, protegida contra repetição e com URL sensível limpa.
 - `getCurrentSession(): Promise<Session | null>`, `subscribe(listener): { unsubscribe(): void }`, `signOut(): Promise<{ error: Error | null }>`.
 - Callback redireciona autorizado para `/` e falha segura para `/?authError=unauthorized`; não aceita `returnTo` arbitrário.
