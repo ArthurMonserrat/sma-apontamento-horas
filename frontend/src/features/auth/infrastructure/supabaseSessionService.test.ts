@@ -56,10 +56,23 @@ describe('supabaseSessionService', () => {
 
   it('troca o mesmo código somente uma vez e remove parâmetros sensíveis da URL', async () => {
     await expect(exchangeCallbackCode('oauth-code')).resolves.toEqual({ error: null })
-    await expect(exchangeCallbackCode('oauth-code')).resolves.toEqual({ error: expect.any(Error) })
+    await expect(exchangeCallbackCode('oauth-code')).resolves.toEqual({ error: null })
 
     expect(authMock.exchangeCodeForSession).toHaveBeenCalledTimes(1)
     expect(window.location.search).toBe('')
+  })
+
+  it('reutiliza resultado quando StrictMode dispara duas trocas concorrentes', async () => {
+    let resolveExchange: ((value: { error: null }) => void) | undefined
+    authMock.exchangeCodeForSession.mockReturnValueOnce(new Promise((resolve) => { resolveExchange = resolve }))
+
+    const first = exchangeCallbackCode('concurrent-code')
+    const second = exchangeCallbackCode('concurrent-code')
+    resolveExchange?.({ error: null })
+
+    await expect(first).resolves.toEqual({ error: null })
+    await expect(second).resolves.toEqual({ error: null })
+    expect(authMock.exchangeCodeForSession).toHaveBeenCalledTimes(1)
   })
 
   it('propaga falha de troca sem tentar um segundo exchange', async () => {

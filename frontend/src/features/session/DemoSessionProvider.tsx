@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { demoSessionService } from './infrastructure/demoSessionService'
 import { demoCollaborator } from '../../demo/fixtures/demoData'
@@ -34,40 +34,52 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<CollaboratorProfile | null>(null)
   const [corporateProfile, setCorporateProfile] = useState<NonNullable<DemoSession['corporateProfile']> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const modeRef = useRef<'unknown' | 'none' | 'demo' | 'corporate'>('unknown')
+  const corporateRequestRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
+    const localSession = demoSessionService.restore()
 
-    async function clearCorporateSession() {
+    if (localSession) {
+      modeRef.current = 'demo'
+      corporateRequestRef.current += 1
+      setSession(localSession)
+      setCorporateProfile(null)
+      setIsLoading(false)
+    } else {
+      modeRef.current = 'none'
+    }
+
+    async function clearCorporateSession(requestId: number) {
+      if (modeRef.current !== 'corporate' || corporateRequestRef.current !== requestId) return
       await signOutSupabase()
-      if (cancelled) return
+      if (cancelled || modeRef.current !== 'corporate' || corporateRequestRef.current !== requestId) return
+      modeRef.current = 'none'
       setSession(null)
       setCorporateProfile(null)
     }
 
     async function hydrateCorporateSession(nextSession: Session) {
+      if (modeRef.current === 'demo') return
+      modeRef.current = 'corporate'
+      const requestId = ++corporateRequestRef.current
       try {
         const loadedProfile = await getCorporateProfile(nextSession.access_token)
         const role = mapCorporateRole(loadedProfile.role)
         if (!role || !loadedProfile.active) throw new Error('Perfil corporativo sem autorização ativa.')
-        if (!cancelled) {
+        if (!cancelled && modeRef.current === 'corporate' && corporateRequestRef.current === requestId) {
           const restored = buildCorporateSession(nextSession, role, loadedProfile)
           setSession(restored)
           setCorporateProfile(loadedProfile)
         }
       } catch {
-        await clearCorporateSession()
+        await clearCorporateSession(requestId)
       }
     }
 
     async function restoreSession() {
-      const localSession = demoSessionService.restore()
       if (localSession) {
-        if (!cancelled) {
-          setSession(localSession)
-          setCorporateProfile(null)
-          setIsLoading(false)
-        }
         return
       }
 
@@ -78,7 +90,10 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
     void restoreSession()
     const subscription = subscribeSupabase((event, nextSession) => {
+      if (modeRef.current === 'demo') return
       if (event === 'SIGNED_OUT') {
+        corporateRequestRef.current += 1
+        modeRef.current = 'none'
         setSession(null)
         setCorporateProfile(null)
         return
@@ -114,12 +129,16 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const signIn = (role: DemoRole) => {
     if (session?.authProvider === 'supabase') return session
     const created = demoSessionService.signIn(role)
+    modeRef.current = 'demo'
+    corporateRequestRef.current += 1
     setSession(created)
     setCorporateProfile(null)
     return created
   }
 
   const signOut = () => {
+    modeRef.current = 'none'
+    corporateRequestRef.current += 1
     void signOutSupabase()
     demoSessionService.signOut()
     setSession(null)

@@ -2,7 +2,9 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { getSupabaseBrowserConfig } from '../../../config/supabaseConfig'
 import { supabaseAuthClient } from './supabaseAuthClient'
 
-const exchangedCallbackCodes = new Set<string>()
+type CallbackExchangeResult = { error: Error | null }
+
+const exchangedCallbackResults = new Map<string, Promise<CallbackExchangeResult>>()
 
 function asError(value: unknown, fallback: string): Error {
   return value instanceof Error ? value : new Error(fallback)
@@ -25,7 +27,7 @@ export function clearAuthCallbackUrl(): void {
 }
 
 export function resetCallbackExchangeState(): void {
-  exchangedCallbackCodes.clear()
+  exchangedCallbackResults.clear()
 }
 
 export async function startCorporateOAuth(): Promise<{ error: Error | null }> {
@@ -44,23 +46,26 @@ export async function startCorporateOAuth(): Promise<{ error: Error | null }> {
   return { error: error ? asError(error, 'Não foi possível iniciar o login corporativo.') : null }
 }
 
-export async function exchangeCallbackCode(code: string): Promise<{ error: Error | null }> {
+export async function exchangeCallbackCode(code: string): Promise<CallbackExchangeResult> {
   if (!supabaseAuthClient || !code.trim()) {
     clearAuthCallbackUrl()
     return { error: new Error('Código de callback inválido.') }
   }
-  if (exchangedCallbackCodes.has(code)) {
-    clearAuthCallbackUrl()
-    return { error: new Error('Código de callback já processado.') }
-  }
+  const previousExchange = exchangedCallbackResults.get(code)
+  if (previousExchange) return previousExchange
 
-  exchangedCallbackCodes.add(code)
-  try {
-    const { error } = await supabaseAuthClient.auth.exchangeCodeForSession(code)
-    return { error: error ? asError(error, 'Não foi possível concluir o callback.') : null }
-  } finally {
-    clearAuthCallbackUrl()
-  }
+  const exchange = (async (): Promise<CallbackExchangeResult> => {
+    try {
+      const { error } = await supabaseAuthClient.auth.exchangeCodeForSession(code)
+      return { error: error ? asError(error, 'Não foi possível concluir o callback.') : null }
+    } catch (error) {
+      return { error: asError(error, 'Não foi possível concluir o callback.') }
+    } finally {
+      clearAuthCallbackUrl()
+    }
+  })()
+  exchangedCallbackResults.set(code, exchange)
+  return exchange
 }
 
 export async function getCurrentSession(): Promise<Session | null> {

@@ -5,14 +5,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthCallbackPage } from './AuthCallbackPage'
 import { readCallbackCode } from './authCallback'
 
-const { navigateMock, exchangeMock } = vi.hoisted(() => ({
+const { navigateMock, exchangeMock, clearUrlMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   exchangeMock: vi.fn(),
+  clearUrlMock: vi.fn(),
 }))
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => navigateMock }))
 vi.mock('../../features/auth/infrastructure/supabaseSessionService', () => ({
   exchangeCallbackCode: exchangeMock,
+  clearAuthCallbackUrl: clearUrlMock,
 }))
 
 let container: HTMLDivElement
@@ -36,6 +38,7 @@ afterEach(() => {
 describe('AuthCallbackPage', () => {
   it('extrai código válido da URL', () => {
     expect(readCallbackCode('?code=oauth-code&state=state')).toBe('oauth-code')
+    expect(readCallbackCode('', '#/auth/callback?code=hash-code&state=state')).toBe('hash-code')
   })
 
   it('nega callback sem código e não tenta trocar sessão', async () => {
@@ -44,6 +47,7 @@ describe('AuthCallbackPage', () => {
     await act(async () => root.render(<AuthCallbackPage />))
 
     expect(exchangeMock).not.toHaveBeenCalled()
+    expect(clearUrlMock).toHaveBeenCalledTimes(1)
     expect(navigateMock).toHaveBeenCalledWith('/?authError=invalid_callback', { replace: true })
   })
 
