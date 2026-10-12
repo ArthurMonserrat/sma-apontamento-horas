@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'cookie';
 import type { VercelRequest, VercelResponse } from './types.js';
+import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -50,6 +51,7 @@ function isKnownRole(value: unknown): value is 'colaborador' | 'supervisor' | 'd
 }
 
 export async function provision(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (!assertLegacyMsalEnabled(req, res)) return;
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
     return;

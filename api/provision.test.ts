@@ -15,6 +15,8 @@ import provision from './provision';
 const originalEnvironment = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  ENABLE_LEGACY_MSAL: process.env.ENABLE_LEGACY_MSAL,
+  NODE_ENV: process.env.NODE_ENV,
 };
 
 function createResponse() {
@@ -50,6 +52,8 @@ beforeEach(() => {
   }));
   process.env.SUPABASE_URL = 'https://supabase.example.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'server-only-key';
+  process.env.ENABLE_LEGACY_MSAL = 'true';
+  process.env.NODE_ENV = 'test';
   maybeSingle.mockReset();
   from.mockClear();
   createClient.mockClear();
@@ -61,6 +65,10 @@ afterEach(() => {
   else process.env.SUPABASE_URL = originalEnvironment.SUPABASE_URL;
   if (originalEnvironment.SUPABASE_SERVICE_ROLE_KEY === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   else process.env.SUPABASE_SERVICE_ROLE_KEY = originalEnvironment.SUPABASE_SERVICE_ROLE_KEY;
+  if (originalEnvironment.ENABLE_LEGACY_MSAL === undefined) delete process.env.ENABLE_LEGACY_MSAL;
+  else process.env.ENABLE_LEGACY_MSAL = originalEnvironment.ENABLE_LEGACY_MSAL;
+  if (originalEnvironment.NODE_ENV === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = originalEnvironment.NODE_ENV;
 });
 
 describe('provisionamento corporativo fail-closed', () => {

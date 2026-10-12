@@ -1,5 +1,6 @@
 import { parse } from 'cookie';
 import type { VercelRequest, VercelResponse } from './types.js';
+import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
 
 type MicrosoftProfile = {
   id?: string;
@@ -16,6 +17,7 @@ function getSessionToken(req: VercelRequest): string | null {
 }
 
 export async function me(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (!assertLegacyMsalEnabled(req, res)) return;
   const accessToken = getSessionToken(req);
   if (!accessToken) {
     res.status(401).json({ isAuthenticated: false });
