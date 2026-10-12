@@ -2,16 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import { parse } from 'cookie';
 import type { VercelRequest, VercelResponse } from './types.js';
 
-type ProvisionBody = {
-  email?: unknown;
-  fullName?: unknown;
-};
-
-function readBody(req: VercelRequest): ProvisionBody {
-  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return {};
-  return req.body as ProvisionBody;
-}
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -55,18 +45,13 @@ async function findByEmail(supabase: ReturnType<typeof getSupabaseAdmin>, email:
   return supabase.from('profiles').select('*').eq('email', email).maybeSingle();
 }
 
+function isKnownRole(value: unknown): value is 'colaborador' | 'supervisor' | 'diretor' {
+  return value === 'colaborador' || value === 'supervisor' || value === 'diretor';
+}
+
 export async function provision(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
-    return;
-  }
-
-  const { email, fullName } = readBody(req);
-  const normalizedEmail = isNonEmptyString(email) ? email.trim().toLowerCase() : '';
-  const normalizedFullName = isNonEmptyString(fullName) ? fullName.trim() : '';
-
-  if (!normalizedEmail || !normalizedFullName) {
-    res.status(400).json({ error: 'email and fullName are required.' });
     return;
   }
 
@@ -76,43 +61,29 @@ export async function provision(req: VercelRequest, res: VercelResponse): Promis
       res.status(401).json({ error: 'Authenticated Microsoft session is required.' });
       return;
     }
-    if (authenticatedUser.email !== normalizedEmail) {
-      res.status(403).json({ error: 'The requested profile does not match the authenticated user.' });
-      return;
-    }
-    const authoritativeFullName = authenticatedUser.fullName;
-
     const supabase = getSupabaseAdmin();
-    const existing = await findByEmail(supabase, normalizedEmail);
+    const existing = await findByEmail(supabase, authenticatedUser.email);
     if (existing.error) throw existing.error;
-    if (existing.data) {
-      res.status(200).json({ profile: existing.data });
+    if (!existing.data) {
+      res.status(403).json({ error: 'Corporate profile is not provisioned.' });
       return;
     }
-
-    const created = await supabase.from('profiles').insert({
-      email: normalizedEmail,
-      full_name: authoritativeFullName,
-    }).select('*').single();
-
-    if (!created.error && created.data) {
-      res.status(201).json({ profile: created.data });
+    if (existing.data.active !== true) {
+      res.status(403).json({ error: 'Corporate profile is inactive.' });
       return;
     }
-
-    // Another request may have provisioned the same user between the lookup and insert.
-    if (created.error?.code === '23505') {
-      const racedProfile = await findByEmail(supabase, normalizedEmail);
-      if (!racedProfile.error && racedProfile.data) {
-        res.status(200).json({ profile: racedProfile.data });
-        return;
-      }
+    if (!isKnownRole(existing.data.role)) {
+      res.status(403).json({ error: 'Corporate profile has an invalid role.' });
+      return;
     }
-
-    throw created.error ?? new Error('Could not create corporate profile.');
+    if (!isNonEmptyString(existing.data.id) || !isNonEmptyString(existing.data.email)) {
+      res.status(403).json({ error: 'Corporate profile is incomplete.' });
+      return;
+    }
+    res.status(200).json({ profile: existing.data });
   } catch (error) {
-    console.error('[provision] JIT provisioning failed:', error);
-    res.status(500).json({ error: 'Could not provision corporate profile.' });
+    console.error('[provision] Corporate profile lookup failed:', error);
+    res.status(500).json({ error: 'Could not validate corporate profile.' });
   }
 }
 
