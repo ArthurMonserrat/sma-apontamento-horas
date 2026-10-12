@@ -24,7 +24,7 @@ function includesConfiguredOrKeyword(values: string[], configured: string[], key
   })
 }
 
-export function mapMicrosoftClaimsToRole(claims: MicrosoftClaims | null | undefined): DemoRole {
+export function mapMicrosoftClaimsToRole(claims: MicrosoftClaims | null | undefined): DemoRole | null {
   const values = [...readClaimValues(claims?.roles), ...readClaimValues(claims?.groups)]
   if (includesConfiguredOrKeyword(values, configuredValues('VITE_MSAL_DIRECTOR_ROLES'), ['admin', 'diretor', 'director'])) {
     return 'DIRECTOR_ADMIN'
@@ -32,5 +32,5 @@ export function mapMicrosoftClaimsToRole(claims: MicrosoftClaims | null | undefi
   if (includesConfiguredOrKeyword(values, configuredValues('VITE_MSAL_SUPERVISOR_ROLES'), ['supervisor'])) {
     return 'SUPERVISOR'
   }
-  return 'COLLABORATOR'
+  return null
 }

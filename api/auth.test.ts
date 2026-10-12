@@ -22,6 +22,7 @@ const managedEnvironment = [
   'REDIRECT_URI',
   'FRONTEND_URL',
   'NODE_ENV',
+  'ENABLE_LEGACY_MSAL',
 ] as const;
 
 const originalEnvironment = Object.fromEntries(
@@ -68,6 +69,8 @@ beforeEach(() => {
     TENANT_ID: 'tenant-id',
     REDIRECT_URI: 'https://app.example.test/api/redirect',
     FRONTEND_URL: 'https://app.example.test',
+    NODE_ENV: 'test',
+    ENABLE_LEGACY_MSAL: 'true',
   });
 });
 
@@ -76,8 +79,32 @@ afterEach(() => {
 });
 
 describe('login', () => {
+  test('bloqueia chamadas diretas em produção mesmo com a flag legada', async () => {
+    setEnvironment({
+      CLIENT_ID: 'client-id',
+      CLIENT_SECRET: 'client-secret',
+      TENANT_ID: 'tenant-id',
+      REDIRECT_URI: 'https://app.example.test/api/redirect',
+      FRONTEND_URL: 'https://app.example.test',
+      NODE_ENV: 'production',
+      ENABLE_LEGACY_MSAL: 'true',
+    });
+    const loginResponse = createResponse();
+    const redirectResponse = createResponse();
+
+    await login({ query: {} }, loginResponse);
+    await redirect({ query: { code: 'authorization-code' } }, redirectResponse);
+
+    expect(loginResponse.statusCode).toBe(404);
+    expect(redirectResponse.statusCode).toBe(404);
+    expect(loginResponse.headers['Set-Cookie']).toBeUndefined();
+    expect(redirectResponse.headers['Set-Cookie']).toBeUndefined();
+    expect(msal.getAuthCodeUrl).not.toHaveBeenCalled();
+    expect(msal.acquireTokenByCode).not.toHaveBeenCalled();
+  });
+
   test('returns 500 without exposing configuration when required settings are absent', async () => {
-    setEnvironment();
+    setEnvironment({ NODE_ENV: 'test', ENABLE_LEGACY_MSAL: 'true' });
     const response = createResponse();
 
     await login({ query: {} }, response);
@@ -128,7 +155,8 @@ describe('redirect', () => {
       TENANT_ID: 'tenant-id',
       REDIRECT_URI: 'https://app.example.test/api/redirect',
       FRONTEND_URL: 'https://app.example.test',
-      NODE_ENV: 'production',
+      NODE_ENV: 'development',
+      ENABLE_LEGACY_MSAL: 'true',
     });
     const response = createResponse();
 
@@ -140,7 +168,7 @@ describe('redirect', () => {
       scopes: ['User.Read'],
     });
     expect(response.headers['Set-Cookie']).toBe(
-      'sma_session=access-token; Path=/; HttpOnly; Secure; SameSite=Lax',
+      'sma_session=access-token; Path=/; HttpOnly; SameSite=Lax',
     );
     expect(response.statusCode).toBe(302);
     expect(response.headers.Location).toBe('https://app.example.test/');

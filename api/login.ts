@@ -4,8 +4,10 @@ import {
   USER_READ_SCOPE,
 } from './msal.js';
 import type { VercelRequest, VercelResponse } from './types.js';
+import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
 
-export async function login(_req: VercelRequest, res: VercelResponse): Promise<void> {
+export async function login(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (!assertLegacyMsalEnabled(req, res)) return;
   try {
     const settings = getAuthenticationSettings();
     const authorizationUrl = await createMsalClient(settings).getAuthCodeUrl({

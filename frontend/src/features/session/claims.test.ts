@@ -11,8 +11,8 @@ describe('mapeamento de claims Microsoft para roles internas', () => {
     expect(mapMicrosoftClaimsToRole({ groups: ['grupo-supervisores'] })).toBe('SUPERVISOR')
   })
 
-  it('usa Colaborador como fallback para claims ausentes ou desconhecidas', () => {
-    expect(mapMicrosoftClaimsToRole({})).toBe('COLLABORATOR')
-    expect(mapMicrosoftClaimsToRole({ roles: ['User'] })).toBe('COLLABORATOR')
+  it('nega claims ausentes ou desconhecidas em vez de conceder colaborador', () => {
+    expect(mapMicrosoftClaimsToRole({})).toBeNull()
+    expect(mapMicrosoftClaimsToRole({ roles: ['User'] })).toBeNull()
   })
 })

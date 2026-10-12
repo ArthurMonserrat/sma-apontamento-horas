@@ -6,8 +6,10 @@ import {
   USER_READ_SCOPE,
 } from './msal.js';
 import type { VercelRequest, VercelResponse } from './types.js';
+import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
 
 export async function redirect(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (!assertLegacyMsalEnabled(req, res)) return;
   if (req.query.error) {
     res.status(400).json({ error: 'Microsoft authorization was not completed.' });
     return;

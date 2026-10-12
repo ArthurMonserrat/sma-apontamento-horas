@@ -1,4 +1,3 @@
-import { useMsal } from '@azure/msal-react'
 import { useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
@@ -8,11 +7,9 @@ import { useSession } from '../../features/session/useSession'
 const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || '/selecao-perfil'
 
 export function Portal() {
-  const { instance, accounts } = useMsal()
   const { session } = useSession()
   const navigate = useNavigate()
-  const account = instance.getActiveAccount() ?? accounts[0]
-  const greetingName = account?.name || session?.name || 'Colaborador'
+  const greetingName = session?.name || 'Colaborador'
 
   function openBanco1() {
     navigate(getDemoHomePath(session?.role ?? 'COLLABORATOR'))

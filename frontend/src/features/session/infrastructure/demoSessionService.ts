@@ -74,7 +74,7 @@ export class LocalDemoSessionService implements DemoSessionService {
     if (rawSession !== null) {
       try {
         const session: unknown = JSON.parse(rawSession)
-        if (isDemoSession(session)) return session
+        if (isDemoSession(session) && session.isDemo === true && session.authProvider !== 'microsoft') return session
       } catch {
         // Payloads antigos ou corrompidos são tratados como sessão ausente.
       }

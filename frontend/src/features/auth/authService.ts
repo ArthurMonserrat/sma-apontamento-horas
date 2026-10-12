@@ -5,16 +5,13 @@ type ProvisionResponse = {
   error?: string
 }
 
-/**
- * O navegador nunca acessa o Supabase diretamente. O BFF valida a sessão
- * Microsoft e executa o provisionamento usando a service role no servidor.
- */
-export async function getCorporateProfile(email: string, fullName: string): Promise<CorporateProfile> {
-  const response = await fetch('/api/provision', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, fullName }),
+/** O navegador envia somente o bearer Supabase; cargos nunca vêm do cliente. */
+export async function getCorporateProfile(accessToken: string): Promise<CorporateProfile> {
+  if (!accessToken.trim()) throw new Error('Sessão Supabase ausente.')
+
+  const response = await fetch('/api/supabase-session', {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
 
   const payload = await response.json().catch(() => null) as ProvisionResponse | null
@@ -25,8 +22,9 @@ export async function getCorporateProfile(email: string, fullName: string): Prom
   return payload.profile
 }
 
-export function mapCorporateRole(role: CorporateProfile['role']): DemoRole {
+export function mapCorporateRole(role: unknown): DemoRole | null {
   if (role === 'supervisor') return 'SUPERVISOR'
   if (role === 'diretor') return 'DIRECTOR_ADMIN'
-  return 'COLLABORATOR'
+  if (role === 'colaborador') return 'COLLABORATOR'
+  return null
 }

@@ -30,6 +30,6 @@ export type DemoSession = {
   isDemo: boolean
   version: 2
   email?: string
-  authProvider?: 'demo' | 'microsoft'
+  authProvider?: 'demo' | 'microsoft' | 'supabase'
   corporateProfile?: CorporateProfile
 }

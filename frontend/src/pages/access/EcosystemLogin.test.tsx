@@ -5,6 +5,7 @@ import { ThemeContext } from '../../app/providers/themeContext'
 import { DemoSessionProvider } from '../../features/session/DemoSessionProvider'
 import { EcosystemLogin } from './EcosystemLogin'
 import { getEcosystemModulePath, toMicrosoftSessionInput } from './ecosystemModules'
+import ecosystemLoginSource from './EcosystemLogin.tsx?raw'
 
 vi.mock('@azure/msal-react', () => ({
   useMsal: () => ({
@@ -51,5 +52,12 @@ describe('EcosystemLogin', () => {
       email: 'ana@sma.com',
       role: 'COLLABORATOR',
     })
+  })
+
+  it('mantém o MSAL fora do caminho corporativo e oferece entrada explícita da demonstração', () => {
+    expect(ecosystemLoginSource).not.toContain('loginPopup')
+    expect(ecosystemLoginSource).not.toContain('useMsal')
+    expect(ecosystemLoginSource).toContain('startCorporateOAuth')
+    expect(ecosystemLoginSource).toContain('modo demonstrativo')
   })
 })

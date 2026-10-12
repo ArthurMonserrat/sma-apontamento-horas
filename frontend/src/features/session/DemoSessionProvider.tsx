@@ -1,56 +1,110 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { demoSessionService } from './infrastructure/demoSessionService'
 import { demoCollaborator } from '../../demo/fixtures/demoData'
 import { PROFILE_UPDATED_EVENT, profileService } from '../profile/infrastructure/profileService'
 import { SessionContext } from './sessionContext'
-import type { DemoRole, DemoSession, MicrosoftSessionInput } from './types'
+import type { DemoRole, DemoSession } from './types'
 import type { CollaboratorProfile } from '../profile/types'
 import { getCorporateProfile, mapCorporateRole } from '../auth/authService'
+import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
+
+function buildCorporateSession(session: Session, role: DemoRole, corporateProfile: NonNullable<DemoSession['corporateProfile']>): DemoSession {
+  const timestamp = new Date().toISOString()
+  const metadata = session.user.user_metadata as Record<string, unknown> | undefined
+  const name = typeof metadata?.full_name === 'string' && metadata.full_name.trim()
+    ? metadata.full_name.trim()
+    : corporateProfile.full_name
+  return {
+    id: session.user.id,
+    name,
+    email: session.user.email ?? corporateProfile.email,
+    role,
+    createdAt: timestamp,
+    explicitLoginAt: timestamp,
+    isDemo: false,
+    version: 2,
+    authProvider: 'supabase',
+    corporateProfile,
+  }
+}
 
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DemoSession | null>(null)
   const [profile, setProfile] = useState<CollaboratorProfile | null>(null)
   const [corporateProfile, setCorporateProfile] = useState<NonNullable<DemoSession['corporateProfile']> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const modeRef = useRef<'unknown' | 'none' | 'demo' | 'corporate'>('unknown')
+  const corporateRequestRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
+    const localSession = demoSessionService.restore()
 
-    async function restoreSession() {
-      const localSession = demoSessionService.restore()
-      if (localSession) {
-        if (!cancelled) {
-          setSession(localSession)
-          setCorporateProfile(localSession.corporateProfile ?? null)
-          setIsLoading(false)
-        }
-        return
-      }
+    if (localSession) {
+      modeRef.current = 'demo'
+      corporateRequestRef.current += 1
+      setSession(localSession)
+      setCorporateProfile(null)
+      setIsLoading(false)
+    } else {
+      modeRef.current = 'none'
+    }
 
+    async function clearCorporateSession(requestId: number) {
+      if (modeRef.current !== 'corporate' || corporateRequestRef.current !== requestId) return
+      await signOutSupabase()
+      if (cancelled || modeRef.current !== 'corporate' || corporateRequestRef.current !== requestId) return
+      modeRef.current = 'none'
+      setSession(null)
+      setCorporateProfile(null)
+    }
+
+    async function hydrateCorporateSession(nextSession: Session) {
+      if (modeRef.current === 'demo') return
+      modeRef.current = 'corporate'
+      const requestId = ++corporateRequestRef.current
       try {
-        const response = await fetch('/api/me', { credentials: 'include' })
-        if (!response.ok) return
-        const payload = await response.json() as {
-          isAuthenticated?: boolean
-          account?: { id?: string; name?: string; username?: string }
-        }
-        if (payload.isAuthenticated && payload.account?.id && payload.account.name && payload.account.username && !cancelled) {
-          setSession(demoSessionService.signInWithMicrosoft({
-            id: payload.account.id,
-            name: payload.account.name,
-            email: payload.account.username,
-            role: 'COLLABORATOR',
-          }))
+        const loadedProfile = await getCorporateProfile(nextSession.access_token)
+        const role = mapCorporateRole(loadedProfile.role)
+        if (!role || !loadedProfile.active) throw new Error('Perfil corporativo sem autorização ativa.')
+        if (!cancelled && modeRef.current === 'corporate' && corporateRequestRef.current === requestId) {
+          const restored = buildCorporateSession(nextSession, role, loadedProfile)
+          setSession(restored)
+          setCorporateProfile(loadedProfile)
         }
       } catch {
-        // API indisponível não impede o modo demo/local.
-      } finally {
-        if (!cancelled) setIsLoading(false)
+        await clearCorporateSession(requestId)
       }
     }
 
+    async function restoreSession() {
+      if (localSession) {
+        return
+      }
+
+      const supabaseSession = await getCurrentSession()
+      if (supabaseSession) await hydrateCorporateSession(supabaseSession)
+      if (!cancelled) setIsLoading(false)
+    }
+
     void restoreSession()
-    return () => { cancelled = true }
+    const subscription = subscribeSupabase((event, nextSession) => {
+      if (modeRef.current === 'demo') return
+      if (event === 'SIGNED_OUT') {
+        corporateRequestRef.current += 1
+        modeRef.current = 'none'
+        setSession(null)
+        setCorporateProfile(null)
+        return
+      }
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && nextSession) void hydrateCorporateSession(nextSession)
+    })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -72,33 +126,25 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [session])
 
-  const signInWithMicrosoft = async (input: MicrosoftSessionInput) => {
-    const loadedProfile = await getCorporateProfile(input.email, input.name)
-    const created = demoSessionService.signInWithMicrosoft({
-      ...input,
-      role: mapCorporateRole(loadedProfile.role),
-      corporateProfile: loadedProfile,
-    })
-    setSession(created)
-    setCorporateProfile(loadedProfile)
-    return created
-  }
   const signIn = (role: DemoRole) => {
-    if (session?.authProvider === 'microsoft' && session.email) {
-      return session
-    }
+    if (session?.authProvider === 'supabase') return session
     const created = demoSessionService.signIn(role)
+    modeRef.current = 'demo'
+    corporateRequestRef.current += 1
     setSession(created)
     setCorporateProfile(null)
     return created
   }
+
   const signOut = () => {
-    void fetch('/api/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined)
+    modeRef.current = 'none'
+    corporateRequestRef.current += 1
+    void signOutSupabase()
     demoSessionService.signOut()
     setSession(null)
     setProfile(null)
     setCorporateProfile(null)
   }
 
-  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, signIn, signInWithMicrosoft, signOut }}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, signIn, signOut }}>{children}</SessionContext.Provider>
 }

@@ -1,7 +1,9 @@
 import { serialize } from 'cookie';
 import type { VercelRequest, VercelResponse } from './types.js';
+import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
 
-export function logout(_req: VercelRequest, res: VercelResponse): void {
+export function logout(req: VercelRequest, res: VercelResponse): void {
+  if (!assertLegacyMsalEnabled(req, res)) return;
   res.setHeader('Set-Cookie', serialize('sma_session', '', {
     expires: new Date(0),
     httpOnly: true,
