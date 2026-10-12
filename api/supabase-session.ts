@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import { isCorporateAuthorizationReady, readBearerToken } from './corporateAuthPolicy.js'
-import type { VercelRequest, VercelResponse } from './types.js'
+import { isCorporateAuthorizationReady, readBearerToken } from '../server/corporateAuthPolicy.js'
+import type { VercelRequest, VercelResponse } from '../server/types.js'
 
 function getSupabasePublicClient() {
   const url = process.env.SUPABASE_URL

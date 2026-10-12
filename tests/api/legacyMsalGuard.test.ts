@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { assertLegacyMsalEnabled } from './legacyMsalGuard'
+import { assertLegacyMsalEnabled } from '../../server/legacyMsalGuard.js'
 
 function createResponse() {
   const response = {

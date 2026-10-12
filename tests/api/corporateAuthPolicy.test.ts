@@ -4,7 +4,7 @@ import {
   isLegacyMsalAllowed,
   readBearerToken,
   validateMicrosoftIdentity,
-} from './corporateAuthPolicy'
+} from '../../server/corporateAuthPolicy.js'
 
 describe('corporateAuthPolicy', () => {
   it('mantém a autorização fechada mesmo quando a flag futura está como true', () => {

@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 describe('Vercel configuration', () => {
   test('builds the frontend, preserves API routes, and falls back to the SPA', async () => {
     const config = JSON.parse(
-      await readFile(new URL('../vercel.json', import.meta.url), 'utf8'),
+      await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'),
     );
 
     expect(config.buildCommand).toBe('npm run build');

@@ -8,7 +8,7 @@ const createClient = vi.hoisted(() => vi.fn((url: string) => (
 
 vi.mock('@supabase/supabase-js', () => ({ createClient }))
 
-import supabaseSession from './supabase-session'
+import supabaseSession from '../../api/supabase-session.js'
 
 function createResponse() {
   const response = {

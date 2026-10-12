@@ -4,11 +4,11 @@ import { describe, expect, test } from 'vitest';
 describe('workspace test scripts', () => {
   test('separates API and frontend suites while keeping a complete test command', async () => {
     const packageJson = JSON.parse(
-      await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+      await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
     ) as { scripts?: Record<string, string> };
 
     expect(packageJson.scripts).toMatchObject({
-      'test:api': 'vitest run --dir api',
+      'test:api': 'vitest run --dir tests/api',
       'test:frontend': 'npm --prefix frontend run test --',
       test: 'npm run test:api && npm run test:frontend',
     });

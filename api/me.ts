@@ -1,6 +1,6 @@
 import { parse } from 'cookie';
-import type { VercelRequest, VercelResponse } from './types.js';
-import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
+import type { VercelRequest, VercelResponse } from '../server/types.js';
+import { assertLegacyMsalEnabled } from '../server/legacyMsalGuard.js';
 
 type MicrosoftProfile = {
   id?: string;
