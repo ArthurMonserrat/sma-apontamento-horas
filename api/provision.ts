@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'cookie';
-import type { VercelRequest, VercelResponse } from './types.js';
-import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
+import type { VercelRequest, VercelResponse } from '../server/types.js';
+import { assertLegacyMsalEnabled } from '../server/legacyMsalGuard.js';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;

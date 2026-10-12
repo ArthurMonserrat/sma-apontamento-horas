@@ -10,7 +10,7 @@ const createClient = vi.hoisted(() => vi.fn(() => ({ from })));
 
 vi.mock('@supabase/supabase-js', () => ({ createClient }));
 
-import provision from './provision';
+import provision from '../../api/provision';
 
 const originalEnvironment = {
   SUPABASE_URL: process.env.SUPABASE_URL,

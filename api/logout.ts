@@ -1,6 +1,6 @@
 import { serialize } from 'cookie';
-import type { VercelRequest, VercelResponse } from './types.js';
-import { assertLegacyMsalEnabled } from './legacyMsalGuard.js';
+import type { VercelRequest, VercelResponse } from '../server/types.js';
+import { assertLegacyMsalEnabled } from '../server/legacyMsalGuard.js';
 
 export function logout(req: VercelRequest, res: VercelResponse): void {
   if (!assertLegacyMsalEnabled(req, res)) return;

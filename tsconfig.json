@@ -7,6 +7,6 @@
     "strict": true,
     "target": "ES2022"
   },
-  "exclude": ["api/**/*.test.ts"],
-  "include": ["api/**/*.ts"]
+  "exclude": ["tests/**/*.test.ts"],
+  "include": ["api/**/*.ts", "server/**/*.ts"]
 }

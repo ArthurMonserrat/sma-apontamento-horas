@@ -12,8 +12,8 @@ vi.mock('@azure/msal-node', () => ({
   },
 }));
 
-import login from './login';
-import redirect from './redirect';
+import login from '../../api/login';
+import redirect from '../../api/redirect';
 
 const managedEnvironment = [
   'CLIENT_ID',
