@@ -1,27 +1,16 @@
 import { useState } from 'react'
-import { useMsal } from '@azure/msal-react'
 import { useNavigate } from 'react-router-dom'
-import { loginRequest } from '../../config/msalConfig'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
-import { getEcosystemModulePath, toMicrosoftSessionInput, type EcosystemModule } from './ecosystemModules'
-import { useSession } from '../../features/session/useSession'
+import { getEcosystemModulePath, type EcosystemModule } from './ecosystemModules'
+import { startCorporateOAuth } from '../../features/auth/infrastructure/supabaseSessionService'
 
 const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePath('BANCO_2')
 
 export function EcosystemLogin() {
-  const { instance, accounts } = useMsal()
-  const { signInWithMicrosoft } = useSession()
   const navigate = useNavigate()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  function getActiveAccount() {
-    const currentAccount = instance.getActiveAccount()
-    const activeAccount = currentAccount ?? accounts[0]
-    if (activeAccount && !currentAccount) instance.setActiveAccount(activeAccount)
-    return activeAccount
-  }
 
   async function handleAccess(module: EcosystemModule) {
     if (isAuthenticating) return
@@ -29,19 +18,11 @@ export function EcosystemLogin() {
     setIsAuthenticating(true)
 
     try {
-      const account = getActiveAccount() ?? (await instance.loginPopup(loginRequest)).account
-      if (!account) throw new Error('A autenticação não retornou uma conta válida.')
-      instance.setActiveAccount(account)
-      if (signInWithMicrosoft) await signInWithMicrosoft(toMicrosoftSessionInput(account))
-
       const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
-      if (/^https?:\/\//i.test(destination)) {
-        window.location.assign(destination)
-      } else {
-        navigate(destination, { replace: true })
-      }
-    } catch (authError) {
-      console.error('[MSAL] Não foi possível autenticar para acessar o módulo.', authError)
+      sessionStorage.setItem('sma:oauth-destination', destination)
+      const { error: oauthError } = await startCorporateOAuth()
+      if (oauthError) throw oauthError
+    } catch {
       setError('Não foi possível concluir a autenticação. Tente novamente.')
     } finally {
       setIsAuthenticating(false)
@@ -82,6 +63,7 @@ export function EcosystemLogin() {
         </div>
 
         {error && <p role="alert" className="mx-auto mt-6 max-w-xl text-sm font-semibold text-red-700">{error}</p>}
+        <button type="button" onClick={() => navigate('/selecao-perfil')} className="ui-button-secondary mx-auto mt-6">Acessar modo demonstrativo</button>
       </section>
     </main>
   )

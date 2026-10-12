@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 import type { CollaboratorProfile } from '../profile/types'
-import type { CorporateProfile, DemoRole, DemoSession, MicrosoftSessionInput } from './types'
+import type { CorporateProfile, DemoRole, DemoSession } from './types'
 
 export type DemoSignIn = (role: DemoRole) => DemoSession
 
@@ -10,7 +10,6 @@ export type SessionContextValue = {
   corporateProfile?: CorporateProfile | null
   isLoading: boolean
   signIn: DemoSignIn
-  signInWithMicrosoft?: (input: MicrosoftSessionInput) => Promise<DemoSession>
   signOut: () => void
 }
 

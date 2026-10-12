@@ -18,20 +18,25 @@ describe('getCorporateProfile', () => {
     vi.stubGlobal('fetch', fetchMock)
   })
 
-  it('solicita o perfil ao BFF sem acessar o Supabase no navegador', async () => {
+  it('solicita o perfil ao endpoint Supabase usando somente o bearer da sessão', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ profile: existingProfile }) })
 
-    await expect(getCorporateProfile()).resolves.toEqual(existingProfile)
-    expect(fetchMock).toHaveBeenCalledWith('/api/provision', {
-      method: 'POST',
-      credentials: 'include',
+    await expect(getCorporateProfile('supabase-token')).resolves.toEqual(existingProfile)
+    expect(fetchMock).toHaveBeenCalledWith('/api/supabase-session', {
+      method: 'GET',
+      headers: { Authorization: 'Bearer supabase-token' },
     })
   })
 
   it('propaga a mensagem de erro retornada pelo BFF', async () => {
     fetchMock.mockResolvedValue({ ok: false, json: async () => ({ error: 'Sessão Microsoft ausente.' }) })
 
-    await expect(getCorporateProfile()).rejects.toThrow('Sessão Microsoft ausente.')
+    await expect(getCorporateProfile('supabase-token')).rejects.toThrow('Sessão Microsoft ausente.')
+  })
+
+  it('não consulta o endpoint sem token Supabase', async () => {
+    await expect(getCorporateProfile('')).rejects.toThrow('Sessão Supabase ausente.')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
 })

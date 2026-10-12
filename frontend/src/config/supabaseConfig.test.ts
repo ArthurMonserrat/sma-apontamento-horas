@@ -15,13 +15,13 @@ describe('getSupabaseBrowserConfig', () => {
     const config = getSupabaseBrowserConfig({
       VITE_SUPABASE_URL: 'https://project.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'anon-key',
-      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://app.example/auth/callback,https://localhost:5173/auth/callback',
+      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://app.example/#/auth/callback,https://localhost:5173/#/auth/callback',
     }, 'https://app.example')
 
     expect(config).toEqual({
       url: 'https://project.supabase.co',
       anonKey: 'anon-key',
-      redirectTo: 'https://app.example/auth/callback',
+      redirectTo: 'https://app.example/#/auth/callback',
       enabled: true,
     })
   })
@@ -30,7 +30,7 @@ describe('getSupabaseBrowserConfig', () => {
     const config = getSupabaseBrowserConfig({
       VITE_SUPABASE_URL: 'https://project.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'anon-key',
-      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://app.example/auth/callback',
+      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://app.example/#/auth/callback',
     }, 'https://evil.example')
 
     expect(config.enabled).toBe(false)

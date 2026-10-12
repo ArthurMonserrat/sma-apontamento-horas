@@ -14,7 +14,13 @@ export function clearAuthCallbackUrl(): void {
   for (const parameter of ['code', 'state', 'error', 'error_code', 'error_description']) {
     url.searchParams.delete(parameter)
   }
-  url.hash = ''
+  const hashSeparator = url.hash.indexOf('?')
+  if (hashSeparator >= 0) {
+    const hashPath = url.hash.slice(0, hashSeparator)
+    const hashSearch = new URLSearchParams(url.hash.slice(hashSeparator + 1))
+    for (const parameter of ['code', 'state', 'error', 'error_code', 'error_description']) hashSearch.delete(parameter)
+    url.hash = `${hashPath}${hashSearch.toString() ? `?${hashSearch.toString()}` : ''}`
+  }
   window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
 }
 

@@ -18,10 +18,12 @@ function readAllowedRedirects(env: PublicEnv): string[] {
     .filter(Boolean)
 }
 
-export function getSupabaseBrowserConfig(env: PublicEnv = import.meta.env, origin = getCurrentOrigin()): SupabaseBrowserConfig {
+export function getSupabaseBrowserConfig(env: PublicEnv = import.meta.env, origin = getCurrentOrigin(), basePath = import.meta.env.BASE_URL || '/') : SupabaseBrowserConfig {
   const url = env.VITE_SUPABASE_URL?.trim() ?? ''
   const anonKey = env.VITE_SUPABASE_ANON_KEY?.trim() ?? ''
-  const redirectCandidate = origin ? `${origin.replace(/\/$/, '')}/auth/callback` : ''
+  const normalizedBasePath = basePath.startsWith('/') ? basePath : `/${basePath}`
+  const callbackPath = `${normalizedBasePath.replace(/\/$/, '')}/#/auth/callback`.replace('//', '/')
+  const redirectCandidate = origin ? `${origin.replace(/\/$/, '')}${callbackPath}` : ''
   const allowedRedirects = readAllowedRedirects(env)
   const redirectTo = allowedRedirects.includes(redirectCandidate) ? redirectCandidate : ''
 

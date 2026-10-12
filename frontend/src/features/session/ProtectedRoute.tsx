@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { msalInstance } from '../../config/authConfig'
 import { hasAuthenticatedSession } from './authGuard'
 import { resolveProtectedDemoRoute } from './routePolicy'
 import type { DemoRole } from './types'
@@ -16,8 +15,6 @@ type ProtectedRouteProps = {
 export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: ProtectedRouteProps) {
   const { session, isLoading } = useSession()
   const location = useLocation()
-  const account = msalInstance.getActiveAccount() ?? msalInstance.getAllAccounts()[0] ?? null
-
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center ui-surface-subtle" aria-busy="true">
@@ -26,7 +23,10 @@ export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: P
     )
   }
 
-  if (!hasAuthenticatedSession(session, account)) {
+  const isDemoSelection = location.pathname === '/selecao-perfil' || location.pathname === '/portal'
+  if (!session && isDemoSelection) return children
+
+  if (!hasAuthenticatedSession(session, null)) {
     return <Navigate to="/" replace />
   }
 

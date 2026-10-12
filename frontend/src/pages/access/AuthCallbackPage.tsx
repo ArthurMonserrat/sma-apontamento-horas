@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { exchangeCallbackCode } from '../../features/auth/infrastructure/supabaseSessionService'
 
-export function readCallbackCode(search: string): string | null {
-  const code = new URLSearchParams(search).get('code')?.trim()
+export function readCallbackCode(search: string, hash = ''): string | null {
+  const searchParams = new URLSearchParams(search)
+  const hashSearch = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : ''
+  const code = (searchParams.get('code') ?? new URLSearchParams(hashSearch).get('code'))?.trim()
   return code || null
 }
 
@@ -13,7 +15,7 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     let active = true
-    const code = readCallbackCode(window.location.search)
+    const code = readCallbackCode(window.location.search, window.location.hash)
     if (!code) {
       navigate('/?authError=invalid_callback', { replace: true })
       return () => { active = false }

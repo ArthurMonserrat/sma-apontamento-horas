@@ -17,7 +17,7 @@ vi.mock('../../../config/supabaseConfig', () => ({
   getSupabaseBrowserConfig: () => ({
     url: 'https://project.supabase.co',
     anonKey: 'anon-key',
-    redirectTo: 'https://app.example/auth/callback',
+    redirectTo: 'https://app.example/#/auth/callback',
     enabled: true,
   }),
 }))
@@ -48,7 +48,7 @@ describe('supabaseSessionService', () => {
     expect(authMock.signInWithOAuth).toHaveBeenCalledWith({
       provider: 'azure',
       options: {
-        redirectTo: 'https://app.example/auth/callback',
+        redirectTo: 'https://app.example/#/auth/callback',
         scopes: 'openid profile email',
       },
     })

@@ -15,11 +15,13 @@ import { RelatoriosPage } from '../../pages/administration/RelatoriosPage'
 import { AvisosPage } from '../../pages/administration/AvisosPage'
 import { ManagerNoticesRedirect } from '../../features/session/ManagerNoticesRedirect'
 import { Portal } from '../../pages/access/Portal'
+import { AuthCallbackPage } from '../../pages/access/AuthCallbackPage'
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<EcosystemLogin />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/selecao-perfil" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><ProfileSelectionPage /></ProtectedRoute>} />
       <Route path="/portal" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><Portal /></ProtectedRoute>} />

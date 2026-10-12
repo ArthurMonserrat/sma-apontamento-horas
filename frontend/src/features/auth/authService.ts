@@ -5,14 +5,13 @@ type ProvisionResponse = {
   error?: string
 }
 
-/**
- * O navegador nunca acessa o Supabase diretamente. O BFF valida a sessão
- * Microsoft e somente retorna um perfil corporativo já autorizado no servidor.
- */
-export async function getCorporateProfile(): Promise<CorporateProfile> {
-  const response = await fetch('/api/provision', {
-    method: 'POST',
-    credentials: 'include',
+/** O navegador envia somente o bearer Supabase; cargos nunca vêm do cliente. */
+export async function getCorporateProfile(accessToken: string): Promise<CorporateProfile> {
+  if (!accessToken.trim()) throw new Error('Sessão Supabase ausente.')
+
+  const response = await fetch('/api/supabase-session', {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
 
   const payload = await response.json().catch(() => null) as ProvisionResponse | null
