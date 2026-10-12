@@ -35,12 +35,18 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
           account?: { id?: string; name?: string; username?: string }
         }
         if (payload.isAuthenticated && payload.account?.id && payload.account.name && payload.account.username && !cancelled) {
-          setSession(demoSessionService.signInWithMicrosoft({
+          const loadedProfile = await getCorporateProfile()
+          const role = mapCorporateRole(loadedProfile.role)
+          if (!role || !loadedProfile.active) return
+          const restoredSession = demoSessionService.signInWithMicrosoft({
             id: payload.account.id,
             name: payload.account.name,
             email: payload.account.username,
-            role: 'COLLABORATOR',
-          }))
+            role,
+            corporateProfile: loadedProfile,
+          })
+          setSession(restoredSession)
+          setCorporateProfile(loadedProfile)
         }
       } catch {
         // API indisponível não impede o modo demo/local.
@@ -73,10 +79,12 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   }, [session])
 
   const signInWithMicrosoft = async (input: MicrosoftSessionInput) => {
-    const loadedProfile = await getCorporateProfile(input.email, input.name)
+    const loadedProfile = await getCorporateProfile()
+    const role = mapCorporateRole(loadedProfile.role)
+    if (!role || !loadedProfile.active) throw new Error('Perfil corporativo sem autorização ativa.')
     const created = demoSessionService.signInWithMicrosoft({
       ...input,
-      role: mapCorporateRole(loadedProfile.role),
+      role,
       corporateProfile: loadedProfile,
     })
     setSession(created)

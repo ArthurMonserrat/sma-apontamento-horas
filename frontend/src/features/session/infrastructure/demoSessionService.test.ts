@@ -128,6 +128,19 @@ describe('LocalDemoSessionService', () => {
     expect(storage.getItem(SESSION_KEY)).toBeNull()
   })
 
+  it('não restaura sessão Microsoft persistida sem revalidação no servidor', () => {
+    const { storage, service } = createService()
+    storage.setItem(SESSION_KEY, JSON.stringify({
+      ...validSession(),
+      isDemo: false,
+      authProvider: 'microsoft',
+      email: 'ana@example.com',
+    }))
+
+    expect(service.restore()).toBeNull()
+    expect(storage.getItem(SESSION_KEY)).toBeNull()
+  })
+
   it('preserva dados funcionais ao invalidar a sessão v1', () => {
     const { storage, service } = createService()
     seedDomainData(storage)

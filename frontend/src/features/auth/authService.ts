@@ -7,14 +7,12 @@ type ProvisionResponse = {
 
 /**
  * O navegador nunca acessa o Supabase diretamente. O BFF valida a sessão
- * Microsoft e executa o provisionamento usando a service role no servidor.
+ * Microsoft e somente retorna um perfil corporativo já autorizado no servidor.
  */
-export async function getCorporateProfile(email: string, fullName: string): Promise<CorporateProfile> {
+export async function getCorporateProfile(): Promise<CorporateProfile> {
   const response = await fetch('/api/provision', {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, fullName }),
   })
 
   const payload = await response.json().catch(() => null) as ProvisionResponse | null
@@ -25,8 +23,9 @@ export async function getCorporateProfile(email: string, fullName: string): Prom
   return payload.profile
 }
 
-export function mapCorporateRole(role: CorporateProfile['role']): DemoRole {
+export function mapCorporateRole(role: unknown): DemoRole | null {
   if (role === 'supervisor') return 'SUPERVISOR'
   if (role === 'diretor') return 'DIRECTOR_ADMIN'
-  return 'COLLABORATOR'
+  if (role === 'colaborador') return 'COLLABORATOR'
+  return null
 }
