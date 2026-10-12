@@ -15,7 +15,8 @@
 - O Supabase Auth será a autoridade de sessão corporativa; o Microsoft Entra ID será apenas o provedor externo configurado no Supabase Auth.
 - O fluxo OAuth usará exatamente `openid profile email`, `flowType: 'pkce'` e redirects explicitamente allowlisted por ambiente.
 - A autorização corporativa ficará bloqueada por padrão até a integração definitiva com `access_preapprovals`, identidade Microsoft validada e provisionamento idempotente.
-- Um perfil existente, isoladamente, não poderá liberar acesso enquanto a configuração de autorização definitiva estiver desabilitada.
+- `CORPORATE_AUTHORIZATION_READY=true` isoladamente nunca poderá liberar acesso nesta etapa; o código manterá um bloqueio de implementação até que esses três mecanismos existam e sejam revisados.
+- Um perfil existente, isoladamente, não poderá liberar acesso mesmo quando a configuração de ambiente estiver como `true`.
 - O modo demonstrativo continuará com `isDemo: true`, dados locais e isolamento explícito de endpoints corporativos.
 - O `SUPABASE_SERVICE_ROLE_KEY` permanecerá somente em código server-side e nunca será exposto em `VITE_*`, bundle, localStorage ou testes de navegador.
 - MSAL/BFF legado só poderá operar com `ENABLE_LEGACY_MSAL=true` em ambiente não produtivo; em produção os endpoints deverão bloquear sem criar sessão, cookie ou perfil.
@@ -82,7 +83,7 @@ Arquivos existentes a modificar somente quando o teste exigir:
 - Test: `api/corporateAuthPolicy.test.ts`
 
 **Interfaces:**
-- `isCorporateAuthorizationReady(env = process.env): boolean` — somente `CORPORATE_AUTHORIZATION_READY === 'true'` habilita o gate; ausência é `false`.
+- `isCorporateAuthorizationReady(env = process.env): boolean` — retorna `false` durante toda a Etapa 2; a variável `CORPORATE_AUTHORIZATION_READY` será apenas um contrato futuro e não pode, sozinha, habilitar acesso.
 - `isLegacyMsalAllowed(env = process.env): boolean` — `NODE_ENV !== 'production' && ENABLE_LEGACY_MSAL === 'true'`.
 - `readBearerToken(req: VercelRequest): string | null` — aceita apenas `Authorization: Bearer ...`, sem cookie demo/MSAL.
 - `validateMicrosoftIdentity(claims: unknown, expectedTenantId: string): { tenantId: string; objectId: string; emailVerified: boolean } | null` — exige `tid`, `oid`, tenant igual e rejeita `xms_edov` quando presente e falso; não usa e-mail como chave.
@@ -105,9 +106,9 @@ Arquivos existentes a modificar somente quando o teste exigir:
 - O cliente anon/session valida `auth.getUser(token)`; o cliente service role só é criado depois de token válido, identidade validada e gate habilitado.
 - Resposta autorizada: `{ profile: { id, email, full_name, role, squad_id } }`; nenhuma inserção, atualização ou retorno de segredo.
 
-- [ ] **Step 1: Write failing tests** para 401 sem bearer/token inválido, 403 com gate desligado mesmo havendo perfil, 403 para identidade ausente/tenant divergente/`oid` ausente, perfil inexistente/inativo/cargo inválido/id divergente e 200 somente para combinação válida com gate explicitamente ligado.
+- [ ] **Step 1: Write failing tests** para 401 sem bearer/token inválido, 403 com gate desligado mesmo havendo perfil, 403 quando `CORPORATE_AUTHORIZATION_READY=true` mas o bloqueio de implementação permanece ativo, 403 para identidade ausente/tenant divergente/`oid` ausente, perfil inexistente/inativo/cargo inválido/id divergente e garantia de que não existe caminho 200 nesta etapa.
 - [ ] **Step 2: Run red** com `npm run test:api -- supabase-session.test.ts`; esperar falhas pelo handler inexistente.
-- [ ] **Step 3: Implement minimalmente** autenticação server-side, validação de `auth.users.id`, claims Microsoft e consulta read-only a `profiles`; nunca confiar em body para cargo/e-mail.
+- [ ] **Step 3: Implement minimalmente** autenticação server-side e o bloqueio permanente da etapa; deixar a validação de `auth.users.id`, claims Microsoft e consulta read-only a `profiles` atrás do futuro gate, sem confiar em body para cargo/e-mail nem em dados editáveis do usuário para `tid`/`oid`.
 - [ ] **Step 4: Run green** e verificar que service role não é inicializado nos caminhos 401/403.
 - [ ] **Step 5: Commit** `feat(auth): adicionar sessao supabase fail-closed`.
 
@@ -186,7 +187,7 @@ Arquivos existentes a modificar somente quando o teste exigir:
 - Test: suíte existente e todos os testes adicionados nas Tasks 1–7.
 
 **Interfaces:**
-- Critério de saída: demo funcional, autorização corporativa ainda fechada por padrão, endpoints legados bloqueados em produção, sem alteração de Supabase/produção.
+- Critério de saída: demo funcional, autorização corporativa ainda fechada inclusive com flag de ambiente `true`, endpoints legados bloqueados em produção, sem alteração de Supabase/produção.
 
 - [ ] **Step 1: Run full verification**: `npm test`; `npm --prefix frontend run lint`; `npm --prefix frontend run typecheck`; `npm run typecheck`; `npm run build`; `git diff --check`.
 - [ ] **Step 2: Inspect results**: registrar testes aprovados, arquivos de teste, avisos de build, status limpo, ausência de alterações em banco/deploy e ausência de chaves no bundle.

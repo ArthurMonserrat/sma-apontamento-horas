@@ -150,6 +150,8 @@ Será preparado o endpoint server-side `api/supabase-session.ts` com este compor
 
 O endpoint não criará registros nesta etapa. Mesmo que exista um perfil isolado, ele não poderá liberar acesso enquanto a autorização definitiva não estiver habilitada. O valor padrão da configuração será bloqueado.
 
+Para evitar que uma configuração acidental libere acesso antes da hora, a Etapa 2 também terá um bloqueio de implementação: `CORPORATE_AUTHORIZATION_READY=true` isoladamente não habilitará o endpoint. Enquanto a validação server-side de identidade Microsoft, a consulta efetiva de `access_preapprovals` e o provisionamento idempotente ainda não estiverem implementados e testados, o handler deverá responder `403` inclusive para um token Supabase válido e um perfil ativo existente. A futura habilitação deverá exigir uma mudança de código revisada, além das configurações de ambiente.
+
 ### 4.5 Logout
 
 O logout corporativo deverá:
@@ -179,6 +181,8 @@ O backend deverá inspecionar os dados de identidade retornados pelo Supabase Au
 - dados retornados por uma API server-side confiável.
 
 Se a identidade não fornecer `tenant_id` e `object_id` verificáveis, o fluxo deverá permanecer sem provisionamento e sem acesso corporativo privilegiado.
+
+Dados editáveis enviados pelo navegador, `localStorage`, query string, body da requisição ou metadados de perfil informados pelo usuário não são fontes confiáveis para `tid`/`oid`. Se o Supabase Auth não disponibilizar esses identificadores com origem verificável nesta etapa, o endpoint deverá permanecer bloqueado e a ausência deverá ser registrada como dependência de homologação com Azure.
 
 O ambiente corporativo será single-tenant. O backend deverá comparar o claim `tid` com `AZURE_TENANT_ID` configurado no servidor e rejeitar qualquer outro tenant. O claim `oid` será tratado como o identificador imutável do objeto Microsoft dentro do tenant; email não substituirá essa validação.
 
@@ -289,6 +293,7 @@ Qualquer acesso privilegiado usado apenas para resolver o perfil deverá continu
 - perfil inativo retornar 403;
 - cargo inválido retornar 403;
 - autorização permanecer bloqueada quando a integração definitiva não estiver habilitada;
+- `CORPORATE_AUTHORIZATION_READY=true` isoladamente continuar retornando 403 enquanto o bloqueio de implementação da Etapa 2 estiver ativo;
 - tentativa de enviar cargo ou email adulterado ser ignorada/rejeitada;
 - service role não ser inicializado antes da autenticação;
 - tenant diferente do configurado retornar 403;
