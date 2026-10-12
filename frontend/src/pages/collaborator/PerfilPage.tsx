@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMsal } from '@azure/msal-react'
 import SignatureCanvas from 'react-signature-canvas'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer } from '../../shared/ui/PageContainer'
@@ -28,7 +27,6 @@ function toDailyMinutes(form: WorkloadForm) {
 }
 
 export function PerfilPage() {
-  const { instance, accounts } = useMsal()
   const navigate = useNavigate()
   const { startTour } = useTour()
   const profileState = useProfile()
@@ -40,7 +38,6 @@ export function PerfilPage() {
   const [signatureStatus, setSignatureStatus] = useState<string | null>(null)
   const [signatureError, setSignatureError] = useState<string | null>(null)
   const signatureRef = useRef<SignatureCanvas | null>(null)
-  const account = instance.getActiveAccount() ?? accounts[0]
 
   const updateField = (field: WorkloadFormField, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const updateProfileField = (field: keyof ProfileForm, value: string) => setProfileForm((current) => ({ ...current, [field]: value }))
@@ -48,12 +45,12 @@ export function PerfilPage() {
   useEffect(() => {
     if (!profileState.data || isEditing) return
     setProfileForm({
-      name: account?.name || profileState.data.profile.name,
-      email: account?.username || profileState.data.profile.email,
+      name: profileState.data.profile.name,
+      email: profileState.data.profile.email,
       jobTitle: profileState.data.profile.jobTitle,
       activeSquadId: profileState.data.profile.activeSquadId,
     })
-  }, [account?.name, account?.username, profileState.data, isEditing])
+  }, [profileState.data, isEditing])
 
   useEffect(() => {
     const canvas = signatureRef.current?.getCanvas()

@@ -79,6 +79,30 @@ afterEach(() => {
 });
 
 describe('login', () => {
+  test('bloqueia chamadas diretas em produção mesmo com a flag legada', async () => {
+    setEnvironment({
+      CLIENT_ID: 'client-id',
+      CLIENT_SECRET: 'client-secret',
+      TENANT_ID: 'tenant-id',
+      REDIRECT_URI: 'https://app.example.test/api/redirect',
+      FRONTEND_URL: 'https://app.example.test',
+      NODE_ENV: 'production',
+      ENABLE_LEGACY_MSAL: 'true',
+    });
+    const loginResponse = createResponse();
+    const redirectResponse = createResponse();
+
+    await login({ query: {} }, loginResponse);
+    await redirect({ query: { code: 'authorization-code' } }, redirectResponse);
+
+    expect(loginResponse.statusCode).toBe(404);
+    expect(redirectResponse.statusCode).toBe(404);
+    expect(loginResponse.headers['Set-Cookie']).toBeUndefined();
+    expect(redirectResponse.headers['Set-Cookie']).toBeUndefined();
+    expect(msal.getAuthCodeUrl).not.toHaveBeenCalled();
+    expect(msal.acquireTokenByCode).not.toHaveBeenCalled();
+  });
+
   test('returns 500 without exposing configuration when required settings are absent', async () => {
     setEnvironment({ NODE_ENV: 'test', ENABLE_LEGACY_MSAL: 'true' });
     const response = createResponse();

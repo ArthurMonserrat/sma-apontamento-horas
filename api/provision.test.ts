@@ -72,6 +72,16 @@ afterEach(() => {
 });
 
 describe('provisionamento corporativo fail-closed', () => {
+  it('bloqueia chamada direta em produção antes de ler cookie ou Graph', async () => {
+    process.env.NODE_ENV = 'production';
+    const response = createResponse();
+
+    await provision(request(), response);
+
+    expect(response.statusCode).toBe(404);
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
   it('nega chamada sem sessão Microsoft e não inicializa o service role', async () => {
     const response = createResponse();
 

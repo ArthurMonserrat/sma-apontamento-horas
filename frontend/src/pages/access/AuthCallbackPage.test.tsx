@@ -2,7 +2,8 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AuthCallbackPage, readCallbackCode } from './AuthCallbackPage'
+import { AuthCallbackPage } from './AuthCallbackPage'
+import { readCallbackCode } from './authCallback'
 
 const { navigateMock, exchangeMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
