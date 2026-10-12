@@ -11,7 +11,9 @@ export const msalConfig: Configuration = {
   auth: {
     clientId,
     authority: `https://login.microsoftonline.com/${tenantId}`,
-    redirectUri: typeof window === 'undefined' ? '/' : `${window.location.origin}/`,
+    redirectUri: typeof window === 'undefined'
+      ? '/'
+      : new URL(import.meta.env.BASE_URL || '/', window.location.origin).toString(),
     navigateToLoginRequestUrl: false,
   } as Configuration['auth'],
   cache: {

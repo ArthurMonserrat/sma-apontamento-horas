@@ -17,10 +17,10 @@ vi.mock('../features/offline/useOfflineSync', () => ({ OfflineSyncProvider: ({ c
 import { App } from './App'
 
 describe('App', () => {
-  it('monta as rotas com o roteador do histórico do navegador', () => {
+  it('monta as rotas com hash para suportar recarregamento no GitHub Pages', () => {
     const markup = renderToStaticMarkup(<App />)
 
-    expect(markup).toContain('data-router="browser"')
+    expect(markup).toContain('data-router="hash"')
     expect(markup).toContain('data-routes="app"')
   })
 })
