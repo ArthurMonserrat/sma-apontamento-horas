@@ -12,13 +12,20 @@ export function AuthSync({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { instance, accounts, inProgress } = useMsal()
   const isAuthenticated = useIsAuthenticated()
-  const { session, signInWithMicrosoft } = useSession()
+  const { session, signInWithMicrosoft, markAuthReady } = useSession()
   const syncingAccount = useRef<string | null>(null)
 
   useEffect(() => {
-    if (inProgress !== InteractionStatus.None || !isAuthenticated) return
+    if (inProgress !== InteractionStatus.None) return
+    if (!isAuthenticated) {
+      markAuthReady?.()
+      return
+    }
     const account = instance.getActiveAccount() ?? accounts[0]
-    if (!account || session?.authProvider === 'microsoft' || syncingAccount.current === account.homeAccountId) return
+    if (!account || session?.authProvider === 'microsoft' || syncingAccount.current === account.homeAccountId) {
+      markAuthReady?.()
+      return
+    }
 
     syncingAccount.current = account.homeAccountId
     let cancelled = false
@@ -36,15 +43,17 @@ export function AuthSync({ children }: { children: ReactNode }) {
           sessionStorage.removeItem('sma:msal-destination')
           navigate(destination, { replace: true })
         }
+        markAuthReady?.()
       } catch (error) {
         console.error('[AuthSync] Falha ao sincronizar MSAL com o BFF:', error)
         syncingAccount.current = null
+        markAuthReady?.(error instanceof Error ? error.message : 'Não foi possível validar a sessão corporativa.')
       }
     }
 
     void synchronize()
     return () => { cancelled = true }
-  }, [accounts, inProgress, instance, isAuthenticated, navigate, session?.authProvider, signInWithMicrosoft])
+  }, [accounts, inProgress, instance, isAuthenticated, markAuthReady, navigate, session?.authProvider, signInWithMicrosoft])
 
   return children
 }

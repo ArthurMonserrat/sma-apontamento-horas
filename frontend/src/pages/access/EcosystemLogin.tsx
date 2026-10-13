@@ -13,7 +13,7 @@ const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePa
 export function EcosystemLogin() {
   const navigate = useNavigate()
   const { instance, inProgress, accounts } = useMsal()
-  const { session } = useSession()
+  const { session, isLoading, authError } = useSession()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -42,6 +42,14 @@ export function EcosystemLogin() {
 
   const busy = isAuthenticating || inProgress !== InteractionStatus.None
   const buttonLabel = busy ? 'Processando autenticação...' : 'Acessar Banco'
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 text-[var(--color-text)]" aria-busy="true">
+        <p className="font-semibold text-[var(--color-primary)]">Validando sessão corporativa...</p>
+      </main>
+    )
+  }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-12 text-[var(--color-text)] sm:px-6">
@@ -74,7 +82,7 @@ export function EcosystemLogin() {
           </article>
         </div>
 
-        {error && <p role="alert" className="mx-auto mt-6 max-w-xl text-sm font-semibold text-red-700">{error}</p>}
+        {(error || authError) && <p role="alert" className="mx-auto mt-6 max-w-xl text-sm font-semibold text-red-700">{error || authError}</p>}
         <button type="button" onClick={() => navigate('/selecao-perfil')} className="ui-button-secondary mx-auto mt-6">Acessar modo demonstrativo</button>
       </section>
     </main>

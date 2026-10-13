@@ -10,8 +10,10 @@ export type SessionContextValue = {
   profile: CollaboratorProfile | null
   corporateProfile?: CorporateProfile | null
   isLoading: boolean
+  authError?: string | null
   signIn: DemoSignIn
   signInWithMicrosoft?: MicrosoftSignIn
+  markAuthReady?: (error?: string) => void
   signOut: () => void
 }
 

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../../app/providers/themeContext'
-import { DemoSessionProvider } from '../../features/session/DemoSessionProvider'
+import { SessionContext } from '../../features/session/sessionContext'
 import { EcosystemLogin } from './EcosystemLogin'
 import { getEcosystemModulePath, toMicrosoftSessionInput } from './ecosystemModules'
 import ecosystemLoginSource from './EcosystemLogin.tsx?raw'
@@ -20,7 +20,9 @@ function renderEcosystemLogin() {
   return renderToStaticMarkup(
     <MemoryRouter initialEntries={['/']}>
       <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
-        <DemoSessionProvider><EcosystemLogin /></DemoSessionProvider>
+        <SessionContext.Provider value={{ session: null, profile: null, isLoading: false, signIn: vi.fn(), signInWithMicrosoft: vi.fn(), markAuthReady: vi.fn(), signOut: vi.fn() }}>
+          <EcosystemLogin />
+        </SessionContext.Provider>
       </ThemeContext.Provider>
     </MemoryRouter>,
   )
