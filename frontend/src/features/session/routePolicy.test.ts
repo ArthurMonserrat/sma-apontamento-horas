@@ -27,6 +27,9 @@ describe('política de rotas da produção', () => {
   })
 
   it.each<[DemoRole, string]>([
+    ['COLLABORATOR', '/selecao-perfil?modulo=banco1'],
+    ['SUPERVISOR', '/selecao-perfil?modulo=banco2'],
+    ['DIRECTOR_ADMIN', '/portal'],
     ['COLLABORATOR', '/colaborador'],
     ['COLLABORATOR', '/colaborador/apontamentos/novo?origem=hoje#formulario'],
     ['SUPERVISOR', '/supervisor?periodo=atual'],

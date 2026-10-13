@@ -6,8 +6,8 @@ describe('autenticação das rotas internas', () => {
     expect(hasAuthenticatedSession(null, { homeAccountId: 'account-1' })).toBe(false)
   })
 
-  it('nega uma sessão Microsoft legada sem autoridade Supabase', () => {
-    expect(hasAuthenticatedSession({ authProvider: 'microsoft', isDemo: false }, null)).toBe(false)
+  it('aceita uma sessão Microsoft corporativa provisionada', () => {
+    expect(hasAuthenticatedSession({ authProvider: 'microsoft', isDemo: false }, null)).toBe(true)
   })
 
   it('não trata sessão demo como autenticação corporativa', () => {
