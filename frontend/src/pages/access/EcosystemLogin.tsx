@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { InteractionStatus } from '@azure/msal-browser'
 import { useMsal } from '@azure/msal-react'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
@@ -15,15 +16,18 @@ export function EcosystemLogin() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (inProgress !== 'none' || accounts.length === 0) return
+    if (inProgress !== InteractionStatus.None) return
     const destination = sessionStorage.getItem('sma:msal-destination')
     if (!destination) return
+    const account = instance.getActiveAccount() ?? accounts[0]
+    if (!account) return
+    instance.setActiveAccount(account)
     sessionStorage.removeItem('sma:msal-destination')
     navigate(destination, { replace: true })
-  }, [accounts, inProgress, navigate])
+  }, [accounts, inProgress, instance, navigate])
 
   async function handleAccess(module: EcosystemModule) {
-    if (isAuthenticating || inProgress !== 'none') return
+    if (isAuthenticating || inProgress !== InteractionStatus.None) return
     setError(null)
     setIsAuthenticating(true)
 
@@ -44,7 +48,8 @@ export function EcosystemLogin() {
     }
   }
 
-  const busy = isAuthenticating || inProgress !== 'none'
+  const busy = isAuthenticating || inProgress !== InteractionStatus.None
+  const buttonLabel = busy ? 'Processando autenticação...' : 'Acessar Banco'
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-12 text-[var(--color-text)] sm:px-6">
@@ -63,7 +68,7 @@ export function EcosystemLogin() {
             <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 1</h2>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Gestão consolidada de horas e registros da base principal.</p>
             <button type="button" disabled={busy} onClick={() => void handleAccess('BANCO_1')} className="ui-button-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60">
-              Acessar Banco 1
+              {busy ? buttonLabel : 'Acessar Banco 1'}
             </button>
           </article>
 
@@ -72,7 +77,7 @@ export function EcosystemLogin() {
             <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 2 (Campo e Estudos)</h2>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Apontamento rápido para equipes externas, modo offline e sincronização.</p>
             <button type="button" disabled={busy} onClick={() => void handleAccess('BANCO_2')} className="ui-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60">
-              Acessar Banco 2
+              {busy ? buttonLabel : 'Acessar Banco 2'}
             </button>
           </article>
         </div>

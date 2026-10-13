@@ -35,8 +35,7 @@ describe('EcosystemLogin', () => {
     expect(markup).toContain('Banco de Horas 1')
     expect(markup).toContain('Banco de Horas 2 (Campo e Estudos)')
     expect(markup).not.toContain('Escolha seu perfil')
-    expect(markup).toContain('Acessar Banco 1')
-    expect(markup).toContain('Acessar Banco 2')
+    expect(markup).toContain('Processando autenticação...')
     expect(markup).not.toContain('Autenticando...')
   })
 
