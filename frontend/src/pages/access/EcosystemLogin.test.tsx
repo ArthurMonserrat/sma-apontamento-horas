@@ -13,6 +13,7 @@ vi.mock('@azure/msal-react', () => ({
     inProgress: 'startup',
     instance: { getActiveAccount: () => null },
   }),
+  useIsAuthenticated: () => false,
 }))
 
 function renderEcosystemLogin() {

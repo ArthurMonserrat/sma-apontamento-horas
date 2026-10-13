@@ -12,6 +12,7 @@ vi.mock('@azure/msal-react', () => ({
     inProgress: 'none',
     instance: { getActiveAccount: () => null },
   }),
+  useIsAuthenticated: () => false,
 }))
 
 describe('rota raiz do ecossistema', () => {

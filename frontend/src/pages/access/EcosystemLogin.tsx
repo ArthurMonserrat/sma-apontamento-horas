@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { InteractionStatus } from '@azure/msal-browser'
-import { useMsal } from '@azure/msal-react'
+import { useIsAuthenticated, useMsal } from '@azure/msal-react'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { getEcosystemModulePath, type EcosystemModule } from './ecosystemModules'
@@ -12,6 +12,7 @@ const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePa
 export function EcosystemLogin() {
   const navigate = useNavigate()
   const { instance, inProgress, accounts } = useMsal()
+  const isAuthenticated = useIsAuthenticated()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -24,7 +25,7 @@ export function EcosystemLogin() {
     instance.setActiveAccount(account)
     sessionStorage.removeItem('sma:msal-destination')
     navigate(destination, { replace: true })
-  }, [accounts, inProgress, instance, navigate])
+  }, [accounts, inProgress, instance, isAuthenticated, navigate])
 
   async function handleAccess(module: EcosystemModule) {
     if (isAuthenticating || inProgress !== InteractionStatus.None) return
@@ -33,8 +34,9 @@ export function EcosystemLogin() {
 
     try {
       const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
-      const activeAccount = instance.getActiveAccount()
-      if (activeAccount) {
+      const activeAccount = instance.getActiveAccount() ?? accounts[0]
+      if (activeAccount && (isAuthenticated || accounts.length > 0)) {
+        instance.setActiveAccount(activeAccount)
         navigate(destination, { replace: true })
         return
       }
