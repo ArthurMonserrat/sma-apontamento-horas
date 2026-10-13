@@ -9,6 +9,7 @@ import { AuthSync } from './AuthSync'
 import { provisionMicrosoftProfile } from './authService'
 
 const account = { homeAccountId: 'account-1', username: 'ana@sma.com', name: 'Ana' }
+let inProgress = 'none'
 const msal = {
   getActiveAccount: vi.fn(() => account),
   setActiveAccount: vi.fn(),
@@ -16,8 +17,8 @@ const msal = {
 }
 
 vi.mock('@azure/msal-react', () => ({
-  useMsal: () => ({ instance: msal, accounts: [account], inProgress: 'none' }),
-  useIsAuthenticated: () => true,
+  useMsal: () => ({ instance: msal, accounts: [account], inProgress }),
+  useIsAuthenticated: () => inProgress === 'none',
 }))
 vi.mock('./authService', () => ({ provisionMicrosoftProfile: vi.fn() }))
 
@@ -30,6 +31,7 @@ beforeEach(() => {
   document.body.appendChild(container)
   root = createRoot(container)
   vi.clearAllMocks()
+  inProgress = 'none'
   sessionStorage.clear()
 })
 
@@ -39,6 +41,18 @@ afterEach(() => {
 })
 
 describe('AuthSync após loginRedirect', () => {
+  it.each(['startup', 'handleRedirect', 'login'])('oculta as páginas enquanto o MSAL está em %s', async (status) => {
+    inProgress = status
+    await act(async () => root.render(
+      <SessionContext.Provider value={{ session: null, profile: null, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
+        <MemoryRouter><AuthSync><p>Página interna</p></AuthSync></MemoryRouter>
+      </SessionContext.Provider>,
+    ))
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Página interna')
+    expect(provisionMicrosoftProfile).not.toHaveBeenCalled()
+  })
+
   it('espera o BFF em Strict Mode e abre o banco escolhido sem novo clique', async () => {
     let finishProvision!: (profile: {
       id: string; email: string; full_name: string; role: 'colaborador'; squad_id: null; active: boolean
