@@ -136,6 +136,15 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     return created
   }
 
+  const signInWithMicrosoft = (input: { id: string; name: string; email: string; role: DemoRole; corporateProfile: NonNullable<DemoSession['corporateProfile']> }) => {
+    const created = demoSessionService.signInWithMicrosoft(input)
+    modeRef.current = 'corporate'
+    corporateRequestRef.current += 1
+    setSession(created)
+    setCorporateProfile(input.corporateProfile)
+    return created
+  }
+
   const signOut = () => {
     modeRef.current = 'none'
     corporateRequestRef.current += 1
@@ -146,5 +155,5 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setCorporateProfile(null)
   }
 
-  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, signIn, signOut }}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, signIn, signInWithMicrosoft, signOut }}>{children}</SessionContext.Provider>
 }

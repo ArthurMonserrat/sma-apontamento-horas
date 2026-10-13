@@ -5,6 +5,41 @@ type ProvisionResponse = {
   error?: string
 }
 
+export async function provisionMicrosoftProfile(email: string, fullName: string, accessToken: string): Promise<CorporateProfile> {
+  const endpoint = '/api/provision'
+  if (!accessToken.trim()) throw new Error('Token Microsoft ausente para provisionamento.')
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ email, fullName }),
+    })
+    const payload = await response.json().catch(() => null) as ProvisionResponse | null
+    if (!response.ok || !payload?.profile) {
+      console.error('[authService] Falha no provisionamento Microsoft:', {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        error: payload?.error ?? 'Resposta sem perfil corporativo',
+      })
+      throw new Error(payload?.error ?? 'O perfil corporativo não foi retornado pelo servidor.')
+    }
+    return payload.profile
+  } catch (error) {
+    console.error('[authService] Erro ao sincronizar MSAL com o BFF:', {
+      endpoint,
+      email,
+      error: error instanceof Error ? { name: error.name, message: error.message } : error,
+    })
+    throw error instanceof Error ? error : new Error('Falha desconhecida no provisionamento corporativo.')
+  }
+}
+
 /** O navegador envia somente o bearer Supabase; cargos nunca vêm do cliente. */
 export async function getCorporateProfile(accessToken: string): Promise<CorporateProfile> {
   const endpoint = '/api/supabase-session'

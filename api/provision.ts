@@ -1,13 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { parse } from 'cookie';
 import type { VercelRequest, VercelResponse } from '../server/types.js';
-import { assertLegacyMsalEnabled } from '../server/legacyMsalGuard.js';
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
 function getSessionToken(req: VercelRequest): string | null {
+  const authorization = req.headers?.authorization;
+  const rawAuthorization = Array.isArray(authorization) ? authorization[0] : authorization;
+  if (rawAuthorization?.startsWith('Bearer ')) return rawAuthorization.slice('Bearer '.length).trim() || null;
+
   const cookieHeader = req.headers?.cookie;
   const rawCookie = Array.isArray(cookieHeader) ? cookieHeader[0] : cookieHeader;
   if (rawCookie) return parse(rawCookie).sma_session ?? null;
@@ -68,9 +71,8 @@ function isKnownRole(value: unknown): value is 'colaborador' | 'supervisor' | 'd
 export async function provision(req: VercelRequest, res: VercelResponse): Promise<void> {
   console.info('[provision] Requisição recebida:', {
     method: req.method,
-    hasSessionCookie: Boolean(req.headers?.cookie || req.cookies?.sma_session),
+    hasSessionCredential: Boolean(req.headers?.authorization || req.headers?.cookie || req.cookies?.sma_session),
   });
-  if (!assertLegacyMsalEnabled(req, res)) return;
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
     return;

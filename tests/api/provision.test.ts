@@ -71,15 +71,18 @@ afterEach(() => {
   else process.env.NODE_ENV = originalEnvironment.NODE_ENV;
 });
 
-describe('provisionamento corporativo fail-closed', () => {
-  it('bloqueia chamada direta em produção antes de ler cookie ou Graph', async () => {
+describe('provisionamento corporativo autenticado', () => {
+  it('permite provisionamento em produção quando a credencial Microsoft é válida', async () => {
     process.env.NODE_ENV = 'production';
+    maybeSingle.mockResolvedValue({ data: {
+      id: 'profile-1', email: 'ana@example.com', full_name: 'Ana Silva', role: 'colaborador', active: true,
+    }, error: null });
     const response = createResponse();
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(404);
-    expect(createClient).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(createClient).toHaveBeenCalledWith('https://supabase.example.test', 'server-only-key', expect.any(Object));
   });
 
   it('nega chamada sem sessão Microsoft e não inicializa o service role', async () => {
