@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const maybeSingle = vi.hoisted(() => vi.fn());
+const insertedSingle = vi.hoisted(() => vi.fn());
 const from = vi.hoisted(() => vi.fn(() => ({
   select: vi.fn(() => ({
     eq: vi.fn(() => ({ maybeSingle })),
+  })),
+  insert: vi.fn(() => ({
+    select: vi.fn(() => ({ single: insertedSingle })),
   })),
 })));
 const createClient = vi.hoisted(() => vi.fn(() => ({ from })));
@@ -55,6 +59,7 @@ beforeEach(() => {
   process.env.ENABLE_LEGACY_MSAL = 'true';
   process.env.NODE_ENV = 'test';
   maybeSingle.mockReset();
+  insertedSingle.mockReset();
   from.mockClear();
   createClient.mockClear();
 });
@@ -95,14 +100,41 @@ describe('provisionamento corporativo autenticado', () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
-  it('nega usuário sem perfil previamente autorizado e não cria registro', async () => {
+  it('cria colaborador automaticamente quando o perfil ainda não existe', async () => {
     maybeSingle.mockResolvedValue({ data: null, error: null });
+    const profile = {
+      id: 'profile-new', email: 'ana@example.com', full_name: 'Ana Silva', role: 'colaborador', active: true,
+    };
+    insertedSingle.mockResolvedValue({ data: profile, error: null });
     const response = createResponse();
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(403);
-    expect(response.body).toEqual({ error: 'Corporate profile is not provisioned.' });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ profile });
+    expect(from).toHaveBeenCalledWith('profiles');
+  });
+
+  it.each([
+    ['fernando.almeida@sma-eng.com.br', 'diretor'],
+    ['supervisor1@sma-eng.com.br', 'supervisor'],
+    ['pessoa@outro-dominio.example', 'colaborador'],
+  ] as const)('define o cargo %s como %s no provisionamento JIT', async (email, role) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ displayName: 'Usuário Microsoft', userPrincipalName: email }),
+    }));
+    maybeSingle.mockResolvedValue({ data: null, error: null });
+    const profile = {
+      id: 'profile-new', email, full_name: 'Usuário Microsoft', role, active: true,
+    };
+    insertedSingle.mockResolvedValue({ data: profile, error: null });
+    const response = createResponse();
+
+    await provision(request(), response);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ profile });
     expect(from).toHaveBeenCalledWith('profiles');
   });
 
