@@ -16,12 +16,23 @@ function getSessionToken(req: VercelRequest): string | null {
 
 async function getAuthenticatedMicrosoftUser(req: VercelRequest) {
   const accessToken = getSessionToken(req);
-  if (!accessToken) return null;
+  if (!accessToken) {
+    console.error('[provision] Sessão Microsoft ausente: cookie sma_session não encontrado.');
+    return null;
+  }
 
-  const response = await fetch('https://graph.microsoft.com/v1.0/me?$select=displayName,userPrincipalName,mail', {
+  const graphEndpoint = 'https://graph.microsoft.com/v1.0/me?$select=displayName,userPrincipalName,mail';
+  const response = await fetch(graphEndpoint, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    console.error('[provision] Microsoft Graph rejeitou a sessão:', {
+      endpoint: graphEndpoint,
+      status: response.status,
+      statusText: response.statusText,
+    });
+    return null;
+  }
 
   const account = await response.json() as { displayName?: string; userPrincipalName?: string; mail?: string | null };
   const authenticatedEmail = account.userPrincipalName ?? account.mail;
@@ -34,6 +45,10 @@ function getSupabaseAdmin() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceRoleKey) {
+    console.error('[provision] Variáveis Supabase ausentes na Vercel:', {
+      hasSupabaseUrl: Boolean(url),
+      hasServiceRoleKey: Boolean(serviceRoleKey),
+    });
     throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured on the server.');
   }
 
@@ -51,6 +66,10 @@ function isKnownRole(value: unknown): value is 'colaborador' | 'supervisor' | 'd
 }
 
 export async function provision(req: VercelRequest, res: VercelResponse): Promise<void> {
+  console.info('[provision] Requisição recebida:', {
+    method: req.method,
+    hasSessionCookie: Boolean(req.headers?.cookie || req.cookies?.sma_session),
+  });
   if (!assertLegacyMsalEnabled(req, res)) return;
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
@@ -65,7 +84,15 @@ export async function provision(req: VercelRequest, res: VercelResponse): Promis
     }
     const supabase = getSupabaseAdmin();
     const existing = await findByEmail(supabase, authenticatedUser.email);
-    if (existing.error) throw existing.error;
+    if (existing.error) {
+      console.error('[provision] Falha ao consultar profiles no Supabase:', {
+        code: existing.error.code,
+        message: existing.error.message,
+        details: existing.error.details,
+        hint: existing.error.hint,
+      });
+      throw existing.error;
+    }
     if (!existing.data) {
       res.status(403).json({ error: 'Corporate profile is not provisioned.' });
       return;
@@ -84,7 +111,9 @@ export async function provision(req: VercelRequest, res: VercelResponse): Promis
     }
     res.status(200).json({ profile: existing.data });
   } catch (error) {
-    console.error('[provision] Corporate profile lookup failed:', error);
+    console.error('[provision] Corporate profile lookup failed:', {
+      error: error instanceof Error ? { name: error.name, message: error.message } : error,
+    });
     res.status(500).json({ error: 'Could not validate corporate profile.' });
   }
 }
