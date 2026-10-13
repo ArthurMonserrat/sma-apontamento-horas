@@ -18,6 +18,7 @@ export type MicrosoftSessionInput = {
   name: string
   email: string
   role: DemoRole
+  accessToken?: string
   corporateProfile?: CorporateProfile
 }
 

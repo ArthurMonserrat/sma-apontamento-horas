@@ -8,11 +8,12 @@ export function getEcosystemModulePath(module: EcosystemModule) {
     : '/selecao-perfil?modulo=banco2'
 }
 
-export function toMicrosoftSessionInput(account: { homeAccountId: string; name?: string; username: string }, role: DemoRole = 'COLLABORATOR'): MicrosoftSessionInput {
+export function toMicrosoftSessionInput(account: { homeAccountId: string; name?: string; username: string }, role: DemoRole = 'COLLABORATOR', accessToken?: string): MicrosoftSessionInput {
   return {
     id: account.homeAccountId,
     name: account.name || account.username,
     email: account.username,
     role,
+    ...(accessToken ? { accessToken } : {}),
   }
 }
