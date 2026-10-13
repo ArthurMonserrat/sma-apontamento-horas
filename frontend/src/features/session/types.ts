@@ -1,5 +1,7 @@
 export type DemoRole = 'COLLABORATOR' | 'SUPERVISOR' | 'DIRECTOR_ADMIN'
 
+export type AuthProvider = 'demo' | 'supabase' | 'microsoft'
+
 export type CorporateRole = 'colaborador' | 'supervisor' | 'diretor'
 
 export type CorporateProfile = {
@@ -31,6 +33,6 @@ export type DemoSession = {
   isDemo: boolean
   version: 2
   email?: string
-  authProvider?: 'demo' | 'microsoft' | 'supabase'
+  authProvider?: AuthProvider
   corporateProfile?: CorporateProfile
 }

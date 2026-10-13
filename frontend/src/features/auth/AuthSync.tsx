@@ -72,7 +72,7 @@ export function AuthSync({ children }: { children: ReactNode }) {
   if (session?.authProvider === 'microsoft') return children
 
   // Cobre também o primeiro render, antes de o efeito iniciar o provisionamento.
-  const awaitingProvision = (isAuthenticated || !!activeAccount) && session?.authProvider !== 'microsoft' && !authError
+  const awaitingProvision = (isAuthenticated || !!activeAccount) && !authError
   if (inProgress !== InteractionStatus.None || isProvisioning || awaitingProvision) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 text-[var(--color-text)]" aria-busy="true">
