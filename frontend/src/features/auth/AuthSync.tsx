@@ -16,28 +16,21 @@ export function AuthSync({ children }: { children: ReactNode }) {
   const syncingAccount = useRef<string | null>(null)
   const [isProvisioning, setIsProvisioning] = useState(false)
   const activeAccount = instance.getActiveAccount() ?? accounts[0]
+  const accountId = activeAccount?.homeAccountId ?? null
 
   useEffect(() => {
-    console.log('[Auth] Iniciando sincronização', { inProgress, hasActiveAccount: !!activeAccount })
+    if (session?.authProvider === 'microsoft') return
+    console.log('[Auth] Iniciando sincronização', { inProgress, hasActiveAccount: !!accountId })
     if (inProgress !== InteractionStatus.None) return
-    if (!activeAccount) {
+    if (!accountId || !activeAccount) {
       syncingAccount.current = null
       markAuthReady?.()
       return
     }
     const account = activeAccount
-    if (session?.authProvider === 'microsoft') {
-      const destination = sessionStorage.getItem('sma:msal-destination')
-      if (destination) {
-        console.log('[Auth] Redirecionando para:', destination)
-        sessionStorage.removeItem('sma:msal-destination')
-        navigate(destination, { replace: true })
-      }
-      return
-    }
-    if (!account || syncingAccount.current === account.homeAccountId) return
+    if (syncingAccount.current === accountId) return
 
-    syncingAccount.current = account.homeAccountId
+    syncingAccount.current = accountId
     setIsProvisioning(true)
 
     async function synchronize() {
@@ -48,16 +41,14 @@ export function AuthSync({ children }: { children: ReactNode }) {
         const profile = await provisionMicrosoftProfile(account.username, account.name || account.username, token.accessToken)
         console.log('[Auth] API retornou com sucesso', profile)
         const role = profile.role === 'diretor' ? 'DIRECTOR_ADMIN' : profile.role === 'supervisor' ? 'SUPERVISOR' : 'COLLABORATOR'
-        signInWithMicrosoft?.({ ...toMicrosoftSessionInput(account, role), corporateProfile: profile })
-        const destination = sessionStorage.getItem('sma:msal-destination')
-        if (destination) {
-          console.log('[Auth] Redirecionando para:', destination)
-          sessionStorage.removeItem('sma:msal-destination')
-          navigate(destination, { replace: true })
+        const updatedSession = signInWithMicrosoft?.({ ...toMicrosoftSessionInput(account, role), corporateProfile: profile })
+        if (updatedSession?.authProvider !== 'microsoft') {
+          throw new Error('A sessão Microsoft não foi atualizada no contexto.')
         }
         markAuthReady?.()
       } catch (error) {
         console.error('[AuthSync] Falha ao sincronizar MSAL com o BFF:', error)
+        syncingAccount.current = null
         markAuthReady?.(error instanceof Error ? error.message : 'Não foi possível validar a sessão corporativa.')
       } finally {
         setIsProvisioning(false)
@@ -65,7 +56,20 @@ export function AuthSync({ children }: { children: ReactNode }) {
     }
 
     void synchronize()
-  }, [activeAccount, inProgress, instance, markAuthReady, navigate, session?.authProvider, signInWithMicrosoft])
+  }, [inProgress, accountId])
+
+  // Navega apenas depois que o provider publicou a sessão Microsoft.
+  useEffect(() => {
+    if (session?.authProvider !== 'microsoft') return
+    const destination = sessionStorage.getItem('sma:msal-destination')
+    if (!destination) return
+
+    console.log('[Auth] Redirecionando para:', destination)
+    sessionStorage.removeItem('sma:msal-destination')
+    navigate(destination, { replace: true })
+  }, [navigate, session?.authProvider])
+
+  if (session?.authProvider === 'microsoft') return children
 
   // Cobre também o primeiro render, antes de o efeito iniciar o provisionamento.
   const awaitingProvision = (isAuthenticated || !!activeAccount) && session?.authProvider !== 'microsoft' && !authError
