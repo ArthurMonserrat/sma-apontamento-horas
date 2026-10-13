@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMsal } from '@azure/msal-react'
 import { BrandMark } from '../../shared/ui/BrandMark'
@@ -10,9 +10,17 @@ const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePa
 
 export function EcosystemLogin() {
   const navigate = useNavigate()
-  const { instance, inProgress } = useMsal()
+  const { instance, inProgress, accounts } = useMsal()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (inProgress !== 'none' || accounts.length === 0) return
+    const destination = sessionStorage.getItem('sma:msal-destination')
+    if (!destination) return
+    sessionStorage.removeItem('sma:msal-destination')
+    navigate(destination, { replace: true })
+  }, [accounts, inProgress, navigate])
 
   async function handleAccess(module: EcosystemModule) {
     if (isAuthenticating || inProgress !== 'none') return
@@ -22,11 +30,12 @@ export function EcosystemLogin() {
     try {
       const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
       const activeAccount = instance.getActiveAccount()
-      const response = activeAccount ? null : await instance.loginPopup(loginRequest)
-      const account = activeAccount ?? response?.account
-      if (!account) throw new Error('A Microsoft não retornou uma conta autenticada.')
-      instance.setActiveAccount(account)
-      navigate(destination, { replace: true })
+      if (activeAccount) {
+        navigate(destination, { replace: true })
+        return
+      }
+      sessionStorage.setItem('sma:msal-destination', destination)
+      await instance.loginRedirect(loginRequest)
     } catch (authError) {
       console.error('Erro detalhado do MSAL:', authError)
       setError(authError instanceof Error ? authError.message : 'Não foi possível concluir a autenticação. Tente novamente.')
