@@ -54,10 +54,10 @@ describe('EcosystemLogin', () => {
     })
   })
 
-  it('mantém o MSAL fora do caminho corporativo e oferece entrada explícita da demonstração', () => {
-    expect(ecosystemLoginSource).not.toContain('loginPopup')
-    expect(ecosystemLoginSource).not.toContain('useMsal')
-    expect(ecosystemLoginSource).toContain('startCorporateOAuth')
+  it('usa o loginPopup do MSAL e mantém a entrada explícita da demonstração', () => {
+    expect(ecosystemLoginSource).toContain('loginPopup')
+    expect(ecosystemLoginSource).toContain('useMsal')
+    expect(ecosystemLoginSource).not.toContain('startCorporateOAuth')
     expect(ecosystemLoginSource).toContain('modo demonstrativo')
   })
 })

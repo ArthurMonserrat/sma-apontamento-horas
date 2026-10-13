@@ -1,35 +1,41 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMsal } from '@azure/msal-react'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { getEcosystemModulePath, type EcosystemModule } from './ecosystemModules'
-import { startCorporateOAuth } from '../../features/auth/infrastructure/supabaseSessionService'
+import { loginRequest } from '../../config/authConfig'
 
 const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePath('BANCO_2')
 
 export function EcosystemLogin() {
   const navigate = useNavigate()
+  const { instance, inProgress } = useMsal()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleAccess(module: EcosystemModule) {
-    if (isAuthenticating) return
+    if (isAuthenticating || inProgress !== 'none') return
     setError(null)
     setIsAuthenticating(true)
 
     try {
       const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
-      sessionStorage.setItem('sma:oauth-destination', destination)
-      const { error: oauthError } = await startCorporateOAuth()
-      if (oauthError) throw oauthError
-    } catch {
-      setError('Não foi possível concluir a autenticação. Tente novamente.')
+      const activeAccount = instance.getActiveAccount()
+      const response = activeAccount ? null : await instance.loginPopup(loginRequest)
+      const account = activeAccount ?? response?.account
+      if (!account) throw new Error('A Microsoft não retornou uma conta autenticada.')
+      instance.setActiveAccount(account)
+      navigate(destination, { replace: true })
+    } catch (authError) {
+      console.error('Erro detalhado do MSAL:', authError)
+      setError(authError instanceof Error ? authError.message : 'Não foi possível concluir a autenticação. Tente novamente.')
     } finally {
       setIsAuthenticating(false)
     }
   }
 
-  const busy = isAuthenticating
+  const busy = isAuthenticating || inProgress !== 'none'
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-12 text-[var(--color-text)] sm:px-6">
