@@ -41,10 +41,7 @@ export function AuthSync({ children }: { children: ReactNode }) {
         const profile = await provisionMicrosoftProfile(account.username, account.name || account.username, token.accessToken)
         console.log('[Auth] API retornou com sucesso', profile)
         const role = profile.role === 'diretor' ? 'DIRECTOR_ADMIN' : profile.role === 'supervisor' ? 'SUPERVISOR' : 'COLLABORATOR'
-        const updatedSession = signInWithMicrosoft?.({ ...toMicrosoftSessionInput(account, role), corporateProfile: profile })
-        if (updatedSession?.authProvider !== 'microsoft') {
-          throw new Error('A sessão Microsoft não foi atualizada no contexto.')
-        }
+        signInWithMicrosoft?.({ ...toMicrosoftSessionInput(account, role), corporateProfile: profile })
         markAuthReady?.()
       } catch (error) {
         console.error('[AuthSync] Falha ao sincronizar MSAL com o BFF:', error)
@@ -60,11 +57,14 @@ export function AuthSync({ children }: { children: ReactNode }) {
 
   // Navega apenas depois que o provider publicou a sessão Microsoft.
   useEffect(() => {
+    console.log('[Auth Router] Sessão atual:', session?.authProvider)
     if (session?.authProvider !== 'microsoft') return
+
     const destination = sessionStorage.getItem('sma:msal-destination')
+    console.log('[Auth Router] Destino no storage:', destination)
     if (!destination) return
 
-    console.log('[Auth] Redirecionando para:', destination)
+    console.log('[Auth Router] Disparando navigate para:', destination)
     sessionStorage.removeItem('sma:msal-destination')
     navigate(destination, { replace: true })
   }, [navigate, session?.authProvider])
