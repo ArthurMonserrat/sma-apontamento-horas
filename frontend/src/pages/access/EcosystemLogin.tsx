@@ -30,7 +30,6 @@ export function EcosystemLogin() {
         return
       }
       sessionStorage.setItem('sma:msal-destination', destination)
-      if (activeAccount) return
       await instance.loginRedirect(loginRequest)
     } catch (authError) {
       console.error('Erro detalhado do MSAL:', authError)
