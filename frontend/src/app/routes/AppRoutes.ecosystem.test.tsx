@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../providers/themeContext'
-import { DemoSessionProvider } from '../../features/session/DemoSessionProvider'
+import { SessionContext } from '../../features/session/sessionContext'
 import { AppRoutes } from './AppRoutes'
 import appRoutesSource from './AppRoutes.tsx?raw'
 
@@ -20,7 +20,9 @@ describe('rota raiz do ecossistema', () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter initialEntries={['/']}>
         <ThemeContext.Provider value={{ theme: 'light', toggleTheme: () => undefined }}>
-          <DemoSessionProvider><AppRoutes /></DemoSessionProvider>
+          <SessionContext.Provider value={{ session: null, profile: null, isLoading: false, signIn: vi.fn(), signInWithMicrosoft: vi.fn(), markAuthReady: vi.fn(), signOut: vi.fn() }}>
+            <AppRoutes />
+          </SessionContext.Provider>
         </ThemeContext.Provider>
       </MemoryRouter>,
     )
