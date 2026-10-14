@@ -3,7 +3,6 @@ import { AppLayout } from '../layouts/AppLayout'
 import { ColaboradorPage } from '../../pages/collaborator/ColaboradorPage'
 import { HistoricoPage } from '../../pages/collaborator/HistoricoPage'
 import { EcosystemLogin } from '../../pages/access/EcosystemLogin'
-import { ProfileSelectionPage } from '../../pages/access/ProfileSelectionPage'
 import { NovoApontamentoPage } from '../../pages/collaborator/NovoApontamentoPage'
 import { PerfilPage } from '../../pages/collaborator/PerfilPage'
 import { FolgasPage } from '../../pages/collaborator/FolgasPage'
@@ -14,7 +13,6 @@ import { EquipesPage } from '../../pages/administration/EquipesPage'
 import { RelatoriosPage } from '../../pages/administration/RelatoriosPage'
 import { AvisosPage } from '../../pages/administration/AvisosPage'
 import { ManagerNoticesRedirect } from '../../features/session/ManagerNoticesRedirect'
-import { Portal } from '../../pages/access/Portal'
 import { AuthCallbackPage } from '../../pages/access/AuthCallbackPage'
 
 export function AppRoutes() {
@@ -23,8 +21,6 @@ export function AppRoutes() {
       <Route path="/" element={<EcosystemLogin />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/selecao-perfil" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><ProfileSelectionPage /></ProtectedRoute>} />
-      <Route path="/portal" element={<ProtectedRoute allowedRoles={['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']}><Portal /></ProtectedRoute>} />
       <Route path="/avisos" element={<ProtectedRoute allowedRoles={['SUPERVISOR', 'DIRECTOR_ADMIN']}><ManagerNoticesRedirect /></ProtectedRoute>} />
       <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['COLLABORATOR']}><AppLayout /></ProtectedRoute>}>
         <Route index element={<ColaboradorPage />} />

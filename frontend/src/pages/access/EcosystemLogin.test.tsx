@@ -4,17 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../../app/providers/themeContext'
 import { SessionContext } from '../../features/session/sessionContext'
 import { EcosystemLogin } from './EcosystemLogin'
-import { getEcosystemModulePath, toMicrosoftSessionInput } from './ecosystemModules'
+import { getEcosystemModulePath, isAllowedOAuthDestination } from './ecosystemModules'
 import ecosystemLoginSource from './EcosystemLogin.tsx?raw'
+import portalSource from './Portal.tsx?raw'
 
-vi.mock('@azure/msal-react', () => ({
-  useMsal: () => ({
-    accounts: [],
-    inProgress: 'startup',
-    instance: { getActiveAccount: () => null },
-  }),
-  useIsAuthenticated: () => false,
-}))
+vi.mock('../../features/auth/infrastructure/supabaseSessionService', () => ({ startCorporateOAuth: vi.fn() }))
 
 function renderEcosystemLogin() {
   return renderToStaticMarkup(
@@ -38,29 +32,24 @@ describe('EcosystemLogin', () => {
     expect(markup).toContain('Banco de Horas 1')
     expect(markup).toContain('Banco de Horas 2 (Campo e Estudos)')
     expect(markup).not.toContain('Escolha seu perfil')
-    expect(markup).toContain('Processando autenticação...')
-    expect(markup).not.toContain('Autenticando...')
+    expect(markup).toContain('Acessar Banco 1')
+    expect(markup).toContain('Banco 2 indisponível')
   })
 
-  it('mantém destinos distintos para a seleção de cada banco', () => {
-    expect(getEcosystemModulePath('BANCO_1')).toBe('/selecao-perfil?modulo=banco1')
-    expect(getEcosystemModulePath('BANCO_2')).toBe('/selecao-perfil?modulo=banco2')
+  it('não aponta módulos para a seleção manual de cargos', () => {
+    expect(getEcosystemModulePath('BANCO_1')).toBe('/?modulo=banco1')
+    expect(getEcosystemModulePath('BANCO_2')).toBeNull()
+    expect(isAllowedOAuthDestination('/?modulo=banco1')).toBe(true)
+    expect(isAllowedOAuthDestination('https://banco2.example.com')).toBe(false)
+    expect(isAllowedOAuthDestination('/?modulo=banco2')).toBe(false)
   })
 
-  it('prepara nome e e-mail da conta Microsoft para a sessão global', () => {
-    expect(toMicrosoftSessionInput({ homeAccountId: 'account-1', name: 'Ana SM&A', username: 'ana@sma.com' })).toEqual({
-      id: 'account-1',
-      name: 'Ana SM&A',
-      email: 'ana@sma.com',
-      role: 'COLLABORATOR',
-    })
-  })
-
-  it('usa o loginRedirect do MSAL e mantém a entrada explícita da demonstração', () => {
-    expect(ecosystemLoginSource).toContain('loginRedirect')
-    expect(ecosystemLoginSource).not.toContain('loginPopup')
-    expect(ecosystemLoginSource).toContain('useMsal')
-    expect(ecosystemLoginSource).not.toContain('startCorporateOAuth')
-    expect(ecosystemLoginSource).toContain('modo demonstrativo')
+  it('usa Supabase OAuth e não oferece entrada demonstrativa', () => {
+    expect(ecosystemLoginSource).toContain('startCorporateOAuth')
+    expect(ecosystemLoginSource).not.toContain('loginRedirect')
+    expect(ecosystemLoginSource).not.toContain('useMsal')
+    expect(ecosystemLoginSource).not.toContain('modo demonstrativo')
+    expect(ecosystemLoginSource).not.toContain('VITE_BANCO_HORAS_2_URL')
+    expect(portalSource).not.toContain('VITE_BANCO_HORAS_2_URL')
   })
 })

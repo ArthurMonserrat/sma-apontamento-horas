@@ -2,9 +2,17 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { demoSessionService } from './infrastructure/demoSessionService'
 import { demoCollaborator } from '../../demo/fixtures/demoData'
 import { PROFILE_UPDATED_EVENT, profileService } from '../profile/infrastructure/profileService'
-import { SessionContext } from './sessionContext'
+import { SessionContext, type AuthState } from './sessionContext'
 import type { DemoRole, DemoSession } from './types'
 import type { CollaboratorProfile } from '../profile/types'
+import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
+
+// A demonstração é uma ferramenta de desenvolvimento/teste, não uma porta de
+// entrada para o bundle publicado. Mesmo que uma variável pública seja
+// configurada por engano na Vercel, o build de produção não restaura uma
+// sessão local nem autoriza uma rota corporativa.
+const demoModeEnabled = import.meta.env.MODE === 'test' || (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true')
+const UNAUTHORIZED_MESSAGE = 'A sessão corporativa ainda não foi autorizada.'
 
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DemoSession | null>(null)
@@ -12,23 +20,67 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [corporateProfile, setCorporateProfile] = useState<NonNullable<DemoSession['corporateProfile']> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
+  const [authState, setAuthState] = useState<AuthState>('initializing')
   const modeRef = useRef<'unknown' | 'none' | 'demo' | 'corporate'>('unknown')
   const corporateRequestRef = useRef(0)
+  const signOutInFlightRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
-    const localSession = demoSessionService.restore()
+    let cancelled = false
+    const subscription = subscribeSupabase((event, supabaseSession) => {
+      if (cancelled) return
+      if (modeRef.current === 'demo') return
+      if (supabaseSession) {
+        modeRef.current = 'none'
+        setSession(null)
+        setCorporateProfile(null)
+        setAuthError(UNAUTHORIZED_MESSAGE)
+        setAuthState('authenticated_unauthorized')
+        setIsLoading(false)
+        return
+      }
+      if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+        modeRef.current = 'none'
+        setSession(null)
+        setCorporateProfile(null)
+        setAuthError(null)
+        setAuthState('unauthenticated')
+        setIsLoading(false)
+      }
+    })
+
+    const localSession = demoModeEnabled ? demoSessionService.restore() : null
 
     if (localSession) {
       modeRef.current = 'demo'
       corporateRequestRef.current += 1
       setSession(localSession)
       setCorporateProfile(null)
+      setAuthState('authorized')
       setIsLoading(false)
     } else {
       modeRef.current = 'none'
-      setIsLoading(true)
+      void getCurrentSession().then((supabaseSession) => {
+        if (cancelled) return
+        if (supabaseSession) {
+          setAuthError(UNAUTHORIZED_MESSAGE)
+          setAuthState('authenticated_unauthorized')
+        } else {
+          setAuthState('unauthenticated')
+        }
+        setIsLoading(false)
+      }).catch(() => {
+        if (cancelled) return
+        setAuthState('error')
+        setAuthError('Não foi possível restaurar a sessão corporativa. Tente novamente.')
+        setIsLoading(false)
+      })
     }
 
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -57,6 +109,8 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     corporateRequestRef.current += 1
     setSession(created)
     setCorporateProfile(null)
+    setAuthError(null)
+    setAuthState('authorized')
     return created
   }
 
@@ -73,18 +127,49 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const markAuthReady = (error?: string) => {
-    if (error) setAuthError(error)
+    if (error) {
+      setAuthError(error)
+      setAuthState('error')
+    }
     setIsLoading(false)
   }
 
-  const signOut = () => {
+  const beginAuthentication = () => {
+    setAuthError(null)
+    setAuthState('authenticating')
+    setIsLoading(true)
+  }
+
+  const signOut = (): Promise<void> => {
+    if (signOutInFlightRef.current) return signOutInFlightRef.current
+
     modeRef.current = 'none'
     corporateRequestRef.current += 1
     demoSessionService.signOut()
     setSession(null)
     setProfile(null)
     setCorporateProfile(null)
+    setAuthError(null)
+    setAuthState('signing_out')
+    setIsLoading(false)
+
+    const request = (async () => {
+      try {
+        const result = await signOutSupabase()
+        if (result.error) throw result.error
+        setAuthState('unauthenticated')
+      } catch {
+        // O estado local permanece sem sessão para bloquear as rotas. A falha
+        // explícita informa que o provedor ainda precisa ser confirmado.
+        setAuthError('Não foi possível confirmar o encerramento da sessão. Tente novamente.')
+        setAuthState('error')
+      } finally {
+        signOutInFlightRef.current = null
+      }
+    })()
+    signOutInFlightRef.current = request
+    return request
   }
 
-  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, authError, signIn, signInWithMicrosoft, markAuthReady, signOut }}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, authError, authState, beginAuthentication, signIn, signInWithMicrosoft, markAuthReady, signOut }}>{children}</SessionContext.Provider>
 }

@@ -23,17 +23,10 @@ export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: P
     )
   }
 
-  const isDemoSelection = location.pathname === '/selecao-perfil' || location.pathname === '/portal'
-  if (!session && isDemoSelection) return children
-
   if (!hasAuthenticatedSession(session, null)) {
     return <Navigate to="/" replace />
   }
-
-  if (!session) {
-    const canEnterBeforeProfileSelection = location.pathname === '/selecao-perfil' || location.pathname === '/portal'
-    return canEnterBeforeProfileSelection ? children : <Navigate to="/" replace />
-  }
+  if (!session) return <Navigate to="/" replace />
 
   const redirect = resolveProtectedDemoRoute(session, allowedRoles, location)
   if (redirect) return <Navigate to={redirect.to} replace state={redirect.state} />

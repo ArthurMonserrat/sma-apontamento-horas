@@ -5,17 +5,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../../app/providers/themeContext'
 import { SessionContext } from '../../features/session/sessionContext'
-import type { DemoSession } from '../../features/session/types'
+import { startCorporateOAuth } from '../../features/auth/infrastructure/supabaseSessionService'
 import { EcosystemLogin } from './EcosystemLogin'
 
-const msal = {
-  getActiveAccount: vi.fn<() => { homeAccountId: string; username: string; name: string } | null>(() => null),
-  loginRedirect: vi.fn(async () => undefined),
-}
-
-vi.mock('@azure/msal-react', () => ({
-  useMsal: () => ({ instance: msal, accounts: [], inProgress: 'none' }),
-}))
+vi.mock('../../features/auth/infrastructure/supabaseSessionService', () => ({ startCorporateOAuth: vi.fn() }))
 
 let root: Root
 let container: HTMLDivElement
@@ -27,7 +20,7 @@ beforeEach(() => {
   root = createRoot(container)
   sessionStorage.clear()
   vi.clearAllMocks()
-  msal.getActiveAccount.mockReturnValue(null)
+  vi.mocked(startCorporateOAuth).mockResolvedValue({ error: null })
 })
 
 afterEach(() => {
@@ -35,11 +28,11 @@ afterEach(() => {
   container.remove()
 })
 
-function renderLogin(session: DemoSession | null) {
+function renderLogin(path = '/') {
   return root.render(
     <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
-      <SessionContext.Provider value={{ session, profile: null, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
-        <MemoryRouter initialEntries={['/']}>
+      <SessionContext.Provider value={{ session: null, profile: null, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/" element={<EcosystemLogin />} />
             <Route path="/selecao-perfil" element={<p>Banco selecionado</p>} />
@@ -51,29 +44,29 @@ function renderLogin(session: DemoSession | null) {
 }
 
 describe('acesso ao ecossistema', () => {
-  it('guarda o Banco 1 antes de iniciar o login Microsoft', async () => {
-    await act(async () => renderLogin(null))
+  it('inicia o OAuth Supabase e guarda o destino do Banco 1', async () => {
+    await act(async () => renderLogin())
     const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Banco 1')
 
     await act(async () => button?.click())
 
-    expect(sessionStorage.getItem('sma:msal-destination')).toBe('/selecao-perfil?modulo=banco1')
-    expect(msal.loginRedirect).toHaveBeenCalledTimes(1)
+    expect(sessionStorage.getItem('sma:oauth-destination')).toBe('/?modulo=banco1')
+    expect(startCorporateOAuth).toHaveBeenCalledTimes(1)
   })
 
-  it('abre diretamente o Banco 2 quando a sessão corporativa já está válida', async () => {
-    msal.getActiveAccount.mockReturnValue({ homeAccountId: 'account-1', username: 'ana@sma.com', name: 'Ana' })
-    const session: DemoSession = {
-      id: 'account-1', name: 'Ana', email: 'ana@sma.com', role: 'COLLABORATOR',
-      createdAt: '2026-10-13T00:00:00Z', explicitLoginAt: '2026-10-13T00:00:00Z',
-      isDemo: false, version: 2, authProvider: 'microsoft',
-    }
-    await act(async () => renderLogin(session))
+  it('não inicia autenticação nem inventa fallback para Banco 2 sem URL configurada', async () => {
+    await act(async () => renderLogin())
     const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Banco 2')
 
     await act(async () => button?.click())
 
-    expect(container.textContent).toContain('Banco selecionado')
-    expect(msal.loginRedirect).not.toHaveBeenCalled()
+    expect(startCorporateOAuth).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Banco 2 indisponível')
+  })
+
+  it('exibe erro seguro quando o callback retorna não autorizado', async () => {
+    await act(async () => renderLogin('/?authError=unauthorized'))
+
+    expect(container.textContent).toContain('Acesso corporativo não autorizado')
   })
 })

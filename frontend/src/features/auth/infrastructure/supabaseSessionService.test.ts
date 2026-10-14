@@ -91,4 +91,10 @@ describe('supabaseSessionService', () => {
     await expect(signOut()).resolves.toEqual({ error: null })
     expect(authMock.signOut).toHaveBeenCalledTimes(1)
   })
+
+  it('não transforma falha de restauração em sessão ausente silenciosa', async () => {
+    authMock.getSession.mockResolvedValue({ data: { session: null }, error: new Error('network') })
+
+    await expect(getCurrentSession()).rejects.toThrow('Não foi possível restaurar a sessão Supabase.')
+  })
 })

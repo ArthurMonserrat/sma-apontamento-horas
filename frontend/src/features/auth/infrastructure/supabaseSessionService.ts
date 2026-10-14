@@ -71,7 +71,8 @@ export async function exchangeCallbackCode(code: string): Promise<CallbackExchan
 export async function getCurrentSession(): Promise<Session | null> {
   if (!supabaseAuthClient) return null
   const { data, error } = await supabaseAuthClient.auth.getSession()
-  return error ? null : data.session
+  if (error) throw new Error('Não foi possível restaurar a sessão Supabase.')
+  return data.session
 }
 
 export function subscribe(listener: (event: AuthChangeEvent, session: Session | null) => void): { unsubscribe: () => void } {

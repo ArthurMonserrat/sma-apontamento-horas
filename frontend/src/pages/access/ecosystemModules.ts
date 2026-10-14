@@ -1,19 +1,11 @@
-import type { DemoRole, MicrosoftSessionInput } from '../../features/session/types'
+export const OAUTH_DESTINATION_KEY = 'sma:oauth-destination'
 
 export type EcosystemModule = 'BANCO_1' | 'BANCO_2'
 
 export function getEcosystemModulePath(module: EcosystemModule) {
-  return module === 'BANCO_1'
-    ? '/selecao-perfil?modulo=banco1'
-    : '/selecao-perfil?modulo=banco2'
+  return module === 'BANCO_1' ? '/?modulo=banco1' : null
 }
 
-export function toMicrosoftSessionInput(account: { homeAccountId: string; name?: string; username: string }, role: DemoRole = 'COLLABORATOR', accessToken?: string): MicrosoftSessionInput {
-  return {
-    id: account.homeAccountId,
-    name: account.name || account.username,
-    email: account.username,
-    role,
-    ...(accessToken ? { accessToken } : {}),
-  }
+export function isAllowedOAuthDestination(destination: string | null): destination is string {
+  return destination === getEcosystemModulePath('BANCO_1')
 }
