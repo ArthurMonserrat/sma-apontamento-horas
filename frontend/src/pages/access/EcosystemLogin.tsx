@@ -1,45 +1,43 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { InteractionStatus } from '@azure/msal-browser'
-import { useMsal } from '@azure/msal-react'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
-import { getEcosystemModulePath, type EcosystemModule } from './ecosystemModules'
-import { loginRequest } from '../../config/authConfig'
+import { getEcosystemModulePath, OAUTH_DESTINATION_KEY, type EcosystemModule } from './ecosystemModules'
+import { startCorporateOAuth } from '../../features/auth/infrastructure/supabaseSessionService'
 import { useSession } from '../../features/session/useSession'
 
-const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || getEcosystemModulePath('BANCO_2')
+const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL?.trim() ?? ''
 
 export function EcosystemLogin() {
-  const navigate = useNavigate()
-  const { instance, inProgress, accounts } = useMsal()
-  const { session, isLoading, authError } = useSession()
+  const { isLoading, authError } = useSession()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleAccess(module: EcosystemModule) {
-    if (isAuthenticating || inProgress !== InteractionStatus.None) return
+    if (isAuthenticating) return
     setError(null)
     setIsAuthenticating(true)
 
     try {
       const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
-      const activeAccount = instance.getActiveAccount() ?? accounts[0]
-      if (activeAccount && session?.authProvider === 'microsoft') {
-        navigate(destination, { replace: true })
+      if (!destination) {
+        setError('O Banco de Horas 2 ainda não está configurado neste ambiente.')
         return
       }
-      sessionStorage.setItem('sma:msal-destination', destination)
-      await instance.loginRedirect(loginRequest)
-    } catch (authError) {
-      console.error('Erro detalhado do MSAL:', authError)
-      setError(authError instanceof Error ? authError.message : 'Não foi possível concluir a autenticação. Tente novamente.')
+      sessionStorage.setItem(OAUTH_DESTINATION_KEY, destination)
+      const result = await startCorporateOAuth()
+      if (result.error) {
+        sessionStorage.removeItem(OAUTH_DESTINATION_KEY)
+        setError(result.error.message)
+      }
+    } catch (authFailure) {
+      sessionStorage.removeItem(OAUTH_DESTINATION_KEY)
+      setError(authFailure instanceof Error ? authFailure.message : 'Não foi possível iniciar a autenticação corporativa.')
     } finally {
       setIsAuthenticating(false)
     }
   }
 
-  const busy = isAuthenticating || inProgress !== InteractionStatus.None
+  const busy = isAuthenticating
   const buttonLabel = busy ? 'Processando autenticação...' : 'Acessar Banco'
 
   if (isLoading) {
@@ -75,14 +73,13 @@ export function EcosystemLogin() {
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-secondary)] text-2xl text-white" aria-hidden="true">◈</div>
             <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 2 (Campo e Estudos)</h2>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Apontamento rápido para equipes externas, modo offline e sincronização.</p>
-            <button type="button" disabled={busy} onClick={() => void handleAccess('BANCO_2')} className="ui-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60">
-              {busy ? buttonLabel : 'Acessar Banco 2'}
+            <button type="button" disabled={busy || !banco2Url} onClick={() => void handleAccess('BANCO_2')} className="ui-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60">
+              {banco2Url ? (busy ? buttonLabel : 'Acessar Banco 2') : 'Banco 2 indisponível'}
             </button>
           </article>
         </div>
 
         {(error || authError) && <p role="alert" className="mx-auto mt-6 max-w-xl text-sm font-semibold text-red-700">{error || authError}</p>}
-        <button type="button" onClick={() => navigate('/selecao-perfil')} className="ui-button-secondary mx-auto mt-6">Acessar modo demonstrativo</button>
       </section>
     </main>
   )

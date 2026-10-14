@@ -6,15 +6,6 @@ import { SessionContext } from '../../features/session/sessionContext'
 import { AppRoutes } from './AppRoutes'
 import appRoutesSource from './AppRoutes.tsx?raw'
 
-vi.mock('@azure/msal-react', () => ({
-  useMsal: () => ({
-    accounts: [],
-    inProgress: 'none',
-    instance: { getActiveAccount: () => null },
-  }),
-  useIsAuthenticated: () => false,
-}))
-
 describe('rota raiz do ecossistema', () => {
   it('renderiza a seleção de bancos diretamente em /', () => {
     const markup = renderToStaticMarkup(
@@ -39,8 +30,6 @@ describe('rota raiz do ecossistema', () => {
       '<Route path="/login" element={<Navigate to="/" replace />} />',
     ]
     const protectedRoutes = [
-      ['/selecao-perfil', "['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']", 'ProfileSelectionPage'],
-      ['/portal', "['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN']", 'Portal'],
       ['/avisos', "['SUPERVISOR', 'DIRECTOR_ADMIN']", 'ManagerNoticesRedirect'],
       ['/colaborador', "['COLLABORATOR']", 'AppLayout'],
       ['/supervisor', "['SUPERVISOR']", 'SupervisorPage'],
