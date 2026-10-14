@@ -23,8 +23,18 @@ export function ProfileSelectionPage() {
   const location = useLocation()
   const from = (location.state as { from?: unknown } | null)?.from
 
+  if (corporateProfile) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-20 text-[var(--color-text)] sm:px-6">
+        <section className="ui-card w-full max-w-xl rounded-2xl p-8 text-center" aria-labelledby="corporate-profile-selection-blocked">
+          <h1 id="corporate-profile-selection-blocked" className="text-2xl font-extrabold text-[var(--color-primary)]">Perfil corporativo ainda não liberado</h1>
+          <p className="mt-4 text-sm leading-6 text-[var(--color-text-muted)]">A seleção de perfil está disponível apenas no modo demonstrativo. A autorização corporativa definitiva ainda precisa ser concluída.</p>
+        </section>
+      </main>
+    )
+  }
+
   const enterProfile = (role: DemoRole) => {
-    if (corporateProfile?.role === 'colaborador' && role !== 'COLLABORATOR') return
     signIn(role)
     const destination = typeof from === 'string' && canAccessDemoPath(role, from) ? from : getDemoHomePath(role)
     navigate(destination, { replace: true })
@@ -46,13 +56,7 @@ export function ProfileSelectionPage() {
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-secondary)]">Perfil de acesso</p>
               <h2 className="mt-3 text-xl font-extrabold text-[var(--color-text)]">{profile.name}</h2>
               <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">{profile.description}</p>
-              {corporateProfile?.role === 'colaborador' && profile.role !== 'COLLABORATOR' ? (
-                <button type="button" disabled aria-disabled="true" className="ui-button-primary mt-6 flex w-full cursor-not-allowed items-center justify-center gap-2 opacity-60" title="Perfil não autorizado para esta conta">
-                  <span aria-hidden="true">🔒</span> Perfil não autorizado
-                </button>
-              ) : (
-                <button type="button" onClick={() => enterProfile(profile.role)} className="ui-button-primary mt-6 w-full">Entrar como {profile.name}</button>
-              )}
+              <button type="button" onClick={() => enterProfile(profile.role)} className="ui-button-primary mt-6 w-full">Entrar como {profile.name}</button>
             </article>
           ))}
         </div>

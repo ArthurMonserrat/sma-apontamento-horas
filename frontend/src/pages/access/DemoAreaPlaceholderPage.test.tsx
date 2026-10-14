@@ -25,7 +25,7 @@ function sessionFor(role: DemoRole): DemoSession {
     isDemo: true,
     version: 2,
     email: `${role.toLowerCase()}@sma.com`,
-    authProvider: 'microsoft',
+    authProvider: 'demo',
   }
 }
 
