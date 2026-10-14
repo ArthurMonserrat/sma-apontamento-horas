@@ -23,7 +23,7 @@ export interface SessionStorage {
 export interface DemoSessionService {
   restore(): DemoSession | null
   signIn(role: DemoRole): DemoSession
-  signInWithMicrosoft(input: { id: string; name: string; email: string; role: DemoRole; corporateProfile?: CorporateProfile }): DemoSession
+  signInWithMicrosoft(input: { id: string; name: string; email: string; role: DemoRole; corporateProfile?: CorporateProfile }): null
   signOut(): void
 }
 
@@ -99,22 +99,10 @@ export class LocalDemoSessionService implements DemoSessionService {
     return session
   }
 
-  signInWithMicrosoft({ id, name, email, role, corporateProfile }: { id: string; name: string; email: string; role: DemoRole; corporateProfile?: CorporateProfile }): DemoSession {
-    const timestamp = this.now()
-    const session: DemoSession = {
-      id,
-      name,
-      email,
-      role,
-      createdAt: timestamp,
-      explicitLoginAt: timestamp,
-      isDemo: false,
-      version: 2,
-      authProvider: 'microsoft',
-      corporateProfile,
-    }
-    this.write(SESSION_KEY, JSON.stringify(session))
-    return session
+  signInWithMicrosoft(_input: { id: string; name: string; email: string; role: DemoRole; corporateProfile?: CorporateProfile }): null {
+    // Browser-provided Microsoft claims are not an authorization source. The
+    // corporate flow must establish a server-validated Supabase session first.
+    return null
   }
 
   signOut() {

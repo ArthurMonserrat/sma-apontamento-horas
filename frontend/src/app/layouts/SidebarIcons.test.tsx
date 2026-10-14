@@ -17,7 +17,7 @@ function renderArea(role: DemoRole, path: string) {
     isDemo: true,
     version: 2,
     email: `${role.toLowerCase()}@sma.com`,
-    authProvider: 'microsoft',
+    authProvider: 'demo',
   }
 
   return renderToStaticMarkup(

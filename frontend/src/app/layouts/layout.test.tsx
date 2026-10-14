@@ -20,7 +20,7 @@ const collaboratorSession: DemoSession = {
   isDemo: true,
   version: 2,
   email: 'colaborador@sma.com',
-  authProvider: 'microsoft',
+  authProvider: 'demo',
 }
 
 const supervisorSession: DemoSession = {
@@ -29,7 +29,7 @@ const supervisorSession: DemoSession = {
   name: 'Supervisor',
   role: 'SUPERVISOR',
   email: 'supervisor@sma.com',
-  authProvider: 'microsoft',
+  authProvider: 'demo',
 }
 
 function renderLayout() {

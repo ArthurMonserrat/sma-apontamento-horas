@@ -141,6 +141,19 @@ describe('LocalDemoSessionService', () => {
     expect(storage.getItem(SESSION_KEY)).toBeNull()
   })
 
+  it('não cria sessão local a partir de dados Microsoft do navegador', () => {
+    const { storage, service } = createService()
+
+    expect(service.signInWithMicrosoft({
+      id: 'microsoft-user-001',
+      name: 'Usuário Microsoft',
+      email: 'user@example.com',
+      role: 'DIRECTOR_ADMIN',
+      corporateProfile: { id: 'profile-1', email: 'user@example.com', full_name: 'Diretor', role: 'diretor', squad_id: null, active: true },
+    })).toBeNull()
+    expect(storage.getItem(SESSION_KEY)).toBeNull()
+  })
+
   it('preserva dados funcionais ao invalidar a sessão v1', () => {
     const { storage, service } = createService()
     seedDomainData(storage)

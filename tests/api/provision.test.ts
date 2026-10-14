@@ -77,17 +77,15 @@ afterEach(() => {
 });
 
 describe('provisionamento corporativo autenticado', () => {
-  it('permite provisionamento em produção quando a credencial Microsoft é válida', async () => {
+  it('bloqueia o endpoint em produção mesmo com uma credencial Microsoft válida', async () => {
     process.env.NODE_ENV = 'production';
-    maybeSingle.mockResolvedValue({ data: {
-      id: 'profile-1', email: 'ana@example.com', full_name: 'Ana Silva', role: 'colaborador', active: true,
-    }, error: null });
     const response = createResponse();
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(200);
-    expect(createClient).toHaveBeenCalledWith('https://supabase.example.test', 'server-only-key', expect.any(Object));
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
+    expect(createClient).not.toHaveBeenCalled();
   });
 
   it('nega chamada sem sessão Microsoft e não inicializa o service role', async () => {
@@ -95,12 +93,12 @@ describe('provisionamento corporativo autenticado', () => {
 
     await provision(request({ headers: {} }), response);
 
-    expect(response.statusCode).toBe(401);
-    expect(response.body).toEqual({ error: 'Authenticated Microsoft session is required.' });
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
     expect(createClient).not.toHaveBeenCalled();
   });
 
-  it('cria colaborador automaticamente quando o perfil ainda não existe', async () => {
+  it('não cria colaborador automaticamente quando o perfil ainda não existe', async () => {
     maybeSingle.mockResolvedValue({ data: null, error: null });
     const profile = {
       id: 'profile-new', email: 'ana@example.com', full_name: 'Ana Silva', role: 'colaborador', active: true,
@@ -110,16 +108,17 @@ describe('provisionamento corporativo autenticado', () => {
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ profile });
-    expect(from).toHaveBeenCalledWith('profiles');
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
+    expect(createClient).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
   });
 
   it.each([
     ['fernando.almeida@sma-eng.com.br', 'diretor'],
     ['supervisor1@sma-eng.com.br', 'supervisor'],
     ['pessoa@outro-dominio.example', 'colaborador'],
-  ] as const)('define o cargo %s como %s no provisionamento JIT', async (email, role) => {
+  ] as const)('não atribui o cargo %s por provisionamento JIT', async (email, role) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ displayName: 'Usuário Microsoft', userPrincipalName: email }),
@@ -133,9 +132,10 @@ describe('provisionamento corporativo autenticado', () => {
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ profile });
-    expect(from).toHaveBeenCalledWith('profiles');
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
+    expect(createClient).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
   });
 
   it('nega perfil inativo', async () => {
@@ -147,7 +147,7 @@ describe('provisionamento corporativo autenticado', () => {
     await provision(request(), response);
 
     expect(response.statusCode).toBe(403);
-    expect(response.body).toEqual({ error: 'Corporate profile is inactive.' });
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
   });
 
   it('nega cargo desconhecido mesmo que o frontend envie um cargo válido', async () => {
@@ -159,7 +159,7 @@ describe('provisionamento corporativo autenticado', () => {
     await provision(request({ body: { email: 'ana@example.com', fullName: 'Ana Silva', role: 'diretor' } }), response);
 
     expect(response.statusCode).toBe(403);
-    expect(response.body).toEqual({ error: 'Corporate profile has an invalid role.' });
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
   });
 
   it('retorna somente perfil ativo conhecido e ignora dados falsificados do frontend', async () => {
@@ -171,8 +171,9 @@ describe('provisionamento corporativo autenticado', () => {
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual({ profile });
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
+    expect(createClient).not.toHaveBeenCalled();
   });
 
   it('nega identidade Microsoft ausente ou inválida', async () => {
@@ -181,7 +182,8 @@ describe('provisionamento corporativo autenticado', () => {
 
     await provision(request(), response);
 
-    expect(response.statusCode).toBe(401);
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' });
     expect(createClient).not.toHaveBeenCalled();
   });
 });

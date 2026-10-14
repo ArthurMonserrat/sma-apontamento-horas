@@ -62,6 +62,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
   const signInWithMicrosoft = (input: { id: string; name: string; email: string; role: DemoRole; corporateProfile: NonNullable<DemoSession['corporateProfile']> }) => {
     const created = demoSessionService.signInWithMicrosoft(input)
+    if (!created) return null
     modeRef.current = 'corporate'
     corporateRequestRef.current += 1
     setSession(created)
