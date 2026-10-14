@@ -36,8 +36,8 @@ vi.mock('../auth/infrastructure/supabaseSessionService', () => ({
 }))
 
 function Consumer() {
-  const { session } = useContext(SessionContext)!
-  return <output data-testid="session">{session?.isDemo ? 'demo' : session ? 'corporate' : 'none'}</output>
+  const { session, authState, authError } = useContext(SessionContext)!
+  return <output data-testid="session">{session?.isDemo ? 'demo' : session ? 'corporate' : 'none'}|{authState}|{authError ?? ''}</output>
 }
 
 let root: Root
@@ -79,13 +79,46 @@ describe('DemoSessionProvider', () => {
     })
 
     await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
-    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('demo')
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('demo|authorized|')
 
     await act(async () => emit?.('SIGNED_OUT', null))
     await act(async () => emit?.('TOKEN_REFRESHED', null))
 
-    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('demo')
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('demo|authorized|')
     expect(authMock.signOut).not.toHaveBeenCalled()
     expect(authMock.getCurrentSession).not.toHaveBeenCalled()
+  })
+
+  it('encerra a inicialização sem sessão Supabase', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|unauthenticated|')
+    expect(authMock.getCurrentSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('marca sessão Supabase sem perfil como autenticada porém não autorizada', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    authMock.getCurrentSession.mockResolvedValue({ data: { session: { access_token: 'token', user: { id: 'user-1' } } }, error: null })
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|authenticated_unauthorized|A sessão corporativa ainda não foi autorizada.')
+  })
+
+  it('limpa sessão corporativa ao receber logout Supabase', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    authMock.getCurrentSession.mockResolvedValue({ data: { session: { access_token: 'token', user: { id: 'user-1' } } }, error: null })
+    let emit: ((event: 'SIGNED_OUT', session: null) => void) | undefined
+    authMock.subscribe.mockImplementation((listener: (event: 'SIGNED_OUT', session: null) => void) => {
+      emit = listener
+      return { unsubscribe: vi.fn() }
+    })
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+    await act(async () => emit?.('SIGNED_OUT', null))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|unauthenticated|')
   })
 })
