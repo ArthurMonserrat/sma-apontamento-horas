@@ -57,4 +57,13 @@ describe('AuthCallbackPage', () => {
     expect(exchangeMock).toHaveBeenCalledWith('oauth-code')
     expect(navigateMock).toHaveBeenCalledWith('/', { replace: true })
   })
+
+  it('ignora destino externo ou desconhecido salvo antes do callback', async () => {
+    sessionStorage.setItem('sma:oauth-destination', 'https://banco2.example.com')
+
+    await act(async () => root.render(<AuthCallbackPage />))
+
+    expect(navigateMock).toHaveBeenCalledWith('/', { replace: true })
+    expect(sessionStorage.getItem('sma:oauth-destination')).toBeNull()
+  })
 })

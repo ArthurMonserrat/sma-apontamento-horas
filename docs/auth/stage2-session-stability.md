@@ -21,15 +21,19 @@ Nenhuma alteração foi feita no Supabase de produção, no Azure ou em migratio
    `exchangeCodeForSession` e remove `code`, `state` e erros da URL. A troca é
    deduplicada por código para suportar React StrictMode e reloads concorrentes.
 4. `DemoSessionProvider` assina `onAuthStateChange`, restaura a sessão com
-   `getSession` e expõe estados explícitos: `initializing`, `unauthenticated`,
-   `authenticating`, `authenticated_unauthorized`, `authorized` e `error`.
+`getSession` e expõe estados explícitos: `initializing`, `unauthenticated`,
+   `authenticating`, `signing_out`, `authenticated_unauthorized`,
+   `authorized` e `error`.
 5. Uma sessão Supabase válida ainda termina em
    `authenticated_unauthorized`, pois não existe autorização corporativa
    definitiva nesta etapa. Não há fallback para MSAL, Graph, e-mail, cargo
    enviado pelo navegador ou localStorage.
-6. Logout chama `supabase.auth.signOut`, remove a sessão demonstrativa local e
-   encerra o estado React. O SSO Microsoft pode manter a conta no provedor;
-   isso é independente da sessão Supabase e deve ser tratado na homologação.
+6. Logout remove imediatamente a sessão local para bloquear as rotas, aguarda a
+   confirmação de `supabase.auth.signOut` e deduplica cliques repetidos. Em
+   sucesso, o estado termina em `unauthenticated`; em falha, termina em `error`
+   com mensagem explícita e continua sem sessão local, evitando acesso durante
+   a incerteza. O SSO Microsoft pode manter a conta no provedor; isso é
+   independente da sessão Supabase e deve ser tratado na homologação.
 
 ## Estados e falhas
 
@@ -51,10 +55,12 @@ removidos do fluxo do usuário.
 
 O Banco 1 permanece nesta aplicação. O Banco 2 é uma aplicação separada no
 repositório `ArthurMonserrat/banco-de-horas-2`, com contrato de autenticação
-próprio ainda não homologado. Como não há `VITE_BANCO_HORAS_2_URL` validada,
-seu botão fica indisponível; não existe fallback para o Banco 1 nem URL
-inventada. A futura estratégia de SSO deverá compartilhar a identidade, mas
-cada banco continuará validando sua autorização específica.
+próprio ainda não homologado. Seu botão permanece indisponível mesmo que
+`VITE_BANCO_HORAS_2_URL` exista: uma URL, isoladamente, não prova que o SSO,
+callback, sessão ou autorização entre os dois projetos estão configurados.
+Não existe fallback para o Banco 1 nem URL inventada. A futura estratégia de
+SSO deverá compartilhar a identidade sem enviar tokens por URL, e cada banco
+continuará validando sua autorização específica.
 
 ## Contrato necessário para a Etapa 3
 

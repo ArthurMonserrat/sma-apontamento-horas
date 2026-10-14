@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clearAuthCallbackUrl, exchangeCallbackCode } from '../../features/auth/infrastructure/supabaseSessionService'
 import { readCallbackCode } from './authCallback'
-import { OAUTH_DESTINATION_KEY } from './ecosystemModules'
+import { isAllowedOAuthDestination, OAUTH_DESTINATION_KEY } from './ecosystemModules'
 
 export function AuthCallbackPage() {
   const navigate = useNavigate()
@@ -27,7 +27,7 @@ export function AuthCallbackPage() {
       }
       const destination = sessionStorage.getItem(OAUTH_DESTINATION_KEY)
       sessionStorage.removeItem(OAUTH_DESTINATION_KEY)
-      navigate(destination?.startsWith('/?') ? destination : '/', { replace: true })
+      navigate(isAllowedOAuthDestination(destination) ? destination : '/', { replace: true })
     })
 
     return () => { active = false }

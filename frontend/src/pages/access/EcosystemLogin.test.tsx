@@ -4,8 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../../app/providers/themeContext'
 import { SessionContext } from '../../features/session/sessionContext'
 import { EcosystemLogin } from './EcosystemLogin'
-import { getEcosystemModulePath } from './ecosystemModules'
+import { getEcosystemModulePath, isAllowedOAuthDestination } from './ecosystemModules'
 import ecosystemLoginSource from './EcosystemLogin.tsx?raw'
+import portalSource from './Portal.tsx?raw'
 
 vi.mock('../../features/auth/infrastructure/supabaseSessionService', () => ({ startCorporateOAuth: vi.fn() }))
 
@@ -38,6 +39,9 @@ describe('EcosystemLogin', () => {
   it('não aponta módulos para a seleção manual de cargos', () => {
     expect(getEcosystemModulePath('BANCO_1')).toBe('/?modulo=banco1')
     expect(getEcosystemModulePath('BANCO_2')).toBeNull()
+    expect(isAllowedOAuthDestination('/?modulo=banco1')).toBe(true)
+    expect(isAllowedOAuthDestination('https://banco2.example.com')).toBe(false)
+    expect(isAllowedOAuthDestination('/?modulo=banco2')).toBe(false)
   })
 
   it('usa Supabase OAuth e não oferece entrada demonstrativa', () => {
@@ -45,5 +49,7 @@ describe('EcosystemLogin', () => {
     expect(ecosystemLoginSource).not.toContain('loginRedirect')
     expect(ecosystemLoginSource).not.toContain('useMsal')
     expect(ecosystemLoginSource).not.toContain('modo demonstrativo')
+    expect(ecosystemLoginSource).not.toContain('VITE_BANCO_HORAS_2_URL')
+    expect(portalSource).not.toContain('VITE_BANCO_HORAS_2_URL')
   })
 })

@@ -6,8 +6,6 @@ import { getEcosystemModulePath, OAUTH_DESTINATION_KEY, type EcosystemModule } f
 import { startCorporateOAuth } from '../../features/auth/infrastructure/supabaseSessionService'
 import { useSession } from '../../features/session/useSession'
 
-const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL?.trim() ?? ''
-
 export function EcosystemLogin() {
   const { isLoading, authError } = useSession()
   const [searchParams] = useSearchParams()
@@ -27,7 +25,7 @@ export function EcosystemLogin() {
     setIsAuthenticating(true)
 
     try {
-      const destination = module === 'BANCO_2' ? banco2Url : getEcosystemModulePath('BANCO_1')
+      const destination = getEcosystemModulePath(module)
       if (!destination) {
         setError('O Banco de Horas 2 ainda não está configurado neste ambiente.')
         return
@@ -85,8 +83,8 @@ export function EcosystemLogin() {
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-secondary)] text-2xl text-white" aria-hidden="true">◈</div>
             <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 2 (Campo e Estudos)</h2>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Apontamento rápido para equipes externas, modo offline e sincronização.</p>
-            <button type="button" disabled={busy || !banco2Url} onClick={() => void handleAccess('BANCO_2')} className="ui-button-secondary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60">
-              {banco2Url ? (busy ? buttonLabel : 'Acessar Banco 2') : 'Banco 2 indisponível'}
+            <button type="button" disabled className="ui-button-secondary mt-6 w-full cursor-not-allowed opacity-60">
+              Banco 2 indisponível
             </button>
           </article>
         </div>

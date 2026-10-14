@@ -23,6 +23,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>('initializing')
   const modeRef = useRef<'unknown' | 'none' | 'demo' | 'corporate'>('unknown')
   const corporateRequestRef = useRef(0)
+  const signOutInFlightRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -139,16 +140,35 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
   }
 
-  const signOut = () => {
+  const signOut = (): Promise<void> => {
+    if (signOutInFlightRef.current) return signOutInFlightRef.current
+
     modeRef.current = 'none'
     corporateRequestRef.current += 1
     demoSessionService.signOut()
-    void signOutSupabase()
     setSession(null)
     setProfile(null)
     setCorporateProfile(null)
     setAuthError(null)
-    setAuthState('unauthenticated')
+    setAuthState('signing_out')
+    setIsLoading(false)
+
+    const request = (async () => {
+      try {
+        const result = await signOutSupabase()
+        if (result.error) throw result.error
+        setAuthState('unauthenticated')
+      } catch {
+        // O estado local permanece sem sessão para bloquear as rotas. A falha
+        // explícita informa que o provedor ainda precisa ser confirmado.
+        setAuthError('Não foi possível confirmar o encerramento da sessão. Tente novamente.')
+        setAuthState('error')
+      } finally {
+        signOutInFlightRef.current = null
+      }
+    })()
+    signOutInFlightRef.current = request
+    return request
   }
 
   return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, authError, authState, beginAuthentication, signIn, signInWithMicrosoft, markAuthReady, signOut }}>{children}</SessionContext.Provider>

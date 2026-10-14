@@ -40,9 +40,19 @@ function Consumer() {
   return <output data-testid="session">{session?.isDemo ? 'demo' : session ? 'corporate' : 'none'}|{authState}|{authError ?? ''}</output>
 }
 
+function LoadingState() {
+  const { isLoading } = useContext(SessionContext)!
+  return <output data-testid="loading">{isLoading ? 'loading' : 'ready'}</output>
+}
+
 function AuthenticationStarter() {
   const { beginAuthentication } = useContext(SessionContext)!
   return <button type="button" onClick={() => beginAuthentication?.()}>iniciar</button>
+}
+
+function SignOutButton() {
+  const { signOut } = useContext(SessionContext)!
+  return <button type="button" onClick={() => void signOut()}>sair</button>
 }
 
 let root: Root
@@ -143,5 +153,31 @@ describe('DemoSessionProvider', () => {
     await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
 
     expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|error|Não foi possível restaurar a sessão corporativa. Tente novamente.')
+  })
+
+  it('aguarda a confirmação do provedor e deduplica logout repetido', async () => {
+    let resolveSignOut: ((value: { error: null }) => void) | undefined
+    authMock.signOut.mockReturnValueOnce(new Promise((resolve) => { resolveSignOut = resolve }))
+
+    await act(async () => root.render(<DemoSessionProvider><SignOutButton /><Consumer /><LoadingState /></DemoSessionProvider>))
+    await act(async () => container.querySelector('button')?.click())
+    await act(async () => container.querySelector('button')?.click())
+
+    expect(authMock.signOut).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|signing_out|')
+    expect(container.querySelector('[data-testid="loading"]')?.textContent).toBe('ready')
+
+    await act(async () => resolveSignOut?.({ error: null }))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|unauthenticated|')
+  })
+
+  it('mantém o acesso bloqueado e informa incerteza quando o logout falha', async () => {
+    authMock.signOut.mockResolvedValueOnce({ error: new Error('network') })
+
+    await act(async () => root.render(<DemoSessionProvider><SignOutButton /><Consumer /></DemoSessionProvider>))
+    await act(async () => container.querySelector('button')?.click())
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|error|Não foi possível confirmar o encerramento da sessão. Tente novamente.')
   })
 })
