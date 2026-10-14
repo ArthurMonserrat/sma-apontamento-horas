@@ -14,6 +14,7 @@ export type SessionContextValue = {
   isLoading: boolean
   authError?: string | null
   authState?: AuthState
+  beginAuthentication?: () => void
   signIn: DemoSignIn
   signInWithMicrosoft?: MicrosoftSignIn
   markAuthReady?: (error?: string) => void

@@ -4,7 +4,7 @@ import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { getDemoHomePath } from '../../features/session/routePolicy'
 import { useSession } from '../../features/session/useSession'
 
-const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL || '/selecao-perfil'
+const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL?.trim() ?? ''
 
 export function Portal() {
   const { session } = useSession()
@@ -36,7 +36,7 @@ export function Portal() {
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-secondary)] text-2xl text-white" aria-hidden="true">◈</div>
             <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 2 - Campo e Estudos</h2>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Apontamento rápido para equipes externas, modo offline e sincronização.</p>
-            <a href={banco2Url} className="ui-button-secondary mt-6 w-full text-center">Acessar Banco de Horas 2</a>
+            {banco2Url ? <a href={banco2Url} className="ui-button-secondary mt-6 w-full text-center">Acessar Banco de Horas 2</a> : <button type="button" disabled className="ui-button-secondary mt-6 w-full cursor-not-allowed text-center opacity-60">Banco 2 indisponível</button>}
           </article>
         </div>
       </section>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { getEcosystemModulePath, OAUTH_DESTINATION_KEY, type EcosystemModule } from './ecosystemModules'
@@ -9,12 +10,20 @@ const banco2Url = import.meta.env.VITE_BANCO_HORAS_2_URL?.trim() ?? ''
 
 export function EcosystemLogin() {
   const { isLoading, authError } = useSession()
+  const [searchParams] = useSearchParams()
+  const callbackError = searchParams.get('authError') === 'unauthorized'
+    ? 'Acesso corporativo não autorizado. Solicite sua pré-autorização à Administração.'
+    : searchParams.get('authError') === 'invalid_callback'
+      ? 'Não foi possível validar o retorno da autenticação. Tente novamente.'
+      : null
+  const { beginAuthentication, markAuthReady } = useSession()
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleAccess(module: EcosystemModule) {
     if (isAuthenticating) return
     setError(null)
+    beginAuthentication?.()
     setIsAuthenticating(true)
 
     try {
@@ -27,11 +36,14 @@ export function EcosystemLogin() {
       const result = await startCorporateOAuth()
       if (result.error) {
         sessionStorage.removeItem(OAUTH_DESTINATION_KEY)
+        markAuthReady?.(result.error.message)
         setError(result.error.message)
       }
     } catch (authFailure) {
       sessionStorage.removeItem(OAUTH_DESTINATION_KEY)
-      setError(authFailure instanceof Error ? authFailure.message : 'Não foi possível iniciar a autenticação corporativa.')
+      const message = authFailure instanceof Error ? authFailure.message : 'Não foi possível iniciar a autenticação corporativa.'
+      markAuthReady?.(message)
+      setError(message)
     } finally {
       setIsAuthenticating(false)
     }
@@ -79,7 +91,7 @@ export function EcosystemLogin() {
           </article>
         </div>
 
-        {(error || authError) && <p role="alert" className="mx-auto mt-6 max-w-xl text-sm font-semibold text-red-700">{error || authError}</p>}
+        {(error || authError || callbackError) && <p role="alert" className="mx-auto mt-6 max-w-xl text-sm font-semibold text-red-700">{error || authError || callbackError}</p>}
       </section>
     </main>
   )

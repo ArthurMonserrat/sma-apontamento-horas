@@ -28,11 +28,11 @@ afterEach(() => {
   container.remove()
 })
 
-function renderLogin() {
+function renderLogin(path = '/') {
   return root.render(
     <ThemeContext.Provider value={{ theme: 'light', toggleTheme: vi.fn() }}>
       <SessionContext.Provider value={{ session: null, profile: null, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/" element={<EcosystemLogin />} />
             <Route path="/selecao-perfil" element={<p>Banco selecionado</p>} />
@@ -62,5 +62,11 @@ describe('acesso ao ecossistema', () => {
 
     expect(startCorporateOAuth).not.toHaveBeenCalled()
     expect(container.textContent).toContain('Banco 2 indisponível')
+  })
+
+  it('exibe erro seguro quando o callback retorna não autorizado', async () => {
+    await act(async () => renderLogin('/?authError=unauthorized'))
+
+    expect(container.textContent).toContain('Acesso corporativo não autorizado')
   })
 })

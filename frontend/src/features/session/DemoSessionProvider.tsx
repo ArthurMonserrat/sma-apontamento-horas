@@ -129,6 +129,12 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setIsLoading(false)
   }
 
+  const beginAuthentication = () => {
+    setAuthError(null)
+    setAuthState('authenticating')
+    setIsLoading(true)
+  }
+
   const signOut = () => {
     modeRef.current = 'none'
     corporateRequestRef.current += 1
@@ -141,5 +147,5 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setAuthState('unauthenticated')
   }
 
-  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, authError, authState, signIn, signInWithMicrosoft, markAuthReady, signOut }}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={{ session, profile, corporateProfile, isLoading, authError, authState, beginAuthentication, signIn, signInWithMicrosoft, markAuthReady, signOut }}>{children}</SessionContext.Provider>
 }

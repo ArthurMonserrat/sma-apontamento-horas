@@ -40,6 +40,11 @@ function Consumer() {
   return <output data-testid="session">{session?.isDemo ? 'demo' : session ? 'corporate' : 'none'}|{authState}|{authError ?? ''}</output>
 }
 
+function AuthenticationStarter() {
+  const { beginAuthentication } = useContext(SessionContext)!
+  return <button type="button" onClick={() => beginAuthentication?.()}>iniciar</button>
+}
+
 let root: Root
 let container: HTMLDivElement
 
@@ -120,5 +125,23 @@ describe('DemoSessionProvider', () => {
     await act(async () => emit?.('SIGNED_OUT', null))
 
     expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|unauthenticated|')
+  })
+
+  it('expõe estado autenticando sem liberar nenhuma rota', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+
+    await act(async () => root.render(<DemoSessionProvider><AuthenticationStarter /><Consumer /></DemoSessionProvider>))
+    await act(async () => container.querySelector('button')?.click())
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|authenticating|')
+  })
+
+  it('encerra em erro quando a restauração da sessão falha', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    authMock.getCurrentSession.mockRejectedValueOnce(new Error('network'))
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|error|Não foi possível restaurar a sessão corporativa. Tente novamente.')
   })
 })
