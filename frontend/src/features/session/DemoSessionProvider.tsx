@@ -7,7 +7,11 @@ import type { DemoRole, DemoSession } from './types'
 import type { CollaboratorProfile } from '../profile/types'
 import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
 
-const demoModeEnabled = import.meta.env.MODE === 'test' || import.meta.env.VITE_ENABLE_DEMO_MODE === 'true'
+// A demonstração é uma ferramenta de desenvolvimento/teste, não uma porta de
+// entrada para o bundle publicado. Mesmo que uma variável pública seja
+// configurada por engano na Vercel, o build de produção não restaura uma
+// sessão local nem autoriza uma rota corporativa.
+const demoModeEnabled = import.meta.env.MODE === 'test' || (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true')
 const UNAUTHORIZED_MESSAGE = 'A sessão corporativa ainda não foi autorizada.'
 
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
