@@ -79,4 +79,3 @@
 - [ ] Executar `npm test`, `npm run typecheck`, `npm --prefix frontend run typecheck`, `npm --prefix frontend run lint`, `npm run build` e `git diff --check`.
 - [ ] Confirmar que `CORPORATE_AUTHORIZATION_IMPLEMENTED` segue `false`, `/api/provision` segue 403 e nenhum arquivo contém secrets/tokens.
 - [ ] Fazer commit final somente se necessário; não fazer push, merge, deploy ou alterações remotas.
-
