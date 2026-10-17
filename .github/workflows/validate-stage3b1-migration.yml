@@ -1,4 +1,4 @@
-name: Validate Stage 3B.1 migration
+name: Validate historical and Stage 3B.1 migrations
 
 on:
   pull_request:
@@ -11,19 +11,19 @@ permissions:
   contents: read
 
 jobs:
-  postgres:
-    name: PostgreSQL synthetic migration test
+  historical:
+    name: Historical baseline and compatibility check
     runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: stage3b1
+          POSTGRES_DB: historical
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d stage3b1"
+          --health-cmd="pg_isready -U postgres -d historical"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -31,22 +31,67 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply synthetic baseline and simulate partial application
+      - name: Apply synthetic Auth prelude
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/tests/stage3b1_baseline.sql
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_auth_prelude.sql
 
-      - name: Apply migration
+      - name: Apply recovered historical migration
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261010215524_create_initial_workforce_time_tracking_schema.sql
 
-      - name: Reapply migration to verify idempotent guards
+      - name: Assert historical structure and privileges
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_assertions.sql
 
-      - name: Execute SQL assertions
+      - name: Prove historical-to-3B.1 incompatibility without masking it
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/tests/stage3b1_assertions.sql
+        run: |
+          if psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql; then
+            echo '::error::Stage 3B.1 unexpectedly applied without access_preapprovals.'
+            exit 1
+          fi
+          echo 'Historical baseline incompatibility confirmed: access_preapprovals is not part of the original migration.'
+
+  legacy:
+    name: Legacy schema to Stage 3B.1 compatibility check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: legacy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d legacy"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply synthetic legacy baseline and simulate partial application
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_baseline.sql
+
+      - name: Apply Stage 3B.1 to legacy schema
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+
+      - name: Reapply Stage 3B.1 to verify guarded retry
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+
+      - name: Execute legacy SQL assertions
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_assertions.sql
