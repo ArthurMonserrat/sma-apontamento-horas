@@ -23,25 +23,15 @@ describe('corporateAuthPolicy', () => {
     expect(readBearerToken({ headers: { cookie: 'sma_session=legacy-token' }, query: {} })).toBeNull()
   })
 
-  it('valida tenant e object id a partir de claims confiáveis', () => {
-    expect(validateMicrosoftIdentity({ tid: 'tenant-1', oid: 'object-1' }, 'tenant-1')).toEqual({
-      tenantId: 'tenant-1',
-      objectId: 'object-1',
-      emailVerified: false,
-    })
+  it('não trata claims recebidas pelo chamador como evidência criptográfica', () => {
+    expect(validateMicrosoftIdentity({ tid: 'tenant-1', oid: 'object-1' }, 'tenant-1')).toBeNull()
+    expect(validateMicrosoftIdentity({ tid: 'tenant-1', oid: 'object-1', cryptographicallyVerified: true }, 'tenant-1')).toBeNull()
+    expect(validateMicrosoftIdentity({ email: 'person@example.com', tid: 'tenant-1', oid: 'object-1' }, 'tenant-1')).toBeNull()
   })
 
-  it('nega tenant divergente, oid ausente e xms_edov falso', () => {
+  it('nega entradas externas com tenant divergente, oid ausente ou xms_edov falso', () => {
     expect(validateMicrosoftIdentity({ tid: 'other', oid: 'object-1' }, 'tenant-1')).toBeNull()
     expect(validateMicrosoftIdentity({ tid: 'tenant-1' }, 'tenant-1')).toBeNull()
     expect(validateMicrosoftIdentity({ tid: 'tenant-1', oid: 'object-1', xms_edov: false }, 'tenant-1')).toBeNull()
-  })
-
-  it('aceita xms_edov verdadeiro como reforço, sem usá-lo como chave de identidade', () => {
-    expect(validateMicrosoftIdentity({ tid: 'tenant-1', oid: 'object-1', xms_edov: true }, 'tenant-1')).toEqual({
-      tenantId: 'tenant-1',
-      objectId: 'object-1',
-      emailVerified: true,
-    })
   })
 })

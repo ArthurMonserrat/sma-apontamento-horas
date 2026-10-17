@@ -40,16 +40,13 @@ export interface ValidatedMicrosoftIdentity {
   emailVerified: boolean
 }
 
-export function validateMicrosoftIdentity(claims: unknown, expectedTenantId: string): ValidatedMicrosoftIdentity | null {
-  if (!claims || typeof claims !== 'object' || !nonEmptyString(expectedTenantId)) return null
-  const record = claims as Record<string, unknown>
-  if (!nonEmptyString(record.tid) || !nonEmptyString(record.oid)) return null
-  if (record.tid.trim() !== expectedTenantId.trim()) return null
-  if ('xms_edov' in record && record.xms_edov !== true) return null
-
-  return {
-    tenantId: record.tid.trim(),
-    objectId: record.oid.trim(),
-    emailVerified: record.xms_edov === true,
-  }
+/**
+ * Raw Microsoft claims are not a trusted input boundary. The previous helper
+ * accepted arbitrary objects and could be misused as if a decoded payload had
+ * already passed signature, issuer and audience validation. Keep this symbol
+ * for compatibility, but fail closed until the server-side verifier can issue
+ * an opaque, internal evidence object.
+ */
+export function validateMicrosoftIdentity(_claims: unknown, _expectedTenantId: string): ValidatedMicrosoftIdentity | null {
+  return null
 }
