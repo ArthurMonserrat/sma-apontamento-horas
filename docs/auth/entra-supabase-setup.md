@@ -40,12 +40,21 @@ O cliente browser usa PKCE e o callback troca o código uma única vez. Não cad
 
 ## Identidade e autorização
 
+- O Supabase grava a identidade OAuth em `auth.identities`, incluindo `user_id` (o UUID do mesmo usuário Supabase), `provider`, `provider_id` e `identity_data`. A linha só pode ser usada para conferir o vínculo com `auth.users.id`; `provider_id` isolado não é tratado como prova de `oid` nem contém, por contrato, o `tid`.
+- A implementação local em `server/entraIdentityVerifier.ts` rejeita objetos recebidos do navegador e permanece `unavailable` enquanto não houver um adaptador server-side que produza evidência opaca após verificar o token Microsoft.
 - `tid` deve ser comparado server-side com `AZURE_TENANT_ID`.
 - `oid` é o identificador imutável do objeto Microsoft no tenant.
 - `tid` e `oid` só podem vir de claims/metadados de identidade que o Supabase Auth tenha retornado com origem verificável; body, query string, localStorage e campos editáveis do perfil nunca são prova.
+- A cadeia necessária para ativar o verificador é: token Microsoft correto para o recurso, assinatura validada com JWKS, `iss`, `aud`, `exp` e nonce (quando aplicável) conferidos, tenant permitido, `oid` presente e `auth.identities.user_id` igual ao `auth.users.id` da sessão validada. Dois tokens válidos de usuários diferentes devem ser rejeitados.
 - Se a homologação não comprovar a origem confiável desses identificadores, o acesso deve permanecer bloqueado.
 - Quando `xms_edov` estiver presente, `false` deve ser rejeitado; `true` apenas reforça a validação e não substitui tenant, object ID, assinatura, emissor, audiência, expiração ou pré-autorização.
 - `access_preapprovals` e o provisionamento definitivo ainda não são consultados na Etapa 2.
+
+### Bloqueador atual da Etapa 3B.2A
+
+Na produção inspecionada, a cadeia disponível não demonstra uma identidade Azure vinculada ao usuário Supabase nem entrega ao backend um token Microsoft verificado contendo `tid` e `oid`. Por isso, esta etapa implementa apenas a fronteira e os testes fail-closed; não há cenário positivo habilitável, não há perfil criado e nenhuma sessão passa a ser autorizada.
+
+Para a próxima etapa, a TI e a administração Supabase precisam confirmar: provedor Azure single-tenant ativo, client ID/audience, issuer/JWKS, política de convidados, escopos `openid profile email`, redirect URIs e qual componente server-side validará e entregará as claims ao SM&A sem expor tokens ao navegador.
 
 ## Variáveis
 
