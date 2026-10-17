@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const migrationPath = resolve(process.cwd(), 'supabase/migrations/20261016_stage3b1_identity_foundation.sql')
+const migrationPath = resolve(process.cwd(), 'supabase/migrations/20261016210000_stage3b1_identity_foundation.sql')
 
 describe('stage 3B.1 migration safety contract', () => {
   it('is additive and preserves legacy rows', () => {
