@@ -1,0 +1,52 @@
+name: Validate Stage 3B.1 migration
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/**'
+      - '.github/workflows/validate-stage3b1-migration.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres:
+    name: PostgreSQL synthetic migration test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: stage3b1
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d stage3b1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply synthetic baseline and simulate partial application
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/tests/stage3b1_baseline.sql
+
+      - name: Apply migration
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+
+      - name: Reapply migration to verify idempotent guards
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+
+      - name: Execute SQL assertions
+        env:
+          PGPASSWORD: postgres
+        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname stage3b1 --file supabase/tests/stage3b1_assertions.sql
