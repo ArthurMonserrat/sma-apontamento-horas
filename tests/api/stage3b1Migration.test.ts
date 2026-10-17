@@ -22,4 +22,12 @@ describe('stage 3B.1 migration safety contract', () => {
     expect(sql).not.toContain('grant select on table public.access_preapprovals')
     expect(sql).toContain('revoke all on table private.corporate_provisioning_audit from public')
   })
+
+  it('guards constraint creation so a partially applied migration can be retried safely', () => {
+    const sql = readFileSync(migrationPath, 'utf8').toLowerCase()
+    expect(sql).toContain('if not exists (select 1 from pg_constraint')
+    expect(sql).toContain('profiles_auth_user_id_fkey')
+    expect(sql).toContain('profiles_identity_pair_check')
+    expect(sql).toContain('access_preapprovals_identity_pair_check')
+  })
 })

@@ -23,3 +23,5 @@
 - Nenhum profile legado é alterado.
 - A migration não contém inserts, updates, deletes ou drops.
 - A autorização corporativa e `/api/provision` permanecem bloqueados.
+- O contrato de identidade permanece não ativável até um verificador server-side Entra/Supabase emitir uma prova opaca; booleanos ou strings enviados pelo chamador nunca são aceitos como verificação.
+- A criação de constraints é protegida por guards para permitir nova execução após aplicação parcial sem reescrever os profiles legados.

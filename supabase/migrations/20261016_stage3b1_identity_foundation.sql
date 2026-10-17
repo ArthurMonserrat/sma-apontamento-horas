@@ -8,21 +8,33 @@ alter table public.profiles
   add column if not exists microsoft_object_id uuid,
   add column if not exists squad_id uuid;
 
-alter table public.profiles
-  add constraint profiles_auth_user_id_fkey
-  foreign key (auth_user_id) references auth.users(id) on delete restrict not valid;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_auth_user_id_fkey' and conrelid = 'public.profiles'::regclass) then
+    alter table public.profiles
+      add constraint profiles_auth_user_id_fkey
+      foreign key (auth_user_id) references auth.users(id) on delete restrict not valid;
+  end if;
 
-alter table public.profiles
-  add constraint profiles_squad_id_fkey
-  foreign key (squad_id) references public.squads(id) on delete restrict not valid;
+  if not exists (select 1 from pg_constraint where conname = 'profiles_squad_id_fkey' and conrelid = 'public.profiles'::regclass) then
+    alter table public.profiles
+      add constraint profiles_squad_id_fkey
+      foreign key (squad_id) references public.squads(id) on delete restrict not valid;
+  end if;
 
-alter table public.profiles
-  add constraint profiles_identity_pair_check
-  check ((microsoft_tenant_id is null) = (microsoft_object_id is null)) not valid;
+  if not exists (select 1 from pg_constraint where conname = 'profiles_identity_pair_check' and conrelid = 'public.profiles'::regclass) then
+    alter table public.profiles
+      add constraint profiles_identity_pair_check
+      check ((microsoft_tenant_id is null) = (microsoft_object_id is null)) not valid;
+  end if;
 
-alter table public.access_preapprovals
-  add constraint access_preapprovals_identity_pair_check
-  check ((microsoft_tenant_id is null) = (microsoft_object_id is null)) not valid;
+  if not exists (select 1 from pg_constraint where conname = 'access_preapprovals_identity_pair_check' and conrelid = 'public.access_preapprovals'::regclass) then
+    alter table public.access_preapprovals
+      add constraint access_preapprovals_identity_pair_check
+      check ((microsoft_tenant_id is null) = (microsoft_object_id is null)) not valid;
+  end if;
+end
+$$;
 
 create unique index if not exists profiles_auth_user_id_uidx
   on public.profiles(auth_user_id)

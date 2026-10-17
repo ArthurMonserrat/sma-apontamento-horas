@@ -1,18 +1,13 @@
 export type CorporateRole = 'colaborador' | 'supervisor' | 'diretor'
 
+const trustedIdentityMarker = Symbol('trusted-microsoft-identity')
+
 export type TrustedMicrosoftIdentity = {
   tenantId: string
   objectId: string
   emailVerified: boolean
   source: 'entra-provider-verified'
-}
-
-export type TrustedMicrosoftIdentityInput = {
-  source?: unknown
-  cryptographicallyVerified?: unknown
-  tenantId?: unknown
-  objectId?: unknown
-  emailVerified?: unknown
+  readonly [trustedIdentityMarker]: true
 }
 
 export type AccessPreapproval = {
@@ -26,45 +21,37 @@ export type AccessPreapproval = {
 
 export type AuthorizationDecision =
   | { status: 'authorized'; role: CorporateRole; email: string; fullName: string }
-  | { status: 'unauthorized'; reason: 'identity_missing' | 'identity_mismatch' | 'preapproval_not_found' | 'preapproval_inactive' | 'preapproval_identity_missing' }
-
-function nonEmpty(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0
-}
+  | { status: 'unauthorized'; reason: 'identity_missing' | 'identity_untrusted' | 'identity_mismatch' | 'preapproval_not_found' | 'preapproval_inactive' | 'preapproval_identity_missing' }
 
 /**
- * Validates the server-side envelope produced by a future Entra/Supabase
- * adapter. This function deliberately does not decode JWTs or infer claims.
- * The cryptographic verification and provider binding must happen before this
- * boundary; unverified frontend payloads are rejected.
+ * Boundary for a future Entra/Supabase adapter. This function deliberately
+ * does not decode JWTs, infer claims, or treat booleans/strings supplied by a
+ * caller as proof. A provider verifier must be added in this server module to
+ * issue the private marker after validating signature, issuer, audience,
+ * tenant, object ID and the binding to the same Supabase user. Until then,
+ * every external envelope is rejected.
  */
 export function validateTrustedMicrosoftIdentity(input: unknown, expectedTenantId: string): TrustedMicrosoftIdentity | null {
-  if (!input || typeof input !== 'object' || !nonEmpty(expectedTenantId)) return null
-  const candidate = input as TrustedMicrosoftIdentityInput
-  if (candidate.source !== 'entra-provider-verified' || candidate.cryptographicallyVerified !== true) return null
-  if (!nonEmpty(candidate.tenantId) || !nonEmpty(candidate.objectId)) return null
-  if (candidate.tenantId.trim() !== expectedTenantId.trim()) return null
-  if (candidate.emailVerified !== true) return null
-
-  return {
-    tenantId: candidate.tenantId.trim(),
-    objectId: candidate.objectId.trim(),
-    emailVerified: true,
-    source: 'entra-provider-verified',
-  }
+  void input
+  void expectedTenantId
+  return null
 }
 
 export function authorizeWithPreapproval(
-  identity: TrustedMicrosoftIdentity | null,
+  identity: unknown,
   preapproval: AccessPreapproval | null,
 ): AuthorizationDecision {
   if (!identity) return { status: 'unauthorized', reason: 'identity_missing' }
+  if (typeof identity !== 'object' || !(trustedIdentityMarker in identity)) {
+    return { status: 'unauthorized', reason: 'identity_untrusted' }
+  }
+  const trustedIdentity = identity as TrustedMicrosoftIdentity
   if (!preapproval) return { status: 'unauthorized', reason: 'preapproval_not_found' }
   if (!preapproval.active) return { status: 'unauthorized', reason: 'preapproval_inactive' }
   if (!preapproval.microsoftTenantId || !preapproval.microsoftObjectId) {
     return { status: 'unauthorized', reason: 'preapproval_identity_missing' }
   }
-  if (preapproval.microsoftTenantId !== identity.tenantId || preapproval.microsoftObjectId !== identity.objectId) {
+  if (preapproval.microsoftTenantId !== trustedIdentity.tenantId || preapproval.microsoftObjectId !== trustedIdentity.objectId) {
     return { status: 'unauthorized', reason: 'identity_mismatch' }
   }
 
