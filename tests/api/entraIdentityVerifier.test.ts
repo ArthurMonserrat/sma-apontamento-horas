@@ -10,33 +10,41 @@ describe('Supabase to Entra identity binding', () => {
   it('rejects an identity record from another Supabase user', () => {
     expect(verifySupabaseAzureBinding({
       supabaseUserId: 'supabase-a',
-      identities: [{ userId: 'supabase-b', provider: 'azure', providerId: 'object-1', identityData: { tid: 'tenant-1', oid: 'object-1' } }],
-      microsoftClaims: null,
+      identities: [{ identityId: 'identity-1', userId: 'supabase-b', provider: 'azure', providerId: 'provider-subject', identityData: { tid: 'tenant-1', oid: 'object-1' } }],
+      microsoftEvidence: null,
     }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'invalid', reason: 'identity_user_mismatch' })
   })
 
   it('does not treat provider_id, email, metadata, or a boolean as tid/oid proof', () => {
     expect(verifySupabaseAzureBinding({
       supabaseUserId: 'supabase-a',
-      identities: [{ userId: 'supabase-a', provider: 'azure', providerId: 'object-1', identityData: { email: 'person@example.com', tid: 'tenant-1', oid: 'object-1', cryptographicallyVerified: true } }],
-      microsoftClaims: { tid: 'tenant-1', oid: 'object-1', cryptographicallyVerified: true },
+      identities: [{ identityId: 'identity-1', userId: 'supabase-a', provider: 'azure', providerId: 'provider-subject', identityData: { email: 'person@example.com', tid: 'tenant-1', oid: 'object-1', cryptographicallyVerified: true } }],
+      microsoftEvidence: { sub: 'different-subject', tid: 'tenant-1', oid: 'object-1', cryptographicallyVerified: true },
     }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'unavailable', reason: 'verified_provider_evidence_missing' })
   })
 
   it('fails closed when Azure identity is absent, duplicated, or from another provider', () => {
-    expect(verifySupabaseAzureBinding({ supabaseUserId: 'supabase-a', identities: [], microsoftClaims: null }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'invalid', reason: 'azure_identity_missing' })
+    expect(verifySupabaseAzureBinding({ supabaseUserId: 'supabase-a', identities: [], microsoftEvidence: null }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'invalid', reason: 'azure_identity_missing' })
     expect(verifySupabaseAzureBinding({
       supabaseUserId: 'supabase-a',
       identities: [
-        { userId: 'supabase-a', provider: 'azure', providerId: 'object-1', identityData: {} },
-        { userId: 'supabase-a', provider: 'azure', providerId: 'object-2', identityData: {} },
+        { identityId: 'identity-1', userId: 'supabase-a', provider: 'azure', providerId: 'provider-subject-1', identityData: {} },
+        { identityId: 'identity-2', userId: 'supabase-a', provider: 'azure', providerId: 'provider-subject-2', identityData: {} },
       ],
-      microsoftClaims: null,
+      microsoftEvidence: null,
     }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'invalid', reason: 'multiple_azure_identities' })
     expect(verifySupabaseAzureBinding({
       supabaseUserId: 'supabase-a',
-      identities: [{ userId: 'supabase-a', provider: 'google', providerId: 'subject-1', identityData: {} }],
-      microsoftClaims: null,
+      identities: [{ identityId: 'identity-1', userId: 'supabase-a', provider: 'google', providerId: 'subject-1', identityData: {} }],
+      microsoftEvidence: null,
     }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'invalid', reason: 'azure_identity_missing' })
+  })
+
+  it('does not equate provider_id or sub with oid when the definitive evidence is unavailable', () => {
+    expect(verifySupabaseAzureBinding({
+      supabaseUserId: 'supabase-a',
+      identities: [{ identityId: 'identity-1', userId: 'supabase-a', provider: 'azure', providerId: 'provider-subject', identityData: {} }],
+      microsoftEvidence: { sub: 'provider-subject', tid: 'tenant-1', oid: 'object-1' },
+    }, { expectedTenantId: 'tenant-1' })).toEqual({ status: 'unavailable', reason: 'verified_provider_evidence_missing' })
   })
 })

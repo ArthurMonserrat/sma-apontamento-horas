@@ -14,7 +14,7 @@ Microsoft Entra ID → Supabase OAuth Azure/PKCE → sessão Supabase
                          SM&A (autorização bloqueada)
 ```
 
-O backend valida a sessão Supabase pelo bearer token. A identidade OAuth do Supabase pode conter `user_id`, `provider`, `provider_id` e `identity_data`. `user_id` é útil para confirmar a associação com o mesmo `auth.users.id`; `provider_id` isolado não é aceito como `oid` e não fornece, por contrato, o `tid`.
+O backend valida a sessão Supabase pelo bearer token. A identidade OAuth do Supabase pode conter `user_id`, `provider`, `provider_id` e `identity_data`. `user_id` é útil para confirmar a associação com o mesmo `auth.users.id`; `provider_id` isolado não é aceito como `oid` e não fornece, por contrato, o `tid`. Também não se presume que `provider_id`, `sub` e `oid` tenham o mesmo valor.
 
 ## Estratégias avaliadas
 
@@ -28,7 +28,7 @@ O backend valida a sessão Supabase pelo bearer token. A identidade OAuth do Sup
 ### 2. Verificador server-side de token Microsoft
 
 - **Evidência necessária:** token correto para o recurso, assinatura validada por JWKS, `iss`, `aud`, expiração e nonce (quando aplicável), tenant permitido e `oid` presente.
-- **Vínculo obrigatório:** a evidência Microsoft deve corresponder ao mesmo `auth.users.id` e à identidade Azure associada em `auth.identities`.
+- **Vínculo obrigatório:** a evidência Microsoft deve corresponder ao mesmo `auth.users.id` e ser explicitamente vinculada, pelo adaptador server-side, ao registro de identidade Azure (`auth.identities.id`). Essa vinculação não será inferida comparando `provider_id` com `sub` ou `oid`.
 - **Riscos:** tratar access token do Graph como ID token, aceitar o endpoint `common`, aceitar claims apenas decodificadas ou combinar tokens de usuários diferentes.
 - **Decisão:** é a estratégia recomendada, mas permanece indisponível até a TI/Supabase confirmarem a fonte segura do token e a configuração do provedor.
 
@@ -37,13 +37,13 @@ O backend valida a sessão Supabase pelo bearer token. A identidade OAuth do Sup
 `server/entraIdentityVerifier.ts` rejeita:
 
 - objetos do navegador, e-mail e `user_metadata`;
-- `provider_id` sem evidência Microsoft verificada;
+- `provider_id` sem evidência Microsoft verificada ou tratado como equivalente a `sub`/`oid`;
 - booleanos como `cryptographicallyVerified`;
 - identidade Azure de outro usuário Supabase;
 - múltiplas identidades Azure ambíguas;
 - tenant ou object ID incompatíveis.
 
-O resultado `verified` só pode ser produzido com uma marca opaca privada criada pelo futuro adaptador server-side. Não existe produtor ativado nesta etapa, portanto entradas externas resultam em `invalid` ou `unavailable`.
+O resultado `verified` só pode ser produzido com uma marca opaca privada criada pelo futuro adaptador server-side, contendo o identificador do registro `auth.identities` que ele validou. Não existe produtor ativado nesta etapa, portanto entradas externas resultam em `invalid` ou `unavailable`.
 
 ## Dependências da TI/Supabase
 

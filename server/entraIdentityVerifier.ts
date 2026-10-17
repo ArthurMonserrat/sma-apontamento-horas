@@ -4,13 +4,15 @@
  * Supabase's auth.identities row proves that an Azure identity is linked to a
  * Supabase user, but provider_id/identity_data alone do not prove the Entra
  * tenant and object ID. A future adapter in this module must verify a real
- * Microsoft ID token (signature/JWKS, issuer, audience, expiry and nonce when
- * applicable) before it can issue the private evidence marker below.
+ * Microsoft token (signature/JWKS, issuer, audience, expiry and nonce when
+ * applicable) and explicitly bind its result to the server-side identity row
+ * before it can issue the private evidence marker below.
  */
 
 const verifiedClaimsMarker = Symbol('verified-microsoft-claims')
 
 export type SupabaseAzureIdentityRecord = {
+  identityId: string
   userId: string
   provider: string
   providerId: string
@@ -20,7 +22,7 @@ export type SupabaseAzureIdentityRecord = {
 export type EntraBindingInput = {
   supabaseUserId: string
   identities: readonly SupabaseAzureIdentityRecord[]
-  microsoftClaims: unknown
+  microsoftEvidence: unknown
 }
 
 export type EntraBindingConfig = {
@@ -29,10 +31,12 @@ export type EntraBindingConfig = {
 
 export type EntraBindingResult =
   | { status: 'verified'; tenantId: string; objectId: string; supabaseUserId: string }
-  | { status: 'invalid'; reason: 'invalid_input' | 'azure_identity_missing' | 'multiple_azure_identities' | 'identity_user_mismatch' | 'tenant_mismatch' | 'object_id_missing' | 'object_id_mismatch' }
+  | { status: 'invalid'; reason: 'invalid_input' | 'azure_identity_missing' | 'multiple_azure_identities' | 'identity_user_mismatch' | 'tenant_mismatch' | 'object_id_missing' | 'identity_record_mismatch' }
   | { status: 'unavailable'; reason: 'verified_provider_evidence_missing' }
 
 type VerifiedMicrosoftClaims = {
+  identityRecordId: string
+  subject: string
   issuer: string
   audience: string
   tenantId: string
@@ -49,6 +53,8 @@ function isVerifiedMicrosoftClaims(value: unknown): value is VerifiedMicrosoftCl
   if (!value || typeof value !== 'object' || !(verifiedClaimsMarker in value)) return false
   const claims = value as Record<PropertyKey, unknown>
   return claims[verifiedClaimsMarker] === true
+    && nonEmptyString(claims.identityRecordId)
+    && nonEmptyString(claims.subject)
     && nonEmptyString(claims.issuer)
     && nonEmptyString(claims.audience)
     && nonEmptyString(claims.tenantId)
@@ -83,20 +89,22 @@ export function verifySupabaseAzureBinding(
   if (azureIdentities.length > 1) return { status: 'invalid', reason: 'multiple_azure_identities' }
 
   const [azureIdentity] = azureIdentities
-  if (!nonEmptyString(azureIdentity.userId) || azureIdentity.userId !== inputRecord.supabaseUserId) {
+  if (!nonEmptyString(azureIdentity.identityId) || !nonEmptyString(azureIdentity.userId) || azureIdentity.userId !== inputRecord.supabaseUserId) {
     return { status: 'invalid', reason: 'identity_user_mismatch' }
   }
 
   // provider_id and identity_data are deliberately not accepted as proof of
-  // tid/oid. The provider verifier must issue the opaque marker server-side.
-  if (!isVerifiedMicrosoftClaims(inputRecord.microsoftClaims)) {
+  // tid/oid. The provider verifier must issue opaque evidence server-side and
+  // bind it to this exact auth.identities row by identity record ID. No
+  // equivalence between provider_id, sub and oid is assumed.
+  if (!isVerifiedMicrosoftClaims(inputRecord.microsoftEvidence)) {
     return { status: 'unavailable', reason: 'verified_provider_evidence_missing' }
   }
 
-  const claims = inputRecord.microsoftClaims
+  const claims = inputRecord.microsoftEvidence
   if (claims.tenantId !== configRecord.expectedTenantId) return { status: 'invalid', reason: 'tenant_mismatch' }
   if (!nonEmptyString(claims.objectId)) return { status: 'invalid', reason: 'object_id_missing' }
-  if (azureIdentity.providerId !== claims.objectId) return { status: 'invalid', reason: 'object_id_mismatch' }
+  if (claims.identityRecordId !== azureIdentity.identityId) return { status: 'invalid', reason: 'identity_record_mismatch' }
 
   return {
     status: 'verified',
