@@ -1,5 +1,9 @@
 \set ON_ERROR_STOP on
 
+-- These assertions prove the recovered DDL, grants, and policy definitions.
+-- They do not prove row filtering under anon/authenticated or a full Supabase
+-- Data API/Auth environment; that requires the dedicated RLS stage and a
+-- managed Supabase test project.
 do $$
 declare
   user_id uuid := '00000000-0000-0000-0000-000000000001';
@@ -22,6 +26,19 @@ begin
   end if;
   if (select count(*) from pg_policies where schemaname = 'public') <> 17 then
     raise exception 'unexpected historical policy count';
+  end if;
+  if exists (
+    select 1
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relname in ('profiles', 'squads', 'workloads', 'time_entries', 'daily_approvals')
+      and c.relrowsecurity is not true
+  ) then
+    raise exception 'historical public table without row-level security';
+  end if;
+  if has_table_privilege('anon', 'public.profiles', 'select') then
+    raise exception 'anon has historical profiles select privilege';
   end if;
   if has_function_privilege('anon', 'private.current_profile_role()', 'execute') then
     raise exception 'anon can execute historical role helper';

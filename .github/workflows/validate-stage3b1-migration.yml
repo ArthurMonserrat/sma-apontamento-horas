@@ -31,30 +31,63 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify recovered migration checksum
+        shell: bash
+        run: |
+          expected='4ef1871ed3cd19181bdd0b7a30ac6130'
+          actual="$(md5sum supabase/migrations/20261010215524_create_initial_workforce_time_tracking_schema.sql | awk '{print $1}')"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Historical migration checksum mismatch: $actual"
+            exit 1
+          fi
+          echo "Historical migration MD5: $actual"
+
       - name: Apply synthetic Auth prelude
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_auth_prelude.sql
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_auth_prelude.sql
+
+      - name: Regression-test incompatibility error classification
+        run: bash supabase/tests/assert_expected_missing_relation_test.sh
 
       - name: Apply recovered historical migration
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261010215524_create_initial_workforce_time_tracking_schema.sql
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261010215524_create_initial_workforce_time_tracking_schema.sql
 
       - name: Assert historical structure and privileges
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_assertions.sql
+        run: |
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_assertions.sql
+          echo 'Historical baseline: PASS' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Confirm missing access_preapprovals before compatibility test
+        env:
+          PGPASSWORD: postgres
+        shell: bash
+        run: |
+          relation_state="$(psql --no-psqlrc --set ON_ERROR_STOP=1 --tuples-only --host 127.0.0.1 --username postgres --dbname historical --command "select (to_regclass('public.access_preapprovals') is null)::text;")"
+          relation_state="$(echo "$relation_state" | tr -d '[:space:]')"
+          if [[ "$relation_state" != "true" ]]; then
+            echo '::error::Historical baseline unexpectedly contains public.access_preapprovals.'
+            exit 1
+          fi
+          echo 'Confirmed before migration: public.access_preapprovals is absent.'
 
       - name: Prove historical-to-3B.1 incompatibility without masking it
         env:
           PGPASSWORD: postgres
+        run: bash supabase/tests/assert_expected_missing_relation.sh 127.0.0.1 5432 historical supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+
+      - name: Publish validation scope
         run: |
-          if psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql; then
-            echo '::error::Stage 3B.1 unexpectedly applied without access_preapprovals.'
-            exit 1
-          fi
-          echo 'Historical baseline incompatibility confirmed: access_preapprovals is not part of the original migration.'
+          {
+            echo '### Migration validation scope'
+            echo '- Historical baseline: PASS'
+            echo '- Historical → Stage 3B.1: INCOMPATIBLE — SQLSTATE 42P01 for missing public.access_preapprovals (expected)'
+            echo '- Full managed Supabase validation: NOT TESTED'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   legacy:
     name: Legacy schema to Stage 3B.1 compatibility check
@@ -79,19 +112,25 @@ jobs:
       - name: Apply synthetic legacy baseline and simulate partial application
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_baseline.sql
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_baseline.sql
 
       - name: Apply Stage 3B.1 to legacy schema
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
 
       - name: Reapply Stage 3B.1 to verify guarded retry
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
 
       - name: Execute legacy SQL assertions
         env:
           PGPASSWORD: postgres
-        run: psql --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_assertions.sql
+        run: |
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_assertions.sql
+          {
+            echo '### Migration validation scope'
+            echo '- Legacy synthetic → Stage 3B.1: PASS'
+            echo '- Full managed Supabase validation: NOT TESTED'
+          } >> "$GITHUB_STEP_SUMMARY"
