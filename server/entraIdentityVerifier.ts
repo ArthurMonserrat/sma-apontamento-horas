@@ -46,7 +46,16 @@ function nonEmptyString(value: unknown): value is string {
 }
 
 function isVerifiedMicrosoftClaims(value: unknown): value is VerifiedMicrosoftClaims {
-  return Boolean(value && typeof value === 'object' && verifiedClaimsMarker in value)
+  if (!value || typeof value !== 'object' || !(verifiedClaimsMarker in value)) return false
+  const claims = value as Record<PropertyKey, unknown>
+  return claims[verifiedClaimsMarker] === true
+    && nonEmptyString(claims.issuer)
+    && nonEmptyString(claims.audience)
+    && nonEmptyString(claims.tenantId)
+    && nonEmptyString(claims.objectId)
+    && typeof claims.expiresAt === 'number'
+    && Number.isFinite(claims.expiresAt)
+    && claims.expiresAt > Math.floor(Date.now() / 1000)
 }
 
 /**

@@ -15,7 +15,7 @@ function headerValue(headers: VercelRequest['headers'], name: string): string | 
 }
 
 /**
- * This remains hard-false during Stage 2. The environment flag is deliberately
+ * This remains hard-false during the identity-foundation stages. The environment flag is deliberately
  * only a future contract so a production misconfiguration cannot authorize a
  * profile before Microsoft identity, pre-authorization and provisioning exist.
  */
