@@ -17,7 +17,8 @@ set +e
 PGPASSWORD="${PGPASSWORD:?PGPASSWORD must be set}" psql \
   --no-psqlrc \
   --set ON_ERROR_STOP=1 \
-  --echo-errors=verbose \
+  --echo-errors \
+  --set=VERBOSITY=verbose \
   --host "$host" \
   --port "$port" \
   --username postgres \
