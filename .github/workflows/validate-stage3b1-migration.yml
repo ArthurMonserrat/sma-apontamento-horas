@@ -1,4 +1,4 @@
-name: Validate historical and Stage 3B.1 migrations
+name: Validate identity reconciliation migrations
 
 on:
   pull_request:
@@ -12,11 +12,15 @@ permissions:
 
 jobs:
   historical:
-    name: Historical baseline and compatibility check
+    name: New database reconciliation (PostgreSQL ${{ matrix.pg }})
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['15', '17']
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:${{ matrix.pg }}
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: historical
@@ -47,9 +51,6 @@ jobs:
           PGPASSWORD: postgres
         run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_auth_prelude.sql
 
-      - name: Regression-test incompatibility error classification
-        run: bash supabase/tests/assert_expected_missing_relation_test.sh
-
       - name: Apply recovered historical migration
         env:
           PGPASSWORD: postgres
@@ -62,39 +63,45 @@ jobs:
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/historical_assertions.sql
           echo 'Historical baseline: PASS' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Confirm missing access_preapprovals before compatibility test
+      - name: Apply identity reconciliation prerequisites
         env:
           PGPASSWORD: postgres
-        shell: bash
-        run: |
-          relation_state="$(psql --no-psqlrc --set ON_ERROR_STOP=1 --tuples-only --host 127.0.0.1 --username postgres --dbname historical --command "select (to_regclass('public.access_preapprovals') is null)::text;")"
-          relation_state="$(echo "$relation_state" | tr -d '[:space:]')"
-          if [[ "$relation_state" != "true" ]]; then
-            echo '::error::Historical baseline unexpectedly contains public.access_preapprovals.'
-            exit 1
-          fi
-          echo 'Confirmed before migration: public.access_preapprovals is absent.'
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261016190000_identity_reconciliation_prerequisites.sql
 
-      - name: Prove historical-to-3B.1 incompatibility without masking it
+      - name: Apply Stage 3B.1 to reconstructed historical schema
         env:
           PGPASSWORD: postgres
-        run: bash supabase/tests/assert_expected_missing_relation.sh 127.0.0.1 5432 historical supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
+
+      - name: Apply identity contract convergence
+        env:
+          PGPASSWORD: postgres
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261016220000_identity_contract_convergence.sql
+
+      - name: Assert reconstructed historical contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/reconciliation_assertions.sql
 
       - name: Publish validation scope
         run: |
           {
             echo '### Migration validation scope'
             echo '- Historical baseline: PASS'
-            echo '- Historical → Stage 3B.1: INCOMPATIBLE — SQLSTATE 42P01 for missing public.access_preapprovals (expected)'
+            echo '- Historical → prerequisites → Stage 3B.1 → convergence: PASS'
             echo '- Full managed Supabase validation: NOT TESTED'
           } >> "$GITHUB_STEP_SUMMARY"
 
   legacy:
-    name: Legacy schema to Stage 3B.1 compatibility check
+    name: Legacy schema reconciliation (PostgreSQL ${{ matrix.pg }})
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['15', '17']
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:${{ matrix.pg }}
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: legacy
@@ -114,6 +121,11 @@ jobs:
           PGPASSWORD: postgres
         run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_baseline.sql
 
+      - name: Apply identity reconciliation prerequisites
+        env:
+          PGPASSWORD: postgres
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016190000_identity_reconciliation_prerequisites.sql
+
       - name: Apply Stage 3B.1 to legacy schema
         env:
           PGPASSWORD: postgres
@@ -124,13 +136,19 @@ jobs:
           PGPASSWORD: postgres
         run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016210000_stage3b1_identity_foundation.sql
 
+      - name: Apply identity contract convergence
+        env:
+          PGPASSWORD: postgres
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261016220000_identity_contract_convergence.sql
+
       - name: Execute legacy SQL assertions
         env:
           PGPASSWORD: postgres
         run: |
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_assertions.sql
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/reconciliation_assertions.sql
           {
             echo '### Migration validation scope'
-            echo '- Legacy synthetic → Stage 3B.1: PASS'
+            echo '- Legacy synthetic → prerequisites → Stage 3B.1 → convergence: PASS'
             echo '- Full managed Supabase validation: NOT TESTED'
           } >> "$GITHUB_STEP_SUMMARY"

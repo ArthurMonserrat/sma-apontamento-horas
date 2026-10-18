@@ -18,6 +18,8 @@ begin
   if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'auth_user_id') then raise exception 'auth_user_id missing'; end if;
   if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'squad_id') then raise exception 'squad_id missing'; end if;
   if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'microsoft_tenant_id') then raise exception 'profile tenant column missing'; end if;
+  if not exists (select 1 from pg_type where typname = 'app_role') then raise exception 'app_role missing'; end if;
+  if (select udt_name from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'role') <> 'app_role' then raise exception 'profiles.role did not converge to app_role'; end if;
 
   if not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'profiles_auth_user_id_uidx') then raise exception 'auth user uniqueness index missing'; end if;
   if not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'profiles_microsoft_identity_uidx') then raise exception 'profile identity uniqueness index missing'; end if;
@@ -38,6 +40,14 @@ begin
   if has_function_privilege('authenticated', 'private.current_profile_role()', 'execute') is distinct from true then raise exception 'authenticated cannot execute role function'; end if;
   if has_function_privilege('anon', 'private.current_profile_squad_id()', 'execute') then raise exception 'anon can execute squad function'; end if;
   if has_function_privilege('authenticated', 'private.is_in_current_squad(uuid)', 'execute') is distinct from true then raise exception 'authenticated cannot execute squad membership function'; end if;
+  if has_table_privilege('authenticated', 'public.profiles', 'update') then raise exception 'authenticated can update profiles directly'; end if;
+  if has_table_privilege('authenticated', 'public.profiles', 'delete') then raise exception 'authenticated can delete profiles directly'; end if;
+  if has_table_privilege('authenticated', 'public.access_preapprovals', 'select') then raise exception 'authenticated can read preapprovals directly'; end if;
+  if exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and (coalesce(qual, '') like '%auth.uid()%' or coalesce(with_check, '') like '%auth.uid()%')
+  ) then raise exception 'policy still compares authorization directly to auth.uid()'; end if;
 
   -- New rows must obey the identity pair constraint even while the existing
   -- table constraint remains NOT VALID for legacy data.
@@ -55,8 +65,8 @@ begin
 
   insert into auth.users (id, email) values (future_user, 'future@example.invalid');
   insert into public.squads (id, name, supervisor_id) values (squad_id, 'Synthetic Squad', future_user);
-  insert into public.profiles (id, email, full_name, role, active, squad_id)
-  values (future_user, 'future@example.invalid', 'Future Supervisor', 'supervisor', true, squad_id);
+  insert into public.profiles (id, auth_user_id, email, full_name, role, active, squad_id)
+  values (future_user, future_user, 'future@example.invalid', 'Future Supervisor', 'supervisor', true, squad_id);
 
   perform set_config('request.jwt.claim.sub', future_user::text, false);
   role_value := private.current_profile_role();
@@ -64,6 +74,14 @@ begin
   if role_value <> 'supervisor'::public.app_role then raise exception 'role function returned %', role_value; end if;
   if squad_value <> squad_id then raise exception 'squad function returned %', squad_value; end if;
   if private.is_in_current_squad(future_user) is distinct from true then raise exception 'same squad was rejected'; end if;
+
+  begin
+    insert into public.profiles (id, auth_user_id, email, full_name, role)
+    values ('10000000-0000-0000-0000-000000000003', future_user, 'duplicate@example.invalid', 'Duplicate', 'colaborador');
+    raise exception 'duplicate auth_user_id was accepted';
+  exception when unique_violation then
+    null;
+  end;
 
   update public.profiles set active = false where id = future_user;
   if private.current_profile_role() is not null then raise exception 'inactive user retained role'; end if;
