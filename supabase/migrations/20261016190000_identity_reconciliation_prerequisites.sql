@@ -28,7 +28,7 @@ begin
         ('email', 'text'),
         ('full_name', 'text'),
         ('role', 'text'),
-        ('active', 'boolean'),
+        ('active', 'bool'),
         ('microsoft_tenant_id', 'uuid'),
         ('microsoft_object_id', 'uuid')
       ) as required(name, type_name)

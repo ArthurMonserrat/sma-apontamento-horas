@@ -30,9 +30,10 @@ begin
   end if;
 
   insert into auth.users (id, email) values (test_user, 'reconciliation@example.invalid');
+  insert into public.profiles (id, auth_user_id, email, full_name, role, active)
+    values (test_user, test_user, 'reconciliation@example.invalid', 'Reconciliation User', 'colaborador', true);
   insert into public.squads (id, name, supervisor_id) values (test_squad, 'Reconciliation Squad', test_user);
-  insert into public.profiles (id, auth_user_id, email, full_name, role, active, squad_id)
-    values (test_user, test_user, 'reconciliation@example.invalid', 'Reconciliation User', 'colaborador', true, test_squad);
+  update public.profiles set squad_id = test_squad where id = test_user;
 
   perform set_config('request.jwt.claim.sub', test_user::text, false);
   if private.current_profile_id() <> test_user then raise exception 'auth_user_id did not resolve profile id'; end if;
