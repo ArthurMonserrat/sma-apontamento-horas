@@ -83,6 +83,35 @@ VITE_SUPABASE_ANON_KEY=
 VITE_SUPABASE_ALLOWED_REDIRECTS=http://localhost:5173/#/auth/callback
 ```
 
+### Ambientes publicados
+
+O runtime corporativo atual usa Supabase Auth no navegador; a configuração MSAL
+existente permanece apenas como legado bloqueado pelos endpoints BFF e não é um
+substituto para a sessão Supabase.
+
+O workflow do GitHub Pages injeta somente as três variáveis públicas abaixo,
+armazenadas como secrets do repositório para evitar valores hardcoded no YAML:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+VITE_SUPABASE_ALLOWED_REDIRECTS
+```
+
+Para o site publicado deste repositório, o redirect efetivo do `HashRouter` é:
+
+`https://arthurmonserrat.github.io/sma-apontamento-horas/#/auth/callback`
+
+Esse valor precisa estar simultaneamente na secret `VITE_SUPABASE_ALLOWED_REDIRECTS`,
+na allowlist de redirect do Supabase Auth e na configuração do aplicativo Entra.
+Não incluir a chave `service_role` ou qualquer segredo do provedor no build.
+
+No Vercel, Production e Preview precisam receber as mesmas três variáveis
+públicas, com redirects correspondentes a cada origem. A ausência de qualquer
+uma delas produz a mensagem `Supabase Auth não está configurado para este
+ambiente`; isso é uma falha de configuração do frontend, distinta de erro de
+OAuth/callback e distinta do bloqueio deliberado da autorização corporativa.
+
 ## Validação antes do piloto
 
 1. Configurar primeiro um projeto Supabase de homologação, nunca produção.
