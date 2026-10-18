@@ -102,8 +102,21 @@ Para o site publicado deste repositório, o redirect efetivo do `HashRouter` é:
 
 `https://arthurmonserrat.github.io/sma-apontamento-horas/#/auth/callback`
 
-Esse valor precisa estar simultaneamente na secret `VITE_SUPABASE_ALLOWED_REDIRECTS`,
-na allowlist de redirect do Supabase Auth e na configuração do aplicativo Entra.
+As configurações têm responsabilidades diferentes:
+
+- **Microsoft Entra ID:** cadastra somente o callback do provedor Supabase Auth,
+  no formato `https://<project-ref>.supabase.co/auth/v1/callback`. O callback
+  final do frontend não é cadastrado diretamente no aplicativo Entra.
+- **Supabase Auth:** inclui o callback final do frontend na allowlist de URLs de
+  redirecionamento, exatamente como será publicado.
+- **Frontend SM&A:** recebe o mesmo callback na variável pública
+  `VITE_SUPABASE_ALLOWED_REDIRECTS`.
+
+Para GitHub Pages, o valor exato é
+`https://arthurmonserrat.github.io/sma-apontamento-horas/#/auth/callback`.
+Para Vercel, use `https://<origem-aprovada>/#/auth/callback` para cada origem
+explicitamente autorizada. Não adicionar esses callbacks finais à configuração
+do aplicativo Entra.
 Não incluir a chave `service_role` ou qualquer segredo do provedor no build.
 
 No Vercel, Production e Preview precisam receber as mesmas três variáveis

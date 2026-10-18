@@ -23,6 +23,7 @@ vi.mock('../../../config/supabaseConfig', () => ({
 }))
 
 import {
+  clearAuthCallbackUrl,
   exchangeCallbackCode,
   getCurrentSession,
   resetCallbackExchangeState,
@@ -60,6 +61,15 @@ describe('supabaseSessionService', () => {
 
     expect(authMock.exchangeCodeForSession).toHaveBeenCalledTimes(1)
     expect(window.location.search).toBe('')
+  })
+
+  it('limpa parâmetros sensíveis quando o callback está no hash', () => {
+    window.history.replaceState({}, '', '/#/auth/callback?code=hash-code&state=state-value&error=none')
+
+    clearAuthCallbackUrl()
+
+    expect(window.location.search).toBe('')
+    expect(window.location.hash).toBe('#/auth/callback')
   })
 
   it('reutiliza resultado quando StrictMode dispara duas trocas concorrentes', async () => {

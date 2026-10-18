@@ -58,6 +58,15 @@ describe('AuthCallbackPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/', { replace: true })
   })
 
+  it('troca código recebido após a rota do HashRouter', async () => {
+    window.history.replaceState({}, '', '/#/auth/callback?code=hash-code&state=state')
+
+    await act(async () => root.render(<AuthCallbackPage />))
+
+    expect(exchangeMock).toHaveBeenCalledWith('hash-code')
+    expect(navigateMock).toHaveBeenCalledWith('/', { replace: true })
+  })
+
   it('ignora destino externo ou desconhecido salvo antes do callback', async () => {
     sessionStorage.setItem('sma:oauth-destination', 'https://banco2.example.com')
 
