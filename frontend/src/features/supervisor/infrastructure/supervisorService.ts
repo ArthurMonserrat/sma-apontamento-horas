@@ -443,4 +443,27 @@ export class LocalStorageSupervisorService implements SupervisorService {
   }
 }
 
-export const supervisorService = new LocalStorageSupervisorService(createBrowserStorage())
+const demoSupervisorService = new LocalStorageSupervisorService(createBrowserStorage())
+let activeSupervisorService: SupervisorService = demoSupervisorService
+
+/** The local fixture service remains the default until server authorization
+ * explicitly selects a corporate implementation. */
+export function configureSupervisorService(service: SupervisorService | null) {
+  activeSupervisorService = service ?? demoSupervisorService
+}
+
+export const supervisorService: SupervisorService = {
+  listEntries: () => activeSupervisorService.listEntries(),
+  listEscalatedEntries: () => activeSupervisorService.listEscalatedEntries(),
+  listCollaborators: () => activeSupervisorService.listCollaborators(),
+  approve: (entryId, supervisorId) => activeSupervisorService.approve(entryId, supervisorId),
+  approveMany: (entryIds, supervisorId) => activeSupervisorService.approveMany(entryIds, supervisorId),
+  approveEscalated: (entryId, directorId) => activeSupervisorService.approveEscalated(entryId, directorId),
+  reject: (entryId, supervisorId, reason) => activeSupervisorService.reject(entryId, supervisorId, reason),
+  rejectMany: (entryIds, supervisorId, reason) => activeSupervisorService.rejectMany(entryIds, supervisorId, reason),
+  listTimeOffRequests: (supervisorId) => activeSupervisorService.listTimeOffRequests(supervisorId),
+  approveTimeOffRequest: (requestId, supervisorId) => activeSupervisorService.approveTimeOffRequest(requestId, supervisorId),
+  rejectTimeOffRequest: (requestId, supervisorId, reason) => activeSupervisorService.rejectTimeOffRequest(requestId, supervisorId, reason),
+  getSummary: () => activeSupervisorService.getSummary(),
+  getRequestSummary: (supervisorId) => activeSupervisorService.getRequestSummary(supervisorId),
+}

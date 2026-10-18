@@ -6,6 +6,11 @@ import { SessionContext, type AuthState } from './sessionContext'
 import type { DemoRole, DemoSession } from './types'
 import type { CollaboratorProfile } from '../profile/types'
 import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
+import { getCorporateProfile, mapCorporateRole } from '../auth/authService'
+import { supabaseAuthClient } from '../auth/infrastructure/supabaseAuthClient'
+import { configureTimeEntryService, SupabaseTimeEntryService } from '../time-entries'
+import { configureSupervisorService } from '../supervisor/infrastructure/supervisorService'
+import { SupabaseSupervisorService } from '../supervisor/infrastructure/supabaseSupervisorService'
 
 // A demonstração é uma ferramenta de desenvolvimento/teste, não uma porta de
 // entrada para o bundle publicado. Mesmo que uma variável pública seja
@@ -27,25 +32,73 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
-    const subscription = subscribeSupabase((event, supabaseSession) => {
-      if (cancelled) return
-      if (modeRef.current === 'demo') return
-      if (supabaseSession) {
+    const applySupabaseSession = async (supabaseSession: Awaited<ReturnType<typeof getCurrentSession>> | null) => {
+      if (cancelled || modeRef.current === 'demo') return
+      const requestId = ++corporateRequestRef.current
+      if (!supabaseSession) {
         modeRef.current = 'none'
-        setSession(null)
-        setCorporateProfile(null)
-        setAuthError(UNAUTHORIZED_MESSAGE)
-        setAuthState('authenticated_unauthorized')
-        setIsLoading(false)
-        return
-      }
-      if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-        modeRef.current = 'none'
+        configureTimeEntryService(null)
+        configureSupervisorService(null)
         setSession(null)
         setCorporateProfile(null)
         setAuthError(null)
         setAuthState('unauthenticated')
         setIsLoading(false)
+        return
+      }
+
+      modeRef.current = 'corporate'
+      setSession(null)
+      setCorporateProfile(null)
+      setAuthError(null)
+      setAuthState('authenticating')
+      setIsLoading(true)
+      try {
+        const authorizedProfile = await getCorporateProfile(supabaseSession.access_token)
+        const role = mapCorporateRole(authorizedProfile.role)
+        if (!role || !authorizedProfile.active || cancelled || requestId !== corporateRequestRef.current) {
+          throw new Error(UNAUTHORIZED_MESSAGE)
+        }
+        const now = new Date().toISOString()
+        const corporateSession: DemoSession = {
+          id: authorizedProfile.id,
+          name: authorizedProfile.full_name,
+          email: authorizedProfile.email,
+          role,
+          createdAt: now,
+          explicitLoginAt: now,
+          isDemo: false,
+          version: 2,
+          authProvider: 'supabase',
+          corporateProfile: authorizedProfile,
+        }
+        setSession(corporateSession)
+        setCorporateProfile(authorizedProfile)
+        if (supabaseAuthClient) {
+          const dataClient = supabaseAuthClient as never
+          configureTimeEntryService(new SupabaseTimeEntryService(dataClient))
+          configureSupervisorService(new SupabaseSupervisorService(dataClient))
+        }
+        setAuthError(null)
+        setAuthState('authorized')
+      } catch {
+        if (cancelled || requestId !== corporateRequestRef.current) return
+        setSession(null)
+        setCorporateProfile(null)
+        configureTimeEntryService(null)
+        configureSupervisorService(null)
+        setAuthError(UNAUTHORIZED_MESSAGE)
+        setAuthState('authenticated_unauthorized')
+      } finally {
+        if (!cancelled && requestId === corporateRequestRef.current) setIsLoading(false)
+      }
+    }
+
+    const subscription = subscribeSupabase((event, supabaseSession) => {
+      if (cancelled) return
+      if (modeRef.current === 'demo') return
+      if (supabaseSession || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        void applySupabaseSession(supabaseSession)
       }
     })
 
@@ -60,16 +113,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     } else {
       modeRef.current = 'none'
-      void getCurrentSession().then((supabaseSession) => {
-        if (cancelled) return
-        if (supabaseSession) {
-          setAuthError(UNAUTHORIZED_MESSAGE)
-          setAuthState('authenticated_unauthorized')
-        } else {
-          setAuthState('unauthenticated')
-        }
-        setIsLoading(false)
-      }).catch(() => {
+      void getCurrentSession().then((supabaseSession) => applySupabaseSession(supabaseSession)).catch(() => {
         if (cancelled) return
         setAuthState('error')
         setAuthError('Não foi possível restaurar a sessão corporativa. Tente novamente.')
@@ -149,6 +193,8 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setSession(null)
     setProfile(null)
     setCorporateProfile(null)
+    configureTimeEntryService(null)
+    configureSupervisorService(null)
     setAuthError(null)
     setAuthState('signing_out')
     setIsLoading(false)

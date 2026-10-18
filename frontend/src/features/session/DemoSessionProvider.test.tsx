@@ -6,7 +6,7 @@ import { DemoSessionProvider } from './DemoSessionProvider'
 import { SessionContext } from './sessionContext'
 import { useContext } from 'react'
 
-const { demoServiceMock, profileServiceMock, authMock } = vi.hoisted(() => ({
+const { demoServiceMock, profileServiceMock, authMock, corporateAuthMock } = vi.hoisted(() => ({
   demoServiceMock: {
     restore: vi.fn(),
     signIn: vi.fn(),
@@ -18,6 +18,10 @@ const { demoServiceMock, profileServiceMock, authMock } = vi.hoisted(() => ({
     signOut: vi.fn(),
     subscribe: vi.fn(),
   },
+  corporateAuthMock: {
+    getCorporateProfile: vi.fn(),
+    mapCorporateRole: vi.fn(),
+  },
 }))
 
 vi.mock('./infrastructure/demoSessionService', () => ({ demoSessionService: demoServiceMock }))
@@ -26,8 +30,8 @@ vi.mock('../profile/infrastructure/profileService', () => ({
   profileService: profileServiceMock,
 }))
 vi.mock('../auth/authService', () => ({
-  getCorporateProfile: vi.fn(),
-  mapCorporateRole: vi.fn(),
+  getCorporateProfile: corporateAuthMock.getCorporateProfile,
+  mapCorporateRole: corporateAuthMock.mapCorporateRole,
 }))
 vi.mock('../auth/infrastructure/supabaseSessionService', () => ({
   getCurrentSession: authMock.getCurrentSession,
@@ -78,6 +82,8 @@ beforeEach(() => {
   authMock.signOut.mockResolvedValue({ error: null })
   authMock.subscribe.mockReturnValue({ unsubscribe: vi.fn() })
   profileServiceMock.getById.mockResolvedValue(null)
+  corporateAuthMock.getCorporateProfile.mockResolvedValue(null)
+  corporateAuthMock.mapCorporateRole.mockImplementation((role: string) => role === 'colaborador' ? 'COLLABORATOR' : null)
 })
 
 afterEach(() => {
@@ -116,6 +122,36 @@ describe('DemoSessionProvider', () => {
   it('marca sessão Supabase sem perfil como autenticada porém não autorizada', async () => {
     demoServiceMock.restore.mockReturnValue(null)
     authMock.getCurrentSession.mockResolvedValue({ data: { session: { access_token: 'token', user: { id: 'user-1' } } }, error: null })
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|authenticated_unauthorized|A sessão corporativa ainda não foi autorizada.')
+  })
+
+  it('publica uma sessão corporativa somente quando o servidor retorna perfil autorizado', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    const corporateProfile = {
+      id: 'profile-1',
+      email: 'collab@example.invalid',
+      full_name: 'Collaborator One',
+      role: 'colaborador',
+      squad_id: 'squad-1',
+      active: true,
+    } as const
+    corporateAuthMock.getCorporateProfile.mockResolvedValue(corporateProfile)
+    corporateAuthMock.mapCorporateRole.mockReturnValue('COLLABORATOR')
+    authMock.getCurrentSession.mockResolvedValue({ access_token: 'token', user: { id: 'auth-user-1', email: corporateProfile.email } })
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+
+    expect(corporateAuthMock.getCorporateProfile).toHaveBeenCalledWith('token')
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('corporate|authorized|')
+  })
+
+  it('mantém o acesso bloqueado quando o servidor recusa o perfil', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    corporateAuthMock.getCorporateProfile.mockRejectedValue(new Error('authorization_pending'))
+    authMock.getCurrentSession.mockResolvedValue({ access_token: 'token', user: { id: 'auth-user-1' } })
 
     await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
 

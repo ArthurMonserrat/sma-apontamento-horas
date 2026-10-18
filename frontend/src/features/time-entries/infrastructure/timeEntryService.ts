@@ -440,10 +440,32 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
   }
 }
 
-export const timeEntryService = new LocalStorageTimeEntryService({
+const demoTimeEntryService = new LocalStorageTimeEntryService({
   storage: createBrowserStorage(),
   resolveAssignment: (collaboratorId) => profileService.resolveAssignment(collaboratorId),
   mutationPolicy: dayApprovalService,
   dateGuard: entryDateAvailabilityService,
   audit: auditService,
 })
+
+let activeTimeEntryService: TimeEntryService = demoTimeEntryService
+
+/**
+ * Corporate runtime selection is explicit and server-authorized. The default
+ * remains the isolated demo service; no Supabase session alone changes it.
+ */
+export function configureTimeEntryService(service: TimeEntryService | null) {
+  activeTimeEntryService = service ?? demoTimeEntryService
+}
+
+export const timeEntryService: TimeEntryService = {
+  list: (query) => activeTimeEntryService.list(query),
+  listByDate: (collaboratorId, date) => activeTimeEntryService.listByDate(collaboratorId, date),
+  listByRange: (collaboratorId, startDate, endDate) => activeTimeEntryService.listByRange(collaboratorId, startDate, endDate),
+  getById: (collaboratorId, id) => activeTimeEntryService.getById(collaboratorId, id),
+  create: (collaboratorId, data) => activeTimeEntryService.create(collaboratorId, data),
+  update: (collaboratorId, id, expectedVersion, data, reason) => activeTimeEntryService.update(collaboratorId, id, expectedVersion, data, reason),
+  duplicate: (collaboratorId, id, expectedVersion, overrides) => activeTimeEntryService.duplicate(collaboratorId, id, expectedVersion, overrides),
+  cancel: (collaboratorId, id, expectedVersion, reason) => activeTimeEntryService.cancel(collaboratorId, id, expectedVersion, reason),
+  getDailySummary: (collaboratorId, date, workloadVersions) => activeTimeEntryService.getDailySummary(collaboratorId, date, workloadVersions),
+}

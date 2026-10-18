@@ -22,4 +22,19 @@ describe('autenticação das rotas internas', () => {
   it('não confia somente em um identificador local de sessão Supabase', () => {
     expect(hasAuthenticatedSession({ authProvider: 'supabase', isDemo: false }, null)).toBe(false)
   })
+
+  it('aceita somente uma sessão Supabase acompanhada de perfil corporativo autorizado', () => {
+    expect(hasAuthenticatedSession({
+      authProvider: 'supabase',
+      isDemo: false,
+      corporateProfile: {
+        id: 'profile-1',
+        email: 'collab@example.invalid',
+        full_name: 'Collaborator One',
+        role: 'colaborador',
+        squad_id: 'squad-1',
+        active: true,
+      },
+    } as never, null)).toBe(true)
+  })
 })
