@@ -36,4 +36,26 @@ describe('getSupabaseBrowserConfig', () => {
     expect(config.enabled).toBe(false)
     expect(config.redirectTo).toBe('')
   })
+
+  it('gera o callback HashRouter do GitHub Pages com a base publicada', () => {
+    const config = getSupabaseBrowserConfig({
+      VITE_SUPABASE_URL: 'https://project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'anon-key',
+      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://arthurmonserrat.github.io/sma-apontamento-horas/#/auth/callback',
+    }, 'https://arthurmonserrat.github.io', '/sma-apontamento-horas/')
+
+    expect(config.redirectTo).toBe('https://arthurmonserrat.github.io/sma-apontamento-horas/#/auth/callback')
+    expect(config.enabled).toBe(true)
+  })
+
+  it('gera o callback HashRouter da raiz usada no Vercel', () => {
+    const config = getSupabaseBrowserConfig({
+      VITE_SUPABASE_URL: 'https://project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'anon-key',
+      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://sma-apontamento-horas.example/#/auth/callback',
+    }, 'https://sma-apontamento-horas.example', '/')
+
+    expect(config.redirectTo).toBe('https://sma-apontamento-horas.example/#/auth/callback')
+    expect(config.enabled).toBe(true)
+  })
 })

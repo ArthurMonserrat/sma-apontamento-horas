@@ -31,4 +31,13 @@ describe('configuração de autenticação segura', () => {
     expect(envExample).not.toContain('SUPABASE_SERVICE_ROLE_KEY')
     expect(envExample).not.toContain('CLIENT_SECRET')
   })
+
+  it('injeta apenas a configuração pública do Supabase no build do GitHub Pages', async () => {
+    const workflow = await readFile(join(process.cwd(), '.github', 'workflows', 'deploy-pages.yml'), 'utf8')
+
+    expect(workflow).toContain('VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}')
+    expect(workflow).toContain('VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}')
+    expect(workflow).toContain('VITE_SUPABASE_ALLOWED_REDIRECTS: ${{ secrets.VITE_SUPABASE_ALLOWED_REDIRECTS }}')
+    expect(workflow).not.toContain('SUPABASE_SERVICE_ROLE_KEY:')
+  })
 })

@@ -41,6 +41,9 @@ jobs:
           GITHUB_PAGES: 'true'
           VITE_MSAL_CLIENT_ID: ${{ secrets.VITE_MSAL_CLIENT_ID }}
           VITE_MSAL_TENANT_ID: ${{ secrets.VITE_MSAL_TENANT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_ALLOWED_REDIRECTS: ${{ secrets.VITE_SUPABASE_ALLOWED_REDIRECTS }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
