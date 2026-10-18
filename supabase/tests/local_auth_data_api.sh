@@ -34,7 +34,7 @@ login_user() {
 
 request_status() {
   local method="$1" url="$2" token="${3:-}" body="${4:-}"
-  local args=(--silent --show-error --output "$tmp_dir/response" --write-out '%{http_code}' -X "$method" "$url" -H "apikey: $ANON_KEY")
+  local args=(--silent --show-error --output "$tmp_dir/response" --write-out '%{http_code}' -X "$method" "$url" -H "apikey: $ANON_KEY" -H 'Prefer: return=representation')
   if [[ -n "$token" ]]; then args+=( -H "Authorization: Bearer $token" ); fi
   if [[ -n "$body" ]]; then args+=( -H 'Content-Type: application/json' --data "$body" ); fi
   curl "${args[@]}"
@@ -86,6 +86,7 @@ SQL
 
 COLLAB_TOKEN="$(login_user collab@example.invalid)"
 SUPERVISOR_TOKEN="$(login_user supervisor@example.invalid)"
+OTHER_SUPERVISOR_TOKEN="$(login_user other-supervisor@example.invalid)"
 DIRECTOR_TOKEN="$(login_user director@example.invalid)"
 INACTIVE_TOKEN="$(login_user inactive@example.invalid)"
 UNLINKED_TOKEN="$(login_user unlinked@example.invalid)"
@@ -106,6 +107,10 @@ status="$(request_status GET "$API_URL/rest/v1/time_entries?select=profile_id&or
 expected="$(jq -cn --arg id "$COLLAB_ID" '[$id]')"
 assert_ids 'supervisor squad entries' "$status" "$expected"
 
+status="$(request_status GET "$API_URL/rest/v1/time_entries?select=profile_id&profile_id=eq.$COLLAB_ID" "$OTHER_SUPERVISOR_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "other supervisor request failed: HTTP $status" >&2; exit 1; }
+[[ "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'other supervisor saw another squad entry' >&2; exit 1; }
+
 status="$(request_status GET "$API_URL/rest/v1/time_entries?select=profile_id" "$DIRECTOR_TOKEN")"
 [[ "$status" =~ ^2 ]] || { echo "director read failed: HTTP $status" >&2; exit 1; }
 [[ "$(jq 'length' "$tmp_dir/response")" -eq 2 ]] || { echo 'director did not see both synthetic entries' >&2; exit 1; }
@@ -123,7 +128,23 @@ status="$(request_status GET "$API_URL/rest/v1/access_preapprovals?select=email"
 [[ ! "$status" =~ ^2 ]] || { echo 'authenticated user unexpectedly read access_preapprovals' >&2; exit 1; }
 
 status="$(request_status PATCH "$API_URL/rest/v1/profiles?id=eq.$COLLAB_ID" "$COLLAB_TOKEN" '{"role":"diretor","auth_user_id":"00000000-0000-0000-0000-000000000099"}')"
-[[ ! "$status" =~ ^2 ]] || { echo 'direct role/auth_user_id update unexpectedly succeeded' >&2; exit 1; }
+[[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'direct role/auth_user_id update unexpectedly succeeded' >&2; exit 1; }; }
+
+status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"'"$COLLAB_ID"'","date":"2026-01-07","duration_minutes":90,"client_name":"Synthetic Client","project_code":"LOCAL-RICH","contractor_number":"CONTRACT-7","activity_id":"activity-7","discipline_code":"E","document_type_code":"RN","description":"Persisted from Data API","status":"pending"}')"
+[[ "$status" =~ ^2 ]] || { echo "rich time entry insert failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
+ENTRY_ID="$(jq -er '.[0].id // .id' "$tmp_dir/response")"
+
+status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$ENTRY_ID"'","expected_version":1,"decision":"approved","rejection_reason":null}')"
+[[ "$status" =~ ^2 ]] || { echo "supervisor approval RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
+[[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'approved' ]] || { echo 'approval RPC did not persist approved status' >&2; exit 1; }
+
+status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID" "$SUPERVISOR_TOKEN" '{"description":"forged supervisor update"}')"
+[[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'supervisor direct update unexpectedly succeeded' >&2; exit 1; }; }
+
+status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID&select=id,status,client_name,activity_id" "$COLLAB_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "collaborator persisted read failed: HTTP $status" >&2; exit 1; }
+[[ "$(jq -r '.[0].status' "$tmp_dir/response")" == 'approved' ]] || { echo 'collaborator did not see persisted approval' >&2; exit 1; }
+[[ "$(jq -r '.[0].client_name' "$tmp_dir/response")" == 'Synthetic Client' ]] || { echo 'rich client field was lost' >&2; exit 1; }
 
 status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"00000000-0000-0000-0000-000000000099","date":"2026-01-06","start_time":"08:00","end_time":"09:00","duration_minutes":60,"project_code":"FORBIDDEN","status":"pending"}')"
 [[ ! "$status" =~ ^2 ]] || { echo 'cross-profile time entry insert unexpectedly succeeded' >&2; exit 1; }
