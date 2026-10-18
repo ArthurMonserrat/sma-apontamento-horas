@@ -206,6 +206,19 @@ grant execute on function public.decide_time_entry(uuid, integer, text, text) to
 -- transaction above so team membership, version and audit are checked
 -- together. Collaborators retain their existing RLS-guarded update path.
 drop policy if exists time_entries_update_supervisor_team on public.time_entries;
+
+-- Directors may inspect all active workforce entries, but an inactive profile
+-- must not become visible or actionable through this operational path.
+drop policy if exists time_entries_select_director on public.time_entries;
+create policy time_entries_select_director on public.time_entries for select to authenticated
+using (
+  private.current_profile_role() = 'diretor'
+  and exists (
+    select 1 from public.profiles target
+    where target.id = time_entries.profile_id and target.active = true
+  )
+);
+
 revoke insert, update, delete, truncate, references, trigger on table public.time_entry_decisions from public, anon, authenticated;
 
 commit;
