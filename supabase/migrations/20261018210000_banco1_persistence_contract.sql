@@ -12,7 +12,19 @@ alter table public.time_entries
   add column if not exists assignment_snapshot jsonb,
   add column if not exists last_edit_reason text,
   add column if not exists source_entry_id uuid,
-  add column if not exists cancelled_at timestamptz;
+  add column if not exists cancelled_at timestamptz,
+  add column if not exists rejection_reason text,
+  add column if not exists decided_at timestamptz,
+  add column if not exists decided_by uuid;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'time_entries_decided_by_fkey' and conrelid = 'public.time_entries'::regclass) then
+    alter table public.time_entries add constraint time_entries_decided_by_fkey
+      foreign key (decided_by) references public.profiles(id) on delete restrict not valid;
+  end if;
+end
+$$;
 
 -- The UI captures a duration, not artificial clock times. Existing rows keep
 -- their values; new duration-only rows may leave both times NULL.
@@ -31,7 +43,9 @@ alter table public.time_entries
   add constraint time_entries_activity_not_blank
     check (activity_id is null or length(btrim(activity_id)) > 0) not valid,
   add constraint time_entries_document_type_not_blank
-    check (document_type_code is null or length(btrim(document_type_code)) > 0) not valid;
+    check (document_type_code is null or length(btrim(document_type_code)) > 0) not valid,
+  add constraint time_entries_rejection_reason_check
+    check (status <> 'rejected' or length(btrim(coalesce(rejection_reason, ''))) > 0) not valid;
 
 create index if not exists time_entries_profile_date_status_idx
   on public.time_entries(profile_id, date, status);
@@ -117,6 +131,9 @@ begin
   update public.time_entries
   set status = next_status,
       version = version + 1,
+      rejection_reason = case when decision = 'rejected' then nullif(btrim(rejection_reason), '') else null end,
+      decided_at = now(),
+      decided_by = actor_profile_id,
       updated_at = now()
   where id = target_entry_id
   returning * into updated_entry;

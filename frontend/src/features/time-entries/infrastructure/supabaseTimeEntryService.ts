@@ -50,6 +50,9 @@ type DatabaseTimeEntry = {
   source_entry_id: string | null
   cancelled_at: string | null
   cancel_reason: string | null
+  rejection_reason: string | null
+  decided_at: string | null
+  decided_by: string | null
 }
 
 const statusToDb: Record<TimeEntryStatus, DatabaseStatus> = {
@@ -87,6 +90,9 @@ function mapRow(row: DatabaseTimeEntry): TimeEntry {
     sourceEntryId: row.source_entry_id ?? undefined,
     cancelledAt: row.cancelled_at ?? undefined,
     cancelReason: row.cancel_reason ?? undefined,
+    rejectionReason: row.rejection_reason ?? undefined,
+    decidedAt: row.decided_at ?? undefined,
+    decidedBy: row.decided_by ?? undefined,
   }
 }
 
