@@ -130,6 +130,13 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
     async function loadProfile() {
+      // Corporate sessions must never consult the local/demo profile store.
+      // Until a server-authorized profile adapter is available, keep this
+      // value empty instead of mixing a real session with demo identity data.
+      if (session?.authProvider === 'supabase') {
+        setProfile(null)
+        return
+      }
       if (session?.role !== 'COLLABORATOR') {
         setProfile(null)
         return

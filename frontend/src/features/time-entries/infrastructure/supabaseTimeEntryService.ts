@@ -10,6 +10,7 @@ type QueryResult<T> = { data: T | null, error: { message: string } | null, count
 export type SupabaseQuery = {
   select: (...args: unknown[]) => SupabaseQuery
   eq: (...args: unknown[]) => SupabaseQuery
+  neq: (...args: unknown[]) => SupabaseQuery
   gte: (...args: unknown[]) => SupabaseQuery
   lte: (...args: unknown[]) => SupabaseQuery
   order: (...args: unknown[]) => SupabaseQuery
@@ -103,7 +104,8 @@ function filters(query: SupabaseQuery, values: TimeEntryFilters | undefined) {
   if (values?.activityId) next = next.eq('activity_id', values.activityId)
   if (values?.disciplineCode) next = next.eq('discipline_code', values.disciplineCode)
   if (values?.documentTypeCode) next = next.eq('document_type_code', values.documentTypeCode)
-  if (values?.status) next = next.eq('status', statusToDb[values.status])
+  if (values?.status === 'ACTIVE') next = next.neq('status', 'cancelled')
+  else if (values?.status) next = next.eq('status', statusToDb[values.status])
   return next
 }
 

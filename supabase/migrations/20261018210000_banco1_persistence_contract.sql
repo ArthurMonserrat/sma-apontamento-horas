@@ -72,6 +72,52 @@ create index if not exists time_entry_decisions_entry_idx
 revoke all privileges on table public.time_entry_decisions from public, anon, authenticated;
 alter table public.time_entry_decisions enable row level security;
 
+create or replace function public.guard_time_entry_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, private, pg_temp
+as $$
+begin
+  -- The approval RPC sets this transaction-local capability immediately
+  -- before changing decision fields. Direct Data API updates never receive it.
+  if current_setting('sma.allow_time_entry_decision', true) = 'on' then
+    return new;
+  end if;
+
+  if new.id <> old.id
+    or new.profile_id <> old.profile_id
+    or new.created_at <> old.created_at
+    or new.offline_sync_id is distinct from old.offline_sync_id
+    or new.decided_by is distinct from old.decided_by
+    or new.decided_at is distinct from old.decided_at
+    or new.rejection_reason is distinct from old.rejection_reason
+    or new.version <> old.version + 1 then
+    raise exception using errcode = '42501', message = 'protected time entry fields require a reviewed server operation';
+  end if;
+
+  if old.status <> 'pending' and new.status <> old.status then
+    raise exception using errcode = '42501', message = 'only pending entries may change status';
+  end if;
+
+  if new.status in ('approved', 'rejected') then
+    raise exception using errcode = '42501', message = 'approval decisions require the server RPC';
+  end if;
+
+  if new.status = 'cancelled' and (new.cancelled_at is null or length(btrim(coalesce(new.cancel_reason, ''))) = 0) then
+    raise exception using errcode = '22023', message = 'cancellation reason is required';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_time_entry_mutation on public.time_entries;
+create trigger guard_time_entry_mutation
+  before update on public.time_entries
+  for each row execute function public.guard_time_entry_mutation();
+revoke all privileges on function public.guard_time_entry_mutation() from public, anon, authenticated;
+
 create or replace function public.decide_time_entry(
   target_entry_id uuid,
   expected_version integer default null,
@@ -121,6 +167,7 @@ begin
     join public.profiles target on target.id = current_entry.profile_id
     where actor.id = actor_profile_id
       and actor.active = true
+      and target.active = true
       and actor.role in ('supervisor', 'diretor')
       and (actor.role = 'diretor' or actor.squad_id is not null and actor.squad_id = target.squad_id)
   ) then
@@ -128,18 +175,25 @@ begin
   end if;
 
   next_status := decision::public.time_entry_status;
-  update public.time_entries
-  set status = next_status,
-      version = version + 1,
-      rejection_reason = case when decision = 'rejected' then nullif(btrim(p_rejection_reason), '') else null end,
-      decided_at = now(),
-      decided_by = actor_profile_id,
-      updated_at = now()
-  where id = target_entry_id
-  returning * into updated_entry;
+  perform set_config('sma.allow_time_entry_decision', 'on', true);
+  begin
+    update public.time_entries
+    set status = next_status,
+        version = version + 1,
+        rejection_reason = case when decision = 'rejected' then nullif(btrim(p_rejection_reason), '') else null end,
+        decided_at = now(),
+        decided_by = actor_profile_id,
+        updated_at = now()
+    where id = target_entry_id
+    returning * into updated_entry;
 
-  insert into public.time_entry_decisions(time_entry_id, decision, decided_by, rejection_reason, expected_version)
-  values (target_entry_id, decision, actor_profile_id, nullif(btrim(p_rejection_reason), ''), current_entry.version);
+    insert into public.time_entry_decisions(time_entry_id, decision, decided_by, rejection_reason, expected_version)
+    values (target_entry_id, decision, actor_profile_id, nullif(btrim(p_rejection_reason), ''), current_entry.version);
+    perform set_config('sma.allow_time_entry_decision', 'off', true);
+  exception when others then
+    perform set_config('sma.allow_time_entry_decision', 'off', true);
+    raise;
+  end;
 
   return next updated_entry;
 end;

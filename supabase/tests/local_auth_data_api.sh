@@ -74,15 +74,19 @@ values
 
 update public.profiles set squad_id = '40000000-0000-0000-0000-000000000001' where id in (:'collab_id', :'supervisor_id');
 update public.profiles set squad_id = '40000000-0000-0000-0000-000000000002' where id in (:'other_collab_id', :'other_supervisor_id');
+update public.profiles set squad_id = '40000000-0000-0000-0000-000000000001' where id = :'inactive_id';
 
 insert into public.time_entries (profile_id, date, start_time, end_time, duration_minutes, project_code, description, status)
 values
   (:'collab_id', '2026-01-05', '08:00', '17:00', 480, 'LOCAL-A', 'Own collaborator entry', 'pending'),
-  (:'other_collab_id', '2026-01-05', '08:00', '17:00', 480, 'LOCAL-B', 'Other squad entry', 'pending');
+  (:'other_collab_id', '2026-01-05', '08:00', '17:00', 480, 'LOCAL-B', 'Other squad entry', 'pending'),
+  (:'inactive_id', '2026-01-05', '08:00', '17:00', 480, 'LOCAL-INACTIVE', 'Inactive collaborator entry', 'pending');
 
 insert into public.access_preapprovals (email, full_name, role, active)
 values ('local-preapproval@example.invalid', 'Synthetic Preapproval', 'colaborador', true);
 SQL
+
+INACTIVE_ENTRY_ID="$(psql "$DB_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align -c "select id from public.time_entries where profile_id = '$INACTIVE_ID' limit 1")"
 
 COLLAB_TOKEN="$(login_user collab@example.invalid)"
 SUPERVISOR_TOKEN="$(login_user supervisor@example.invalid)"
@@ -147,6 +151,12 @@ status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVI
 
 status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID" "$SUPERVISOR_TOKEN" '{"description":"forged supervisor update"}')"
 [[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'supervisor direct update unexpectedly succeeded' >&2; exit 1; }; }
+
+status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID" "$COLLAB_TOKEN" '{"status":"rejected","rejection_reason":"forged decision","decided_by":"'$SUPERVISOR_ID'","decided_at":"2026-01-05T12:00:00Z"}')"
+[[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'collaborator directly changed decision metadata' >&2; exit 1; }; }
+
+status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$INACTIVE_ENTRY_ID"'","expected_version":1,"decision":"approved","p_rejection_reason":null}')"
+[[ ! "$status" =~ ^2 ]] || { echo 'inactive profile entry was approved unexpectedly' >&2; exit 1; }
 
 status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID&select=id,status,client_name,activity_id" "$COLLAB_TOKEN")"
 [[ "$status" =~ ^2 ]] || { echo "collaborator persisted read failed: HTTP $status" >&2; exit 1; }

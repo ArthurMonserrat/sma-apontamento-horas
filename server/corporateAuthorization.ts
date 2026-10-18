@@ -61,6 +61,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function createTrustedCorporateAuthorizationFacts(input: unknown): TrustedCorporateAuthorizationFacts | null {
   if (!isRecord(input)) return null
+  // The factory is not a trust boundary by itself. It may only wrap a bundle
+  // that already contains the opaque binding emitted by the server verifier;
+  // browser-shaped objects, decoded claims and request bodies are rejected.
+  if (!isVerifiedEntraBinding(input.binding)) return null
   return Object.freeze({
     ...input,
     [trustedFactsMarker]: true as const,

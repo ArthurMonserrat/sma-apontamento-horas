@@ -78,10 +78,17 @@ export class SupabaseSupervisorService implements SupervisorService {
     return (result.data ?? []).map((profile) => ({ id: profile.id, name: profile.full_name }))
   }
 
+  private async currentVersion(entryId: string): Promise<number | undefined> {
+    const result = await this.client.from('time_entries').select('version').eq('id', entryId).maybeSingle() as unknown as { data: { version?: number } | null, error: { message: string } | null }
+    throwIfError(result.error, 'Não foi possível verificar a versão do apontamento.')
+    return typeof result.data?.version === 'number' ? result.data.version : undefined
+  }
+
   private async decide(entryId: string, decision: 'approved' | 'rejected', reason: string | null) {
+    const expectedVersion = await this.currentVersion(entryId)
     const result = await this.client.rpc('decide_time_entry', {
       target_entry_id: entryId,
-      expected_version: undefined,
+      expected_version: expectedVersion,
       decision,
       p_rejection_reason: reason,
     })

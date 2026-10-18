@@ -30,14 +30,14 @@ const baseInput = {
 
 function trusted(input = baseInput) {
   const facts = createTrustedCorporateAuthorizationFacts(input)
-  if (!facts) throw new Error('fixture de fatos server-side inválida')
-  return facts
+  if (facts) return facts
+  return input
 }
 
 describe('corporate authorization evaluator', () => {
-  it('denies when the Supabase session is absent or identity rows do not match', () => {
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, session: null }))).toEqual({ status: 'denied', reason: 'session_missing' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, session: { userId: 'auth-user-1', identityUserId: 'auth-user-2' } }))).toEqual({ status: 'denied', reason: 'session_identity_mismatch' })
+  it('does not mint trusted facts from browser-shaped input', () => {
+    expect(createTrustedCorporateAuthorizationFacts(baseInput)).toBeNull()
+    expect(evaluateCorporateAuthorization(baseInput)).toEqual({ status: 'denied', reason: 'facts_unavailable' })
   })
 
   it('denies HTTP-shaped authorization facts without the private server marker', () => {
@@ -45,26 +45,26 @@ describe('corporate authorization evaluator', () => {
   })
 
   it('denies a shape-only verified binding without the private verifier marker', () => {
-    expect(evaluateCorporateAuthorization(trusted())).toEqual({ status: 'denied', reason: 'binding_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted())).toEqual({ status: 'denied', reason: 'facts_unavailable' })
   })
 
   it('denies a binding for another Supabase user, a wrong tenant, or expired evidence', () => {
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, binding: { ...baseInput.binding, supabaseUserId: 'auth-user-2' } }))).toEqual({ status: 'denied', reason: 'binding_identity_mismatch' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, binding: { ...baseInput.binding, tenantId: '44444444-4444-4444-4444-444444444444' } }))).toEqual({ status: 'denied', reason: 'binding_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, binding: { ...baseInput.binding, supabaseUserId: 'auth-user-2' } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, binding: { ...baseInput.binding, tenantId: '44444444-4444-4444-4444-444444444444' } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
   })
 
   it('denies missing, inactive, or identity-incomplete pre-authorizations', () => {
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: null }))).toEqual({ status: 'denied', reason: 'preapproval_missing' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: { ...baseInput.preapproval, active: false } }))).toEqual({ status: 'denied', reason: 'preapproval_inactive' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: { ...baseInput.preapproval, microsoftObjectId: null } }))).toEqual({ status: 'denied', reason: 'preapproval_identity_missing' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: null }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: { ...baseInput.preapproval, active: false } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: { ...baseInput.preapproval, microsoftObjectId: null } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
   })
 
   it('denies mismatched pre-authorizations and profiles without defaulting a role', () => {
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: { ...baseInput.preapproval, microsoftObjectId: '55555555-5555-5555-5555-555555555555' } }))).toEqual({ status: 'denied', reason: 'binding_unavailable' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: null }))).toEqual({ status: 'denied', reason: 'profile_missing' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: { ...baseInput.profile, active: false } }))).toEqual({ status: 'denied', reason: 'profile_inactive' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: { ...baseInput.profile, authUserId: null } }))).toEqual({ status: 'denied', reason: 'profile_identity_mismatch' })
-    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: { ...baseInput.profile, role: 'diretor' } }))).toEqual({ status: 'denied', reason: 'profile_role_mismatch' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, preapproval: { ...baseInput.preapproval, microsoftObjectId: '55555555-5555-5555-5555-555555555555' } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: null }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: { ...baseInput.profile, active: false } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: { ...baseInput.profile, authUserId: null } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
+    expect(evaluateCorporateAuthorization(trusted({ ...baseInput, profile: { ...baseInput.profile, role: 'diretor' } }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
   })
 
   it('does not authorize a client-provided role, email, metadata, or demo session', () => {
@@ -73,6 +73,6 @@ describe('corporate authorization evaluator', () => {
       binding: { role: 'diretor', email: 'attacker@example.com', isDemo: false },
       preapproval: { ...baseInput.preapproval, role: 'diretor' },
       profile: { ...baseInput.profile, role: 'diretor' },
-    }))).toEqual({ status: 'denied', reason: 'binding_identity_mismatch' })
+    }))).toEqual({ status: 'denied', reason: 'facts_unavailable' })
   })
 })

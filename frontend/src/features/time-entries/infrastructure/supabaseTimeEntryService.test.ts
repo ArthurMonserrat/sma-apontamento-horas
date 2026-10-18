@@ -3,7 +3,7 @@ import { SupabaseTimeEntryService } from './supabaseTimeEntryService'
 
 function query(result: { data?: unknown, error?: { message: string } | null, count?: number }) {
   const builder: Record<string, unknown> = {}
-  for (const method of ['select', 'eq', 'gte', 'lte', 'order', 'range', 'insert', 'update', 'upsert', 'maybeSingle', 'single']) {
+  for (const method of ['select', 'eq', 'neq', 'gte', 'lte', 'order', 'range', 'insert', 'update', 'upsert', 'maybeSingle', 'single']) {
     builder[method] = vi.fn((...args: unknown[]) => {
       void args
       return builder
@@ -62,5 +62,15 @@ describe('SupabaseTimeEntryService', () => {
     const service = new SupabaseTimeEntryService({ from: vi.fn(() => entryQuery) } as never)
 
     await expect(service.listByDate('profile-1', '2026-10-18')).rejects.toThrow('permission denied')
+  })
+
+  it('preserva o significado de ACTIVE como qualquer registro não cancelado', async () => {
+    const entryQuery = query({ data: [] })
+    const service = new SupabaseTimeEntryService({ from: vi.fn(() => entryQuery) } as never)
+
+    await service.list({ collaboratorId: 'profile-1', startDate: '2026-10-01', endDate: '2026-10-31', pageSize: 25, filters: { status: 'ACTIVE' } })
+
+    expect(entryQuery.neq).toHaveBeenCalledWith('status', 'cancelled')
+    expect(entryQuery.eq).not.toHaveBeenCalledWith('status', 'pending')
   })
 })
