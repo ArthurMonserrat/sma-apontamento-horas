@@ -6,8 +6,8 @@ do $$
 declare
   test_user uuid := '30000000-0000-0000-0000-000000000001';
   test_squad uuid := '30000000-0000-0000-0000-000000000002';
-  table_name text;
-  privilege_name text;
+  corporate_table_name text;
+  table_privilege_name text;
   expected boolean;
   actual boolean;
 begin
@@ -23,21 +23,21 @@ begin
   if not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'access_preapprovals_microsoft_identity_uidx') then
     raise exception 'canonical preapproval identity uniqueness missing';
   end if;
-  foreach table_name in array array['profiles', 'squads', 'workloads', 'time_entries', 'daily_approvals', 'access_preapprovals'] loop
-    foreach privilege_name in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
-      if has_table_privilege('anon', format('public.%s', table_name), privilege_name) then
-        raise exception 'anon retains % privilege on %', privilege_name, table_name;
+  foreach corporate_table_name in array array['profiles', 'squads', 'workloads', 'time_entries', 'daily_approvals', 'access_preapprovals'] loop
+    foreach table_privilege_name in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+      if has_table_privilege('anon', format('public.%s', corporate_table_name), table_privilege_name) then
+        raise exception 'anon retains % privilege on %', table_privilege_name, corporate_table_name;
       end if;
 
       expected := case
-        when table_name in ('profiles', 'squads', 'workloads') and privilege_name = 'select' then true
-        when table_name = 'time_entries' and privilege_name in ('select', 'insert', 'update') then true
-        when table_name = 'daily_approvals' and privilege_name in ('select', 'insert') then true
+        when corporate_table_name in ('profiles', 'squads', 'workloads') and table_privilege_name = 'select' then true
+        when corporate_table_name = 'time_entries' and table_privilege_name in ('select', 'insert', 'update') then true
+        when corporate_table_name = 'daily_approvals' and table_privilege_name in ('select', 'insert') then true
         else false
       end;
-      actual := has_table_privilege('authenticated', format('public.%s', table_name), privilege_name);
+      actual := has_table_privilege('authenticated', format('public.%s', corporate_table_name), table_privilege_name);
       if actual is distinct from expected then
-        raise exception 'authenticated privilege mismatch: % on % expected %, got %', privilege_name, table_name, expected, actual;
+        raise exception 'authenticated privilege mismatch: % on % expected %, got %', table_privilege_name, corporate_table_name, expected, actual;
       end if;
     end loop;
   end loop;
