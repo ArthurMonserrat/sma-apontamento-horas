@@ -45,6 +45,29 @@ O backend valida a sessão Supabase pelo bearer token. A identidade OAuth do Sup
 
 O resultado `verified` só pode ser produzido com uma marca opaca privada criada pelo futuro adaptador server-side, contendo o identificador do registro `auth.identities` que ele validou. Não existe produtor ativado nesta etapa, portanto entradas externas resultam em `invalid` ou `unavailable`.
 
+## Preparação 3B.3B
+
+A Etapa 3B.3B adiciona um verificador server-side isolado em
+`server/microsoftTokenVerifier.ts`. Nos testes, ele valida tokens de teste
+assinados com RS256 por uma JWKS local e exige issuer e audience exatos,
+tenant permitido, `oid`, `sub`, `exp`, `nbf` quando presente, nonce quando
+configurado e a condição aplicável de `xms_edov`. O verificador não recebe
+claims do navegador, não decodifica JWT como prova e não retorna cargo,
+profile ou autorização.
+
+O vínculo Supabase continua deliberadamente indisponível. O backend primeiro
+precisa validar a sessão Supabase e obter, no servidor, a linha de
+`auth.identities` cujo `user_id` seja o mesmo `auth.users.id`. Ainda assim,
+`provider_id` não é tratado como `oid` ou `sub`: a equivalência não é
+garantida pelo contrato documentado. O adaptador futuro deverá demonstrar a
+semântica do sujeito Microsoft e vincular a evidência criptográfica ao
+`auth.identities.id`; até essa confirmação, o resultado é `unavailable` e
+nenhum acesso é concedido.
+
+Os testes positivos usam somente chaves e tokens sintéticos. Eles demonstram
+validação criptográfica do componente, não homologação do tenant corporativo,
+do provedor Azure no Supabase ou do Supabase gerenciado.
+
 ## Dependências da TI/Supabase
 
 Antes da Etapa 3B.2B, confirmar:
@@ -56,6 +79,9 @@ Antes da Etapa 3B.2B, confirmar:
 5. Redirect URIs do Supabase Auth e do HashRouter.
 6. Componente server-side responsável pela validação criptográfica.
 7. Como `tid` e `oid` verificados serão vinculados ao mesmo `auth.users.id` sem expor tokens ao navegador.
+8. Qual campo do registro Azure em `auth.identities` representa o sujeito
+   Microsoft no fluxo efetivamente configurado, com evidência documental do
+   provedor; não basta fornecer um `provider_id` sem semântica comprovada.
 
 ## Testes isolados necessários
 
