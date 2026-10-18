@@ -1,5 +1,5 @@
 import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet, type JSONWebKeySet, type KeyLike } from 'jose'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   assessSupabaseIdentityBinding,
   verifyMicrosoftIdToken,
@@ -111,10 +111,30 @@ describe('Microsoft Entra token verifier', () => {
   it('rejects a token intended for another resource and unsafe JWKS configuration', async () => {
     const token = await createToken()
     const unsafeConfig = { ...config, jwksUri: 'https://attacker.example/jwks.json' }
+    const nonCanonicalMicrosoftPath = { ...config, jwksUri: `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/not-keys` }
     const wrongResource = { ...config, expectedAudience: '44444444-4444-4444-4444-444444444444' }
 
     await expect(verifyMicrosoftIdToken(token, unsafeConfig, { keyResolver: localJwks })).resolves.toMatchObject({ status: 'invalid', reason: 'invalid_configuration' })
+    await expect(verifyMicrosoftIdToken(token, nonCanonicalMicrosoftPath, { keyResolver: localJwks })).resolves.toMatchObject({ status: 'invalid', reason: 'invalid_configuration' })
     await expect(verifyMicrosoftIdToken(token, wrongResource, { keyResolver: localJwks })).resolves.toMatchObject({ status: 'invalid' })
+  })
+
+  it('rejects previously verified evidence after the token expires', async () => {
+    vi.useFakeTimers()
+    try {
+      const evidence = await verifyMicrosoftIdToken(await createToken({}, privateKey, { expiresAt: '10m' }), config, { keyResolver: localJwks })
+      expect(evidence.status).toBe('verified-token')
+
+      vi.advanceTimersByTime(11 * 60 * 1000)
+
+      expect(assessSupabaseIdentityBinding(evidence, 'supabase-user-a', {
+        identityId: 'identity-a',
+        userId: 'supabase-user-a',
+        provider: 'azure',
+      })).toEqual({ status: 'invalid', reason: 'token_evidence_missing' })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('keeps the Supabase binding unavailable until provider subject mapping is proven', async () => {

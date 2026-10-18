@@ -62,8 +62,8 @@ function isValidConfiguration(config: MicrosoftTokenVerifierConfig): boolean {
   try {
     const issuer = new URL(config.expectedIssuer)
     const jwks = new URL(config.jwksUri)
-    const tenantPath = `/${config.expectedTenantId}`
     const expectedIssuer = `https://login.microsoftonline.com/${config.expectedTenantId}/v2.0`
+    const expectedJwksUri = `https://login.microsoftonline.com/${config.expectedTenantId}/discovery/v2.0/keys`
 
     return issuer.protocol === 'https:'
       && issuer.hostname === 'login.microsoftonline.com'
@@ -71,7 +71,8 @@ function isValidConfiguration(config: MicrosoftTokenVerifierConfig): boolean {
       && config.expectedIssuer === expectedIssuer
       && jwks.protocol === 'https:'
       && jwks.hostname === 'login.microsoftonline.com'
-      && jwks.pathname.startsWith(`${tenantPath}/discovery/`)
+      && config.jwksUri === expectedJwksUri
+      && jwks.pathname === `/${config.expectedTenantId}/discovery/v2.0/keys`
       && (config.clockToleranceSeconds === undefined || Number.isInteger(config.clockToleranceSeconds) && config.clockToleranceSeconds >= 0 && config.clockToleranceSeconds <= 300)
   } catch {
     return false
@@ -134,7 +135,7 @@ export async function verifyMicrosoftIdToken(
     }
     if (!Number.isInteger(verified.payload.exp)) return { status: 'invalid', reason: 'signature_or_claims_invalid' }
 
-    return {
+    return Object.freeze({
       status: 'verified-token',
       tenantId: verified.payload.tid as string,
       objectId: verified.payload.oid as string,
@@ -142,8 +143,8 @@ export async function verifyMicrosoftIdToken(
       issuer: verified.payload.iss as string,
       audience: verified.payload.aud as string,
       expiresAt: verified.payload.exp as number,
-      [verifiedTokenMarker]: true,
-    }
+      [verifiedTokenMarker]: true as const,
+    })
   } catch {
     return { status: 'invalid', reason: 'signature_or_claims_invalid' }
   }
@@ -160,6 +161,7 @@ function isMicrosoftTokenEvidence(value: unknown): value is MicrosoftTokenEviden
     && nonEmptyString(evidence.issuer)
     && nonEmptyString(evidence.audience)
     && Number.isInteger(evidence.expiresAt)
+    && Number(evidence.expiresAt) > Math.floor(Date.now() / 1000)
 }
 
 /**
