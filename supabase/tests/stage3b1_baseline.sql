@@ -64,6 +64,46 @@ create table public.access_preapprovals (
   constraint access_preapprovals_role_check check (role in ('colaborador', 'supervisor', 'diretor'))
 );
 
+create type public.time_entry_status as enum ('pending', 'approved', 'rejected', 'cancelled');
+create type public.approval_status as enum ('pending', 'approved', 'rejected');
+
+create table public.workloads (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null,
+  daily_minutes_target integer not null,
+  valid_from date not null,
+  valid_to date,
+  created_at timestamptz not null default now()
+);
+
+create table public.time_entries (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null,
+  date date not null,
+  start_time time not null,
+  end_time time not null,
+  duration_minutes integer not null,
+  project_code text not null,
+  description text,
+  status public.time_entry_status not null default 'pending',
+  version integer not null default 1,
+  cancel_reason text,
+  offline_sync_id text unique,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.daily_approvals (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null,
+  date date not null,
+  status public.approval_status not null default 'pending',
+  supervisor_id uuid,
+  version_hash text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-000000000001', 'legacy@example.invalid');
 
@@ -77,6 +117,12 @@ insert into public.access_preapprovals (email, full_name, role) values
   ('supervisor-2@example.invalid', 'Synthetic Supervisor 2', 'supervisor'),
   ('collaborator-1@example.invalid', 'Synthetic Collaborator', 'colaborador'),
   ('inactive-1@example.invalid', 'Synthetic Inactive', 'colaborador');
+
+alter table public.profiles enable row level security;
+alter table public.squads enable row level security;
+alter table public.workloads enable row level security;
+alter table public.time_entries enable row level security;
+alter table public.daily_approvals enable row level security;
 
 -- Represent the previously broken function contracts without depending on
 -- columns that the foundation migration is about to add.
