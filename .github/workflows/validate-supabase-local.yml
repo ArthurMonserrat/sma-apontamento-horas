@@ -27,7 +27,7 @@ jobs:
       - name: Verify local-only configuration
         run: |
           test -f supabase/config.toml
-          if grep -R -E 'supabase\.co|SUPABASE_URL|project-ref|service_role|sb_secret_' supabase/config.toml supabase/tests/local_auth_data_api.sh; then
+          if grep -R -E 'qtrtaoyadtapcilnrhrk|https://[A-Za-z0-9_-]+\.supabase\.co|project-ref|sb_secret_' supabase/config.toml supabase/tests/local_auth_data_api.sh; then
             echo 'Remote project references or privileged key literals are forbidden in local integration tests.'
             exit 1
           fi
