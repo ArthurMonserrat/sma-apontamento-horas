@@ -83,7 +83,7 @@ export class SupabaseSupervisorService implements SupervisorService {
       target_entry_id: entryId,
       expected_version: undefined,
       decision,
-      rejection_reason: reason,
+      p_rejection_reason: reason,
     })
     throwIfError(result.error, 'Não foi possível persistir a decisão do supervisor.')
     const row = Array.isArray(result.data) ? result.data[0] : result.data

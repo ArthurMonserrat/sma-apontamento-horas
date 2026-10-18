@@ -76,7 +76,7 @@ create or replace function public.decide_time_entry(
   target_entry_id uuid,
   expected_version integer default null,
   decision text default 'approved',
-  rejection_reason text default null
+  p_rejection_reason text default null
 )
 returns setof public.time_entries
 language plpgsql
@@ -97,7 +97,7 @@ begin
   if decision not in ('approved', 'rejected') then
     raise exception using errcode = '22023', message = 'invalid time entry decision';
   end if;
-  if decision = 'rejected' and length(btrim(coalesce(rejection_reason, ''))) = 0 then
+  if decision = 'rejected' and length(btrim(coalesce(p_rejection_reason, ''))) = 0 then
     raise exception using errcode = '22023', message = 'rejection reason is required';
   end if;
 
@@ -131,7 +131,7 @@ begin
   update public.time_entries
   set status = next_status,
       version = version + 1,
-      rejection_reason = case when decision = 'rejected' then nullif(btrim(rejection_reason), '') else null end,
+      rejection_reason = case when decision = 'rejected' then nullif(btrim(p_rejection_reason), '') else null end,
       decided_at = now(),
       decided_by = actor_profile_id,
       updated_at = now()
@@ -139,7 +139,7 @@ begin
   returning * into updated_entry;
 
   insert into public.time_entry_decisions(time_entry_id, decision, decided_by, rejection_reason, expected_version)
-  values (target_entry_id, decision, actor_profile_id, nullif(btrim(rejection_reason), ''), current_entry.version);
+  values (target_entry_id, decision, actor_profile_id, nullif(btrim(p_rejection_reason), ''), current_entry.version);
 
   return next updated_entry;
 end;

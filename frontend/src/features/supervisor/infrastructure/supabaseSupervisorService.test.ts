@@ -21,7 +21,7 @@ describe('SupabaseSupervisorService', () => {
       target_entry_id: 'entry-1',
       expected_version: undefined,
       decision: 'approved',
-      rejection_reason: null,
+      p_rejection_reason: null,
     })
   })
 

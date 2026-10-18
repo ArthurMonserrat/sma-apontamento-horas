@@ -134,9 +134,16 @@ status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{
 [[ "$status" =~ ^2 ]] || { echo "rich time entry insert failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
 ENTRY_ID="$(jq -er '.[0].id // .id' "$tmp_dir/response")"
 
-status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$ENTRY_ID"'","expected_version":1,"decision":"approved","rejection_reason":null}')"
+status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$ENTRY_ID"'","expected_version":1,"decision":"approved","p_rejection_reason":null}')"
 [[ "$status" =~ ^2 ]] || { echo "supervisor approval RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
 [[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'approved' ]] || { echo 'approval RPC did not persist approved status' >&2; exit 1; }
+
+status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"'"$COLLAB_ID"'","date":"2026-01-08","duration_minutes":45,"client_name":"Synthetic Client","project_code":"LOCAL-REJECT","activity_id":"activity-8","discipline_code":"E","document_type_code":"RN","description":"Rejected synthetic entry","status":"pending"}')"
+[[ "$status" =~ ^2 ]] || { echo "rejection fixture insert failed: HTTP $status" >&2; exit 1; }
+REJECT_ENTRY_ID="$(jq -er '.[0].id // .id' "$tmp_dir/response")"
+status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":1,"decision":"rejected","p_rejection_reason":"Detalhar a atividade registrada."}')"
+[[ "$status" =~ ^2 ]] || { echo "supervisor rejection RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
+[[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'rejected' ]] || { echo 'rejection RPC did not persist rejected status' >&2; exit 1; }
 
 status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID" "$SUPERVISOR_TOKEN" '{"description":"forged supervisor update"}')"
 [[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'supervisor direct update unexpectedly succeeded' >&2; exit 1; }; }
