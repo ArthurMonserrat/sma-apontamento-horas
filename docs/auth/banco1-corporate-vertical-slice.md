@@ -16,7 +16,7 @@ O fluxo MSAL/BFF anterior não deve ser simplesmente reativado: os endpoints ant
 
 ## Primeiro slice entregue
 
-Esta entrega formaliza um avaliador server-side fail-closed. Ele só poderá autorizar quando receber, de componentes server-side, uma sessão Supabase válida, um binding Entra verificado para o mesmo `auth.users.id`, uma pré-autorização ativa com tenant/object ID e um profile ativo consistente. E-mail, metadata, localStorage, cargo enviado pelo navegador e sessão demonstrativa não participam da decisão.
+Esta entrega formaliza um avaliador server-side fail-closed. Ele só poderá autorizar quando receber fatos nominais criados por um adaptador server-side, uma sessão Supabase válida, um binding Entra verificado para o mesmo `auth.users.id`, uma pré-autorização ativa com tenant/object ID e um profile ativo consistente. Objetos estruturais vindos de request são rejeitados antes da avaliação. E-mail, metadata, localStorage, cargo enviado pelo navegador e sessão demonstrativa não participam da decisão.
 
 Como o produtor real da evidência de vínculo ainda não existe, a autorização corporativa continua bloqueada. O slice não cria profiles, não altera banco e não transforma a sessão Supabase em sessão demo.
 

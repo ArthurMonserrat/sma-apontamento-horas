@@ -1,6 +1,8 @@
 import { isVerifiedEntraBinding, type EntraBindingResult } from './entraIdentityVerifier.js'
 import type { AccessPreapproval, CorporateRole } from './corporateIdentity.js'
 
+const trustedFactsMarker = Symbol('trusted-corporate-authorization-facts')
+
 export type CorporateProfileAuthorizationRecord = {
   id: string
   authUserId: string | null
@@ -15,6 +17,10 @@ export type CorporateSessionAuthorizationInput = {
   profile: CorporateProfileAuthorizationRecord | null
 }
 
+export type TrustedCorporateAuthorizationFacts = CorporateSessionAuthorizationInput & {
+  readonly [trustedFactsMarker]: true
+}
+
 export type CorporateAuthorizationDecision =
   | { status: 'authorized'; profileId: string; authUserId: string; role: CorporateRole }
   | {
@@ -22,6 +28,7 @@ export type CorporateAuthorizationDecision =
       reason:
         | 'session_missing'
         | 'session_identity_mismatch'
+        | 'facts_unavailable'
         | 'binding_unavailable'
         | 'binding_identity_mismatch'
         | 'preapproval_missing'
@@ -47,6 +54,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Internal server-adapter boundary. Only code that has already obtained the
+ * session, identity, pre-authorization and profile from trusted server-side
+ * sources may call this constructor. It deliberately is not used by any HTTP
+ * handler and must never receive request body/query data.
+ */
+export function createTrustedCorporateAuthorizationFacts(input: unknown): TrustedCorporateAuthorizationFacts | null {
+  if (!isRecord(input)) return null
+  return Object.freeze({
+    ...input,
+    [trustedFactsMarker]: true as const,
+  }) as TrustedCorporateAuthorizationFacts
+}
+
+function isTrustedCorporateAuthorizationFacts(value: unknown): value is TrustedCorporateAuthorizationFacts {
+  if (!isRecord(value)) return false
+  const candidate = value as Record<PropertyKey, unknown>
+  return candidate[trustedFactsMarker] === true
+}
+
+/**
  * Evaluates server-side facts only. No request body, email, metadata, local
  * storage value or demo session is accepted as an authorization input.
  *
@@ -56,9 +83,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * fail-closed in the deployed application.
  */
 export function evaluateCorporateAuthorization(
-  input: CorporateSessionAuthorizationInput,
+  input: unknown,
   now = Math.floor(Date.now() / 1000),
 ): CorporateAuthorizationDecision {
+  if (!isTrustedCorporateAuthorizationFacts(input)) {
+    return { status: 'denied', reason: 'facts_unavailable' }
+  }
   if (!input || !input.session || !isNonEmptyString(input.session.userId) || !isNonEmptyString(input.session.identityUserId)) {
     return { status: 'denied', reason: 'session_missing' }
   }
