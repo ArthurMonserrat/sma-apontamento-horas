@@ -24,10 +24,12 @@ Como o produtor real da evidência de vínculo ainda não existe, a autorizaçã
 
 1. Homologar em ambiente Supabase gerenciado isolado a identidade Azure retornada em `auth.identities`, preservando `auth.users.id` e sem divulgar tokens.
 2. Implementar o adaptador server-side que produzirá o binding opaco somente após validar assinatura/JWKS, issuer, audience, tenant, oid, sub, expiração/nonce e vínculo ao mesmo `auth.identities.id`.
-3. Somente depois, implementar `SupabaseTimeEntryService` e o serviço de aprovações sobre a Data API/RLS homologada, mantendo os serviços LocalStorage apenas no demo.
+3. Aplicar a migration aditiva somente após backup, reconciliação do histórico remoto e aprovação operacional; então executar a homologação real do fluxo persistente com contas sintéticas e Microsoft autorizadas.
 
 ## Handoff de persistência real
 
 O modelo `TimeEntry` do frontend contém `entryDate`, `clientName`, `projectCode`, `contractorNumber`, `ldDocument`, `activityId`, `disciplineCode`, `documentTypeCode`, `durationMinutes`, `details`, snapshot de atribuição, status, versão e motivos de cancelamento. A tabela histórica `time_entries` confirma data, horários, duração, projeto, descrição, status, versão e cancelamento, mas não oferece colunas confirmadas para cliente, atividade, disciplina, tipo de documento, contratada ou snapshot de atribuição. Esses campos não podem ser descartados silenciosamente nem codificados em uma coluna sem contrato.
 
-O serviço corporativo futuro deve usar o cliente Supabase autenticado no navegador e as policies/RLS para leitura e escrita; `service_role` fica restrito a operações administrativas server-side. A migração de contrato precisa ser aprovada e testada em Supabase local/gerenciado isolado antes de trocar o serviço de runtime. As operações de aprovação devem persistir `daily_approvals`/histórico com controle de versão e verificar a squad do supervisor no banco, não em fixtures.
+O serviço corporativo deve usar o cliente Supabase autenticado no navegador e as policies/RLS para leitura e escrita; `service_role` fica restrito a operações administrativas server-side. A migration aditiva `20261018210000_banco1_persistence_contract.sql` preserva os campos ricos, permite lançamentos por duração sem inventar horários, cria histórico de decisões e expõe o RPC versionado `decide_time_entry`. O RPC deriva o perfil de `auth.uid()`, verifica cargo ativo e squad, altera o apontamento e grava a auditoria em uma transação.
+
+`SupabaseTimeEntryService` e `SupabaseSupervisorService` já estão implementados e cobertos por testes de mapeamento/erro. O runtime seleciona esses serviços apenas depois que o endpoint server-side retornar um perfil corporativo autorizado; a falha de autorização mantém o modo local/demo bloqueado para dados corporativos e não converte erros de rede em falso sucesso. A migration e o workflow de integração são locais/versionados somente: nada foi aplicado ao Supabase corporativo.

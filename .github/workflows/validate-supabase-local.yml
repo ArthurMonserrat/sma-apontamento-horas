@@ -27,6 +27,7 @@ jobs:
       - name: Verify local-only configuration
         run: |
           test -f supabase/config.toml
+          test "$(git show HEAD:supabase/migrations/20261010215524_create_initial_workforce_time_tracking_schema.sql | md5sum | cut -d' ' -f1)" = "4ef1871ed3cd19181bdd0b7a30ac6130"
           if grep -R -E 'qtrtaoyadtapcilnrhrk|https://[A-Za-z0-9_-]+\.supabase\.co|project-ref|sb_secret_' supabase/config.toml supabase/tests/local_auth_data_api.sh; then
             echo 'Remote project references or privileged key literals are forbidden in local integration tests.'
             exit 1
