@@ -12,11 +12,15 @@ permissions:
 
 jobs:
   historical:
-    name: New database reconciliation check
+    name: New database reconciliation (PostgreSQL ${{ matrix.pg }})
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['15', '17']
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:${{ matrix.pg }}
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: historical
@@ -89,11 +93,15 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   legacy:
-    name: Legacy schema reconciliation check
+    name: Legacy schema reconciliation (PostgreSQL ${{ matrix.pg }})
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['15', '17']
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        image: postgres:${{ matrix.pg }}
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: legacy

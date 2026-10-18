@@ -6,6 +6,10 @@ do $$
 declare
   test_user uuid := '30000000-0000-0000-0000-000000000001';
   test_squad uuid := '30000000-0000-0000-0000-000000000002';
+  table_name text;
+  privilege_name text;
+  expected boolean;
+  actual boolean;
 begin
   if (select udt_name from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'role') <> 'app_role' then
     raise exception 'canonical role type missing';
@@ -19,53 +23,29 @@ begin
   if not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'access_preapprovals_microsoft_identity_uidx') then
     raise exception 'canonical preapproval identity uniqueness missing';
   end if;
-  if has_table_privilege('anon', 'public.profiles', 'select')
-     or has_table_privilege('anon', 'public.squads', 'select')
-     or has_table_privilege('anon', 'public.workloads', 'select')
-     or has_table_privilege('anon', 'public.time_entries', 'select')
-     or has_table_privilege('anon', 'public.daily_approvals', 'select')
-     or has_table_privilege('anon', 'public.access_preapprovals', 'select') then
-    raise exception 'anon retains direct corporate table access';
-  end if;
-  if has_table_privilege('authenticated', 'public.profiles', 'insert')
-     or has_table_privilege('authenticated', 'public.profiles', 'update')
-     or has_table_privilege('authenticated', 'public.profiles', 'delete')
-     or has_table_privilege('authenticated', 'public.profiles', 'truncate')
-     or has_table_privilege('authenticated', 'public.profiles', 'references')
-     or has_table_privilege('authenticated', 'public.profiles', 'trigger') then
-    raise exception 'authenticated retains profile administrative privilege';
-  end if;
-  if has_table_privilege('authenticated', 'public.access_preapprovals', 'select') then
-    raise exception 'authenticated can read preapprovals directly';
-  end if;
-  if has_table_privilege('authenticated', 'public.squads', 'insert')
-     or has_table_privilege('authenticated', 'public.squads', 'update')
-     or has_table_privilege('authenticated', 'public.squads', 'delete')
-     or has_table_privilege('authenticated', 'public.squads', 'truncate')
-     or has_table_privilege('authenticated', 'public.squads', 'references')
-     or has_table_privilege('authenticated', 'public.squads', 'trigger') then
-    raise exception 'authenticated retains squad administrative privilege';
-  end if;
-  if has_table_privilege('authenticated', 'public.workloads', 'insert')
-     or has_table_privilege('authenticated', 'public.workloads', 'update')
-     or has_table_privilege('authenticated', 'public.workloads', 'delete')
-     or has_table_privilege('authenticated', 'public.workloads', 'truncate')
-     or has_table_privilege('authenticated', 'public.workloads', 'references')
-     or has_table_privilege('authenticated', 'public.workloads', 'trigger') then
-    raise exception 'authenticated retains workload administrative privilege';
-  end if;
-  if has_table_privilege('authenticated', 'public.time_entries', 'delete')
-     or has_table_privilege('authenticated', 'public.time_entries', 'truncate')
-     or has_table_privilege('authenticated', 'public.time_entries', 'references')
-     or has_table_privilege('authenticated', 'public.time_entries', 'trigger') then
-    raise exception 'authenticated retains time entry administrative privilege';
-  end if;
-  if has_table_privilege('authenticated', 'public.daily_approvals', 'update')
-     or has_table_privilege('authenticated', 'public.daily_approvals', 'delete')
-     or has_table_privilege('authenticated', 'public.daily_approvals', 'truncate')
-     or has_table_privilege('authenticated', 'public.daily_approvals', 'references')
-     or has_table_privilege('authenticated', 'public.daily_approvals', 'trigger') then
-    raise exception 'authenticated retains approval administrative privilege';
+  foreach table_name in array array['profiles', 'squads', 'workloads', 'time_entries', 'daily_approvals', 'access_preapprovals'] loop
+    foreach privilege_name in array array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+      if has_table_privilege('anon', format('public.%s', table_name), privilege_name) then
+        raise exception 'anon retains % privilege on %', privilege_name, table_name;
+      end if;
+
+      expected := case
+        when table_name in ('profiles', 'squads', 'workloads') and privilege_name = 'select' then true
+        when table_name = 'time_entries' and privilege_name in ('select', 'insert', 'update') then true
+        when table_name = 'daily_approvals' and privilege_name in ('select', 'insert') then true
+        else false
+      end;
+      actual := has_table_privilege('authenticated', format('public.%s', table_name), privilege_name);
+      if actual is distinct from expected then
+        raise exception 'authenticated privilege mismatch: % on % expected %, got %', privilege_name, table_name, expected, actual;
+      end if;
+    end loop;
+  end loop;
+
+  if to_regclass('private.corporate_provisioning_audit') is not null
+     and (has_table_privilege('anon', 'private.corporate_provisioning_audit', 'select')
+       or has_table_privilege('authenticated', 'private.corporate_provisioning_audit', 'select')) then
+    raise exception 'audit table is directly readable';
   end if;
   if exists (select 1 from pg_policies where schemaname = 'public' and (coalesce(qual, '') like '%auth.uid()%' or coalesce(with_check, '') like '%auth.uid()%')) then
     raise exception 'direct auth.uid policy comparison remains';
@@ -108,6 +88,17 @@ begin
   if visible_count <> 1 then
     raise exception 'authenticated RLS did not restrict profile visibility to the linked user';
   end if;
+end
+$$;
+
+do $$
+begin
+  begin
+    update public.profiles set role = 'diretor' where auth_user_id = auth.uid();
+    raise exception 'authenticated role change unexpectedly succeeded';
+  exception when insufficient_privilege then
+    null;
+  end;
 end
 $$;
 reset role;
