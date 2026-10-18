@@ -88,21 +88,35 @@ as $$
   )
 $$;
 
-revoke execute on function private.current_profile_id() from public, anon;
-revoke execute on function private.current_profile_role() from public, anon;
-revoke execute on function private.current_profile_squad_id() from public, anon;
-revoke execute on function private.is_in_current_squad(uuid) from public, anon;
+revoke all privileges on schema private from public, anon;
+grant usage on schema private to authenticated;
+revoke all privileges on function private.current_profile_id() from public, anon, authenticated;
+revoke all privileges on function private.current_profile_role() from public, anon, authenticated;
+revoke all privileges on function private.current_profile_squad_id() from public, anon, authenticated;
+revoke all privileges on function private.is_in_current_squad(uuid) from public, anon, authenticated;
 grant execute on function private.current_profile_id() to authenticated;
 grant execute on function private.current_profile_role() to authenticated;
 grant execute on function private.current_profile_squad_id() to authenticated;
 grant execute on function private.is_in_current_squad(uuid) to authenticated;
 
 -- Direct profile writes are not an authorization path. Future provisioning is
--- server-side and must use a reviewed transaction, not table grants.
-revoke insert, update, delete on table public.profiles from public, anon, authenticated;
-grant select on table public.profiles to authenticated;
-revoke all on table public.access_preapprovals from public, anon, authenticated;
-revoke all on all tables in schema public from anon;
+-- server-side and must use a reviewed transaction, not table grants. Revoke
+-- every table privilege first so inherited PUBLIC grants cannot retain
+-- TRUNCATE, REFERENCES, TRIGGER or other administrative capabilities.
+revoke all privileges on table public.profiles, public.squads, public.workloads,
+  public.time_entries, public.daily_approvals, public.access_preapprovals
+  from public, anon, authenticated;
+grant select on table public.profiles, public.squads, public.workloads to authenticated;
+grant select, insert, update on table public.time_entries to authenticated;
+grant select, insert on table public.daily_approvals to authenticated;
+
+do $$
+begin
+  if to_regclass('private.corporate_provisioning_audit') is not null then
+    execute 'revoke all privileges on table private.corporate_provisioning_audit from public, anon, authenticated';
+  end if;
+end
+$$;
 grant select on public.profiles, public.squads, public.workloads, public.time_entries, public.daily_approvals to authenticated;
 grant insert, update on public.time_entries to authenticated;
 grant insert on public.daily_approvals to authenticated;

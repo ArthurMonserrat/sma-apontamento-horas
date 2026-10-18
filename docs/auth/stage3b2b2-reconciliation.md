@@ -9,6 +9,8 @@
 - `access_preapprovals` é criada no caminho histórico quando ausente e validada no caminho legado; seus cinco registros sintéticos são preservados.
 - O par `microsoft_tenant_id`/`microsoft_object_id` permanece nulo para pré-autorizações não reconciliadas e é único quando preenchido.
 - `anon` e `authenticated` não recebem leitura direta de `access_preapprovals` nem escrita direta em `profiles`.
+- Os privilégios das tabelas corporativas são zerados antes dos grants mínimos: `authenticated` recebe somente `SELECT` em `profiles`, `squads` e `workloads`; `SELECT/INSERT/UPDATE` em `time_entries`; `SELECT/INSERT` em `daily_approvals`; e nenhum privilégio direto em `access_preapprovals`.
+- `TRUNCATE`, `REFERENCES` e `TRIGGER` são revogados explicitamente, inclusive privilégios herdados de `PUBLIC`; a tabela privada de auditoria permanece sem acesso direto para `anon` e `authenticated` quando existente.
 
 ## Ordem das migrations
 
@@ -21,7 +23,7 @@ A migration intermediária rejeita uma tabela `access_preapprovals` existente qu
 
 ## RLS e limitações
 
-As policies que comparavam diretamente `profile_id = auth.uid()` ou `supervisor_id = auth.uid()` foram recriadas usando `private.current_profile_id()`. Os testes verificam a ausência dessas comparações diretas e o comportamento fail-closed para profiles sem vínculo e inativos.
+As policies que comparavam diretamente `profile_id = auth.uid()` ou `supervisor_id = auth.uid()` foram recriadas usando `private.current_profile_id()`. Os testes verificam a ausência dessas comparações diretas, os privilégios efetivos de `anon`/`authenticated` e o comportamento fail-closed para profiles sem vínculo e inativos.
 
 Os testes usam PostgreSQL 15 sintético. Eles não equivalem à homologação completa do Supabase gerenciado, da Data API, das claims Auth ou do isolamento real entre squads. A restrição de `squads.supervisor_id` único permanece deliberadamente inalterada.
 

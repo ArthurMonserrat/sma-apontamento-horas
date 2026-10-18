@@ -19,11 +19,53 @@ begin
   if not exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'access_preapprovals_microsoft_identity_uidx') then
     raise exception 'canonical preapproval identity uniqueness missing';
   end if;
-  if has_table_privilege('anon', 'public.profiles', 'update') or has_table_privilege('authenticated', 'public.profiles', 'update') then
-    raise exception 'profile update privilege is too broad';
+  if has_table_privilege('anon', 'public.profiles', 'select')
+     or has_table_privilege('anon', 'public.squads', 'select')
+     or has_table_privilege('anon', 'public.workloads', 'select')
+     or has_table_privilege('anon', 'public.time_entries', 'select')
+     or has_table_privilege('anon', 'public.daily_approvals', 'select')
+     or has_table_privilege('anon', 'public.access_preapprovals', 'select') then
+    raise exception 'anon retains direct corporate table access';
   end if;
-  if has_table_privilege('anon', 'public.access_preapprovals', 'select') or has_table_privilege('authenticated', 'public.access_preapprovals', 'select') then
-    raise exception 'preapproval read privilege is too broad';
+  if has_table_privilege('authenticated', 'public.profiles', 'insert')
+     or has_table_privilege('authenticated', 'public.profiles', 'update')
+     or has_table_privilege('authenticated', 'public.profiles', 'delete')
+     or has_table_privilege('authenticated', 'public.profiles', 'truncate')
+     or has_table_privilege('authenticated', 'public.profiles', 'references')
+     or has_table_privilege('authenticated', 'public.profiles', 'trigger') then
+    raise exception 'authenticated retains profile administrative privilege';
+  end if;
+  if has_table_privilege('authenticated', 'public.access_preapprovals', 'select') then
+    raise exception 'authenticated can read preapprovals directly';
+  end if;
+  if has_table_privilege('authenticated', 'public.squads', 'insert')
+     or has_table_privilege('authenticated', 'public.squads', 'update')
+     or has_table_privilege('authenticated', 'public.squads', 'delete')
+     or has_table_privilege('authenticated', 'public.squads', 'truncate')
+     or has_table_privilege('authenticated', 'public.squads', 'references')
+     or has_table_privilege('authenticated', 'public.squads', 'trigger') then
+    raise exception 'authenticated retains squad administrative privilege';
+  end if;
+  if has_table_privilege('authenticated', 'public.workloads', 'insert')
+     or has_table_privilege('authenticated', 'public.workloads', 'update')
+     or has_table_privilege('authenticated', 'public.workloads', 'delete')
+     or has_table_privilege('authenticated', 'public.workloads', 'truncate')
+     or has_table_privilege('authenticated', 'public.workloads', 'references')
+     or has_table_privilege('authenticated', 'public.workloads', 'trigger') then
+    raise exception 'authenticated retains workload administrative privilege';
+  end if;
+  if has_table_privilege('authenticated', 'public.time_entries', 'delete')
+     or has_table_privilege('authenticated', 'public.time_entries', 'truncate')
+     or has_table_privilege('authenticated', 'public.time_entries', 'references')
+     or has_table_privilege('authenticated', 'public.time_entries', 'trigger') then
+    raise exception 'authenticated retains time entry administrative privilege';
+  end if;
+  if has_table_privilege('authenticated', 'public.daily_approvals', 'update')
+     or has_table_privilege('authenticated', 'public.daily_approvals', 'delete')
+     or has_table_privilege('authenticated', 'public.daily_approvals', 'truncate')
+     or has_table_privilege('authenticated', 'public.daily_approvals', 'references')
+     or has_table_privilege('authenticated', 'public.daily_approvals', 'trigger') then
+    raise exception 'authenticated retains approval administrative privilege';
   end if;
   if exists (select 1 from pg_policies where schemaname = 'public' and (coalesce(qual, '') like '%auth.uid()%' or coalesce(with_check, '') like '%auth.uid()%')) then
     raise exception 'direct auth.uid policy comparison remains';
@@ -47,3 +89,35 @@ begin
   end if;
 end
 $$;
+
+do $$
+begin
+  insert into auth.users (id, email)
+  values ('30000000-0000-0000-0000-000000000003', 'rls@example.invalid');
+  insert into public.profiles (id, auth_user_id, email, full_name, role, active)
+  values ('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000003', 'rls@example.invalid', 'RLS User', 'colaborador', true);
+end
+$$;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '30000000-0000-0000-0000-000000000003', false);
+do $$
+declare visible_count integer;
+begin
+  select count(*) into visible_count from public.profiles;
+  if visible_count <> 1 then
+    raise exception 'authenticated RLS did not restrict profile visibility to the linked user';
+  end if;
+end
+$$;
+reset role;
+
+set role anon;
+do $$
+begin
+  if has_table_privilege('anon', 'public.profiles', 'select') then
+    raise exception 'anon retained profile access under effective role';
+  end if;
+end
+$$;
+reset role;
