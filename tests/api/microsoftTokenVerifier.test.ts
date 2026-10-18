@@ -123,6 +123,7 @@ describe('Microsoft Entra token verifier', () => {
       identityId: 'identity-a',
       userId: 'supabase-user-a',
       provider: 'azure',
+      providerId: 'provider-subject-with-unconfirmed-semantics',
     })
 
     expect(binding).toEqual({ status: 'unavailable', reason: 'provider_subject_mapping_unconfirmed' })
