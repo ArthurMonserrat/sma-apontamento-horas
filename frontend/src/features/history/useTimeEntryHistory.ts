@@ -23,6 +23,7 @@ import { calculateDaySummary, calculatePeriodSummary } from '../calendar/domain'
 import type { CalendarEvent, DailySummary, PeriodSummary } from '../calendar/types'
 import type { TimeOffRequest } from '../time-off/types'
 import { requestAppliesToDate } from '../time-off/types'
+import { localDataAccessError } from '../session/sessionActor'
 
 export type HistoryFiltersValue = {
   mode: HistoryPeriodMode
@@ -73,7 +74,7 @@ function holidaysToEvents(collaboratorId: string, holidays: Awaited<ReturnType<t
 }
 
 export function useTimeEntryHistory() {
-  const { profile } = useSession()
+  const { profile, session } = useSession()
   const [searchParams] = useSearchParams()
   const initialFilters = createInitialFilters(searchParams.get('date') ?? today)
   const [draftFilters, setDraftFilters] = useState(initialFilters)
@@ -91,6 +92,16 @@ export function useTimeEntryHistory() {
   const [feedback, setFeedback] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setRows([])
+      setPeriodSummary(null)
+      setPeriodEvents([])
+      setPeriodTimeOffRequests([])
+      setIsLoading(false)
+      setError(`${corporateDataError} O histórico corporativo ainda não está integrado aos serviços de jornada.`)
+      return
+    }
     if (!profile) return
     setIsLoading(true)
     setError(null)
@@ -159,7 +170,7 @@ export function useTimeEntryHistory() {
     } finally {
       setIsLoading(false)
     }
-  }, [cursor, filters, profile])
+  }, [cursor, filters, profile, session])
 
   useEffect(() => { void load() }, [load])
 
@@ -184,6 +195,11 @@ export function useTimeEntryHistory() {
   }
 
   const cancel = async (row: HistoryRow, reason: string) => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setError(`${corporateDataError} O cancelamento corporativo permanece bloqueado.`)
+      return
+    }
     if (!profile) return
     await timeEntryService.cancel(profile.id, row.entry.id, row.entry.version, reason)
     setFeedback('Apontamento cancelado. O registro foi preservado no histórico.')
@@ -191,6 +207,11 @@ export function useTimeEntryHistory() {
   }
 
   const completeCorrection = async (row: HistoryRow) => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setError(`${corporateDataError} A conclusão de correções corporativas permanece bloqueada.`)
+      return
+    }
     if (!profile || !row.approval) return
     await dayApprovalService.completeCorrection(profile.id, row.entry.entryDate, row.approval.version)
     setFeedback('Correção concluída. O dia voltou a ficar disponível para aprovação.')

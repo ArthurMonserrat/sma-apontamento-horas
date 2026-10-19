@@ -149,6 +149,28 @@ describe('DemoSessionProvider', () => {
     expect(profileServiceMock.getById).not.toHaveBeenCalled()
   })
 
+  it('expõe perfil de aplicação somente quando o servidor retorna todos os dados administrativos', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    const corporateProfile = {
+      id: 'profile-1',
+      email: 'collab@example.invalid',
+      full_name: 'Collaborator One',
+      role: 'colaborador',
+      squad_id: 'squad-1',
+      active: true,
+      job_title: 'Analista',
+      location: { countryCode: 'BR', stateCode: 'SP', city: 'São Paulo', timeZone: 'America/Sao_Paulo' },
+    } as const
+    corporateAuthMock.getCorporateProfile.mockResolvedValue(corporateProfile)
+    corporateAuthMock.mapCorporateRole.mockReturnValue('COLLABORATOR')
+    authMock.getCurrentSession.mockResolvedValue({ access_token: 'token', user: { id: 'auth-user-1', email: corporateProfile.email } })
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('corporate|profile-1|authorized|')
+    expect(profileServiceMock.getById).not.toHaveBeenCalled()
+  })
+
   it('mantém o acesso bloqueado quando o servidor recusa o perfil', async () => {
     demoServiceMock.restore.mockReturnValue(null)
     corporateAuthMock.getCorporateProfile.mockRejectedValue(new Error('authorization_pending'))

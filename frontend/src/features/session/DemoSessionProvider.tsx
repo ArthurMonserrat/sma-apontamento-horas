@@ -11,6 +11,7 @@ import { supabaseAuthClient } from '../auth/infrastructure/supabaseAuthClient'
 import { configureTimeEntryService, SupabaseTimeEntryService } from '../time-entries'
 import { configureSupervisorService } from '../supervisor/infrastructure/supervisorService'
 import { SupabaseSupervisorService } from '../supervisor/infrastructure/supabaseSupervisorService'
+import { toCollaboratorProfile } from './corporateProfileAdapter'
 
 // A demonstração é uma ferramenta de desenvolvimento/teste, não uma porta de
 // entrada para o bundle publicado. Mesmo que uma variável pública seja
@@ -131,10 +132,10 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     async function loadProfile() {
       // Corporate sessions must never consult the local/demo profile store.
-      // Until a server-authorized profile adapter is available, keep this
-      // value empty instead of mixing a real session with demo identity data.
+      // The adapter accepts only complete administrative data from the server;
+      // incomplete responses remain blocked instead of receiving demo defaults.
       if (session?.authProvider === 'supabase') {
-        setProfile(null)
+        setProfile(toCollaboratorProfile(session.corporateProfile))
         return
       }
       if (session?.role !== 'COLLABORATOR') {

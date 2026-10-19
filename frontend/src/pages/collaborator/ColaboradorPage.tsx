@@ -12,7 +12,7 @@ import { formatMinutes } from '../../features/time-entries/domain'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
 
 export function ColaboradorPage() {
-  const { profile } = useSession()
+  const { profile, session, corporateProfile } = useSession()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDate = searchParams.get('date') ?? getCorporateToday()
@@ -52,7 +52,21 @@ export function ColaboradorPage() {
     navigate(`/colaborador/apontamentos/novo?date=${date}`)
   }
 
-  if (!profile) return null
+  if (!profile) {
+    if (session?.authProvider === 'supabase') {
+      return (
+        <PageContainer
+          title={`Olá, ${corporateProfile?.full_name ?? session.name}`}
+          description="A sessão Microsoft foi reconhecida, mas o perfil profissional ainda não está completo."
+        >
+          <div role="alert" className="ui-alert-danger rounded-xl p-4 text-sm font-semibold">
+            Perfil profissional corporativo incompleto. O acesso aos apontamentos permanece bloqueado até que a equipe administrativa confirme cargo, squad, jornada e demais dados do perfil.
+          </div>
+        </PageContainer>
+      )
+    }
+    return null
+  }
   const contextDescription = dashboard.data
     ? `${profile.jobTitle} · ${dashboard.data.assignment?.squadName ?? 'Squad não definida'} · Supervisão: ${dashboard.data.assignment?.supervisorName ?? 'não definida'}. Carga vigente ${dashboard.data.currentWorkload ? formatMinutes(dashboard.data.currentWorkload.dailyMinutes) : 'não cadastrada'}.`
     : `${profile.jobTitle} · Carregando contexto profissional.`

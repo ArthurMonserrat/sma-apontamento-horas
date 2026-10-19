@@ -4,6 +4,7 @@ import { workloadService } from '../workloads/infrastructure/workloadService'
 import type { DailySummary } from '../../shared/types/domain'
 import type { TimeEntry } from '../time-entries/types'
 import { useSession } from '../session/useSession'
+import { localDataAccessError } from '../session/sessionActor'
 
 type DashboardState = {
   entries: TimeEntry[]
@@ -13,10 +14,15 @@ type DashboardState = {
 }
 
 export function useDailyDashboard(date: string) {
-  const { profile } = useSession()
+  const { profile, session } = useSession()
   const [state, setState] = useState<DashboardState>({ entries: [], summary: null, isLoading: true, error: null })
 
   const load = useCallback(async () => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setState({ entries: [], summary: null, isLoading: false, error: `${corporateDataError} O resumo diário persistente ainda não está disponível.` })
+      return
+    }
     if (!profile) return
     setState((current) => ({ ...current, isLoading: true, error: null }))
     try {
@@ -30,7 +36,7 @@ export function useDailyDashboard(date: string) {
       console.error('Falha ao carregar o resumo diário.', error)
       setState({ entries: [], summary: null, isLoading: false, error: 'Não foi possível carregar o resumo do dia.' })
     }
-  }, [date, profile])
+  }, [date, profile, session])
 
   useEffect(() => {
     void load()
