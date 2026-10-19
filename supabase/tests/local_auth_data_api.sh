@@ -149,6 +149,40 @@ status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVI
 [[ "$status" =~ ^2 ]] || { echo "supervisor rejection RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
 [[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'rejected' ]] || { echo 'rejection RPC did not persist rejected status' >&2; exit 1; }
 
+status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$REJECT_ENTRY_ID&select=id,status,rejection_reason,version" "$COLLAB_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "collaborator rejected-entry read failed: HTTP $status" >&2; exit 1; }
+[[ "$(jq -r '.[0].status' "$tmp_dir/response")" == 'rejected' ]] || { echo 'collaborator did not see rejected status' >&2; exit 1; }
+[[ "$(jq -r '.[0].rejection_reason' "$tmp_dir/response")" == 'Detalhar a atividade registrada.' ]] || { echo 'collaborator did not see the current rejection reason' >&2; exit 1; }
+[[ "$(jq -r '.[0].version' "$tmp_dir/response")" == '2' ]] || { echo 'rejected entry version was not incremented' >&2; exit 1; }
+
+status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$REJECT_ENTRY_ID" "$COLLAB_TOKEN" '{"status":"pending","description":"forged rework without reason"}')"
+[[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'direct rejected-entry rework unexpectedly succeeded' >&2; exit 1; }; }
+
+status="$(request_status POST "$API_URL/rest/v1/rpc/rework_time_entry" "$COLLAB_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":2,"new_date":"2026-01-09","new_duration_minutes":60,"new_client_name":"Synthetic Client","new_project_code":"LOCAL-REWORK","new_activity_id":"activity-9","new_discipline_code":"E","new_document_type_code":"RN","edit_reason":"Corrigir detalhamento rejeitado","new_contractor_number":null,"new_ld_document":null,"new_description":"Versão corrigida pelo colaborador"}')"
+[[ "$status" =~ ^2 ]] || { echo "rework RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
+[[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'pending' ]] || { echo 'rework RPC did not return pending status' >&2; exit 1; }
+[[ "$(jq -r '.[0].version // .version' "$tmp_dir/response")" == '3' ]] || { echo 'rework RPC did not increment version atomically' >&2; exit 1; }
+[[ "$(jq -r '.[0].rejection_reason // empty' "$tmp_dir/response")" == '' ]] || { echo 'rework RPC left a stale rejection reason' >&2; exit 1; }
+
+revision_count="$(psql "$DB_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align -c "select count(*) from public.time_entry_revisions where time_entry_id = '$REJECT_ENTRY_ID'")"
+[[ "$revision_count" == '1' ]] || { echo "expected one immutable rework revision, got $revision_count" >&2; exit 1; }
+decision_count="$(psql "$DB_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align -c "select count(*) from public.time_entry_decisions where time_entry_id = '$REJECT_ENTRY_ID'")"
+[[ "$decision_count" == '1' ]] || { echo "previous rejection decision was not preserved, got $decision_count" >&2; exit 1; }
+
+status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$REJECT_ENTRY_ID&select=id,status,rejection_reason,version,project_code,description" "$SUPERVISOR_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "supervisor rework queue read failed: HTTP $status" >&2; exit 1; }
+[[ "$(jq -r '.[0].status' "$tmp_dir/response")" == 'pending' ]] || { echo 'supervisor did not receive the reworked pending entry' >&2; exit 1; }
+[[ "$(jq -r '.[0].project_code' "$tmp_dir/response")" == 'LOCAL-REWORK' ]] || { echo 'reworked project was not persisted' >&2; exit 1; }
+
+status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":2,"decision":"approved","p_rejection_reason":null}')"
+[[ ! "$status" =~ ^2 ]] || { echo 'stale decision unexpectedly succeeded after rework' >&2; exit 1; }
+
+status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":3,"decision":"approved","p_rejection_reason":null}')"
+[[ "$status" =~ ^2 ]] || { echo "approval after rework RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
+[[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'approved' ]] || { echo 'approval after rework did not persist approved status' >&2; exit 1; }
+decision_count="$(psql "$DB_URL" --set ON_ERROR_STOP=1 --tuples-only --no-align -c "select count(*) from public.time_entry_decisions where time_entry_id = '$REJECT_ENTRY_ID'")"
+[[ "$decision_count" == '2' ]] || { echo "new approval decision was not appended to history, got $decision_count" >&2; exit 1; }
+
 status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID" "$SUPERVISOR_TOKEN" '{"description":"forged supervisor update"}')"
 [[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'supervisor direct update unexpectedly succeeded' >&2; exit 1; }; }
 
