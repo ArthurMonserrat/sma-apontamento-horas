@@ -34,7 +34,10 @@ jobs:
           fi
 
       - name: Start disposable Supabase stack
-        run: supabase start --yes
+        shell: bash
+        run: |
+          supabase start --yes > "$RUNNER_TEMP/supabase-start.log"
+          echo 'Supabase local stack started without printing generated credentials.'
 
       - name: Reset local database with versioned migrations only
         run: supabase db reset --local --no-seed --yes
