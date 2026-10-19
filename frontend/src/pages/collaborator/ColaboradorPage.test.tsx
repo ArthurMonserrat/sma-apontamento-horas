@@ -31,4 +31,25 @@ describe('visão geral do colaborador', () => {
     expect(markup).not.toContain('data-dashboard-shortcuts')
     expect(markup).toContain('Carregando visão geral')
   })
+
+  it('não mistura dados demonstrativos quando a sessão corporativa ainda não possui perfil de aplicação', () => {
+    const markup = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/colaborador']}>
+        <SessionContext.Provider value={{
+          session: { ...collaboratorSession, id: 'auth-profile-1', name: 'Ana Silva', email: 'ana@example.invalid', isDemo: false, authProvider: 'supabase' },
+          profile: null,
+          corporateProfile: { id: 'auth-profile-1', email: 'ana@example.invalid', full_name: 'Ana Silva', role: 'colaborador', squad_id: 'squad-1', active: true },
+          isLoading: false,
+          signIn: vi.fn(),
+          signOut: vi.fn(),
+        }}>
+          <ColaboradorPage />
+        </SessionContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(markup).toContain('Olá, Ana Silva')
+    expect(markup).toContain('Perfil profissional corporativo incompleto')
+    expect(markup).not.toContain('Carregando visão geral')
+  })
 })

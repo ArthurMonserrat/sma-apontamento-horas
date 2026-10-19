@@ -133,6 +133,9 @@ function sharedFields(entry: Record<string, unknown>, collaboratorId: string) {
     sourceEntryId: optionalString(entry.sourceEntryId),
     cancelledAt: optionalString(entry.cancelledAt),
     cancelReason: optionalString(entry.cancelReason),
+    rejectionReason: optionalString(entry.rejectionReason),
+    decidedAt: optionalString(entry.decidedAt),
+    decidedBy: optionalString(entry.decidedBy),
   }
 }
 

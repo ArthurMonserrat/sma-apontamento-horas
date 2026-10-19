@@ -54,6 +54,9 @@ export interface TimeEntry {
   sourceEntryId?: string
   cancelledAt?: string
   cancelReason?: string
+  rejectionReason?: string
+  decidedAt?: string
+  decidedBy?: string
 }
 
 export type CreateTimeEntryData = Pick<

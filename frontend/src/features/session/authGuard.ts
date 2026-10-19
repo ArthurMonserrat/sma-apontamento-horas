@@ -2,10 +2,13 @@ import type { DemoSession } from './types'
 
 type MsalAccountLike = { homeAccountId?: string } | null
 
-export function hasAuthenticatedSession(session: Pick<DemoSession, 'authProvider' | 'isDemo'> | null, account: MsalAccountLike) {
+export function hasAuthenticatedSession(session: Pick<DemoSession, 'authProvider' | 'isDemo' | 'corporateProfile'> | null, account: MsalAccountLike) {
   void account
-  // Local session objects and MSAL accounts are never proof of corporate
-  // authorization. Only the explicitly selected demo session is accepted
-  // until a server-validated Supabase profile is wired into this guard.
-  return session?.isDemo === true && (session.authProvider === 'demo' || session.authProvider === undefined)
+  if (session?.isDemo === true && (session.authProvider === 'demo' || session.authProvider === undefined)) return true
+  // A Supabase session is accepted only after the server has returned an
+  // active corporate profile. A token, localStorage object or MSAL account by
+  // itself never satisfies this predicate.
+  return session?.isDemo === false
+    && session.authProvider === 'supabase'
+    && Boolean(session.corporateProfile?.id && session.corporateProfile.active)
 }

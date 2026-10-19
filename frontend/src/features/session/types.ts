@@ -11,6 +11,15 @@ export type CorporateProfile = {
   role: CorporateRole
   squad_id: string | null
   active: boolean
+  /** Optional only while the backend contract is being expanded. */
+  job_title?: string | null
+  /** Optional only while the backend contract is being expanded. */
+  location?: {
+    countryCode: 'BR'
+    stateCode: string
+    city: string
+    timeZone: string
+  } | null
   created_at?: string
   updated_at?: string
 }

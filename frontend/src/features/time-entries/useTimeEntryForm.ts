@@ -11,6 +11,7 @@ import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } fr
 import { applyLdDocument, type LdDocument } from '../document-list/ldImport'
 import { isManualDocumentType } from './documentCatalog'
 import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
+import { isCorporateSession, resolveSessionActorId } from '../session/sessionActor'
 
 export type TimeEntryFormValues = {
   startDate: string
@@ -64,7 +65,9 @@ function valuesFromEntry(entry: TimeEntry): TimeEntryFormValues {
 type FormMode = 'CREATE' | 'EDIT' | 'DUPLICATE'
 
 export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initialDate: string; entryId?: string; duplicateId?: string }) {
-  const { profile } = useSession()
+  const { session, profile, corporateProfile } = useSession()
+  const collaboratorId = resolveSessionActorId({ session, profile, corporateProfile })
+  const corporateSession = isCorporateSession(session)
   const mode: FormMode = entryId ? 'EDIT' : duplicateId ? 'DUPLICATE' : 'CREATE'
   const sourceId = entryId ?? duplicateId
   const [source, setSource] = useState<TimeEntry | null>(null)
@@ -79,10 +82,10 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
   const [reuseLastEntryMessage, setReuseLastEntryMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!profile || !sourceId) return
+    if (!collaboratorId || !sourceId) return
     let active = true
     setIsLoading(true)
-    timeEntryService.getById(profile.id, sourceId)
+    timeEntryService.getById(collaboratorId, sourceId)
       .then((entry) => {
         if (!active) return
         if (!entry) {
@@ -95,7 +98,7 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       .catch(() => active && setSubmitError('Não foi possível carregar o apontamento.'))
       .finally(() => active && setIsLoading(false))
     return () => { active = false }
-  }, [profile, sourceId])
+  }, [collaboratorId, sourceId])
 
   const setField = useCallback(<Key extends keyof TimeEntryFormValues>(field: Key, value: TimeEntryFormValues[Key]) => {
     setValues((current) => {
@@ -108,12 +111,16 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
   }, [])
 
   const reuseLastEntry = async () => {
-    if (!profile || isReusingLastEntry || mode !== 'CREATE') return false
+    if (!collaboratorId || isReusingLastEntry || mode !== 'CREATE') return false
+    if (corporateSession) {
+      setReuseLastEntryMessage('A reutilização de apontamentos ainda não está disponível para a sessão corporativa.')
+      return false
+    }
     setIsReusingLastEntry(true)
     setReuseLastEntryMessage(null)
     try {
       const { items } = await timeEntryService.list({
-        collaboratorId: profile.id,
+        collaboratorId,
         startDate: '1900-01-01',
         endDate: getCorporateToday(),
         pageSize: 1,
@@ -145,7 +152,11 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
   }
 
   const submit = async () => {
-    if (!profile || isSubmitting) return false
+    if (!collaboratorId || isSubmitting) return false
+    if (corporateSession) {
+      setSubmitError('O apontamento corporativo permanece bloqueado até a autorização server-side e a validação da jornada persistente.')
+      return false
+    }
     setSubmitError(null)
     setSuccessMessage(null)
     const durationHours = Number(values.hours || 0)
@@ -176,9 +187,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
         const datesToCheck = periodDates.length > 0 ? periodDates : [data.entryDate]
         const [mutationAllowed, dateBlocks] = await Promise.all([
           mode === 'CREATE' && periodDates.length > 0
-            ? dayApprovalService.canMutateRange(profile.id, periodDates)
-            : dayApprovalService.canMutate(profile.id, data.entryDate),
-          Promise.all(datesToCheck.map((date) => entryDateAvailabilityService.getBlock(profile.id, date))),
+            ? dayApprovalService.canMutateRange(collaboratorId, periodDates)
+            : dayApprovalService.canMutate(collaboratorId, data.entryDate),
+          Promise.all(datesToCheck.map((date) => entryDateAvailabilityService.getBlock(collaboratorId, date))),
         ])
         canMutateDate = mutationAllowed
         dateBlock = dateBlocks.find((block) => block.blocked) ?? { blocked: false }
@@ -218,24 +229,24 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     setIsSubmitting(true)
     try {
       if (mode === 'EDIT' && source) {
-        const updated = await timeEntryService.update(profile.id, source.id, source.version, data, values.editReason)
+        const updated = await timeEntryService.update(collaboratorId, source.id, source.version, data, values.editReason)
         setSource(updated)
         setValues(valuesFromEntry(updated))
         setSuccessMessage('Apontamento atualizado com sucesso.')
       } else if (mode === 'DUPLICATE' && source) {
-        await timeEntryService.duplicate(profile.id, source.id, source.version, data)
+        await timeEntryService.duplicate(collaboratorId, source.id, source.version, data)
         setSuccessMessage('Apontamento duplicado com sucesso.')
       } else {
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
           await offlineQueueService.enqueue({
             id: crypto.randomUUID(),
             status: 'PENDING',
-            collaboratorId: profile.id,
+            collaboratorId,
             data,
           })
           setSuccessMessage('Sem conexão. Apontamento salvo localmente e aguardando rede.')
         } else {
-          await timeEntryService.create(profile.id, data)
+          await timeEntryService.create(collaboratorId, data)
           setSuccessMessage(periodDates.length > 1
             ? `${periodDates.length} lançamentos salvos com sucesso para o período selecionado.`
             : 'Apontamento salvo com sucesso.')

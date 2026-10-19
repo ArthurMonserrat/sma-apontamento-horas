@@ -95,7 +95,10 @@ describe('supabase-session fail-closed', () => {
     await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(403)
-    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' })
+    expect(response.body).toEqual({
+      error: 'Corporate authorization is not enabled.',
+      code: 'authorization_pending',
+    })
     expect(from).not.toHaveBeenCalled()
     expect(createClient).toHaveBeenCalledTimes(1)
   })

@@ -40,4 +40,11 @@ describe('configuração de autenticação segura', () => {
     expect(workflow).toContain('VITE_SUPABASE_ALLOWED_REDIRECTS: ${{ secrets.VITE_SUPABASE_ALLOWED_REDIRECTS }}')
     expect(workflow).not.toContain('SUPABASE_SERVICE_ROLE_KEY:')
   })
+
+  it('não imprime credenciais sintéticas geradas pelo Supabase no log do CI', async () => {
+    const workflow = await readFile(join(process.cwd(), '.github', 'workflows', 'validate-supabase-local.yml'), 'utf8')
+
+    expect(workflow).toContain('supabase start --yes > "$RUNNER_TEMP/supabase-start.log"')
+    expect(workflow).not.toContain('run: supabase start --yes')
+  })
 })

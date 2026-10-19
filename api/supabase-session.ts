@@ -12,6 +12,13 @@ function getSupabasePublicClient() {
   })
 }
 
+function denyPendingAuthorization(res: VercelResponse): void {
+  res.status(403).json({
+    error: 'Corporate authorization is not enabled.',
+    code: 'authorization_pending',
+  })
+}
+
 export async function supabaseSession(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed.' })
@@ -35,13 +42,13 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
     // Stage 2 deliberately has no corporate authorization implementation yet.
     // This remains false even when an environment flag is accidentally enabled.
     if (!isCorporateAuthorizationReady()) {
-      res.status(403).json({ error: 'Corporate authorization is not enabled.' })
+      denyPendingAuthorization(res)
       return
     }
 
     // The definitive identity/pre-authorization/profile read is intentionally
     // not reachable until a reviewed implementation turns the hard gate on.
-    res.status(403).json({ error: 'Corporate authorization is not enabled.' })
+    denyPendingAuthorization(res)
   } catch {
     res.status(500).json({ error: 'Could not validate Supabase session.' })
   }

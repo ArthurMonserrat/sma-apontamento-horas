@@ -1,4 +1,5 @@
 export * from './infrastructure/timeEntryService'
+export * from './infrastructure/supabaseTimeEntryService'
 export {
   LEGACY_V1_TIME_ENTRY_STORAGE_KEY,
   LEGACY_V2_TIME_ENTRY_STORAGE_KEY,

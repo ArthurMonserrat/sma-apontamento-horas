@@ -58,4 +58,15 @@ describe('getSupabaseBrowserConfig', () => {
     expect(config.redirectTo).toBe('https://sma-apontamento-horas.example/#/auth/callback')
     expect(config.enabled).toBe(true)
   })
+
+  it('aceita o alias de produção Vercel atualmente aprovado', () => {
+    const config = getSupabaseBrowserConfig({
+      VITE_SUPABASE_URL: 'https://qtrtaoyadtapcilnrhrk.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'anon-key',
+      VITE_SUPABASE_ALLOWED_REDIRECTS: 'https://sma-apontamento-horas-murex.vercel.app/#/auth/callback',
+    }, 'https://sma-apontamento-horas-murex.vercel.app', '/')
+
+    expect(config.redirectTo).toBe('https://sma-apontamento-horas-murex.vercel.app/#/auth/callback')
+    expect(config.enabled).toBe(true)
+  })
 })

@@ -10,6 +10,7 @@
  */
 
 const verifiedClaimsMarker = Symbol('verified-microsoft-claims')
+const verifiedBindingMarker = Symbol('verified-entra-binding')
 
 export type SupabaseAzureIdentityRecord = {
   identityId: string
@@ -30,9 +31,18 @@ export type EntraBindingConfig = {
 }
 
 export type EntraBindingResult =
-  | { status: 'verified'; tenantId: string; objectId: string; supabaseUserId: string }
+  | VerifiedEntraBinding
   | { status: 'invalid'; reason: 'invalid_input' | 'azure_identity_missing' | 'multiple_azure_identities' | 'identity_user_mismatch' | 'tenant_mismatch' | 'object_id_missing' | 'identity_record_mismatch' }
   | { status: 'unavailable'; reason: 'verified_provider_evidence_missing' }
+
+export type VerifiedEntraBinding = {
+  status: 'verified'
+  tenantId: string
+  objectId: string
+  supabaseUserId: string
+  expiresAt: number
+  readonly [verifiedBindingMarker]: true
+}
 
 type VerifiedMicrosoftClaims = {
   identityRecordId: string
@@ -62,6 +72,19 @@ function isVerifiedMicrosoftClaims(value: unknown): value is VerifiedMicrosoftCl
     && typeof claims.expiresAt === 'number'
     && Number.isFinite(claims.expiresAt)
     && claims.expiresAt > Math.floor(Date.now() / 1000)
+}
+
+export function isVerifiedEntraBinding(value: unknown, now = Math.floor(Date.now() / 1000)): value is VerifiedEntraBinding {
+  if (!value || typeof value !== 'object' || !(verifiedBindingMarker in value)) return false
+  const binding = value as Record<PropertyKey, unknown>
+  return binding[verifiedBindingMarker] === true
+    && binding.status === 'verified'
+    && nonEmptyString(binding.tenantId)
+    && nonEmptyString(binding.objectId)
+    && nonEmptyString(binding.supabaseUserId)
+    && typeof binding.expiresAt === 'number'
+    && Number.isFinite(binding.expiresAt)
+    && binding.expiresAt > now
 }
 
 /**
@@ -111,5 +134,7 @@ export function verifySupabaseAzureBinding(
     tenantId: claims.tenantId,
     objectId: claims.objectId,
     supabaseUserId: inputRecord.supabaseUserId as string,
+    expiresAt: claims.expiresAt,
+    [verifiedBindingMarker]: true as const,
   }
 }

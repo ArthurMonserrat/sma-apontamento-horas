@@ -19,6 +19,7 @@ import { eachIsoDate, getCorporateToday, getMonthRange } from '../../shared/lib/
 import { profileService } from '../profile/infrastructure/profileService'
 import { workloadService } from '../workloads/infrastructure/workloadService'
 import { useSession } from '../session/useSession'
+import { localDataAccessError } from '../session/sessionActor'
 
 type DashboardData = {
   monthSummary: PeriodSummary
@@ -49,10 +50,15 @@ function holidaysToEvents(collaboratorId: string, holidays: Awaited<ReturnType<t
 }
 
 export function useCollaboratorDashboard(selectedDate: string, monthKey: string, periodStart?: string, periodEnd?: string) {
-  const { profile } = useSession()
+  const { profile, session } = useSession()
   const [state, setState] = useState<DashboardState>({ data: null, isLoading: true, error: null })
 
   const load = useCallback(async () => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setState({ data: null, isLoading: false, error: `${corporateDataError} O dashboard ainda depende dos serviços corporativos de jornada e folgas.` })
+      return
+    }
     if (!profile) return
     setState((current) => ({ ...current, isLoading: true, error: null }))
     try {
@@ -149,7 +155,7 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
     } catch (error) {
       setState({ data: null, isLoading: false, error: error instanceof Error ? error.message : 'Não foi possível carregar a visão geral.' })
     }
-  }, [monthKey, periodEnd, periodStart, profile, selectedDate])
+  }, [monthKey, periodEnd, periodStart, profile, selectedDate, session])
 
   useEffect(() => { void load() }, [load])
   return { ...state, reload: load }

@@ -114,16 +114,35 @@ As configurações têm responsabilidades diferentes:
 
 Para GitHub Pages, o valor exato é
 `https://arthurmonserrat.github.io/sma-apontamento-horas/#/auth/callback`.
-Para Vercel, use `https://<origem-aprovada>/#/auth/callback` para cada origem
-explicitamente autorizada. Não adicionar esses callbacks finais à configuração
-do aplicativo Entra.
+Para Vercel, as origens verificadas deste projeto são:
+
+- `https://sma-apontamento-horas-murex.vercel.app/#/auth/callback` (alias de
+  produção);
+- `https://sma-apontamento-horas-arthur-monserrat.vercel.app/#/auth/callback`
+  (alias de produção);
+- `https://sma-apontamento-horas-git-main-arthur-monserrat.vercel.app/#/auth/callback`
+  (alias da branch `main`);
+- `https://sma-apontamento-horas-git-codex-banco1-ec1470-arthur-monserrat.vercel.app/#/auth/callback`
+  (alias de preview da branch do Banco 1).
+
+Não adicionar esses callbacks finais à configuração do aplicativo Entra.
 Não incluir a chave `service_role` ou qualquer segredo do provedor no build.
 
-No Vercel, Production e Preview precisam receber as mesmas três variáveis
-públicas, com redirects correspondentes a cada origem. A ausência de qualquer
-uma delas produz a mensagem `Supabase Auth não está configurado para este
-ambiente`; isso é uma falha de configuração do frontend, distinta de erro de
-OAuth/callback e distinta do bloqueio deliberado da autorização corporativa.
+No Vercel, Production e o Preview da branch do Banco 1 receberam as três
+variáveis públicas (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e
+`VITE_SUPABASE_ALLOWED_REDIRECTS`) com o projeto Supabase `qtrtaoyadtapcilnrhrk`.
+O backend também recebeu `SUPABASE_ANON_KEY` server-side; o
+`SUPABASE_SERVICE_ROLE_KEY` não foi reutilizado.
+
+Essas variáveis só entram em um novo build. A implantação Production ainda
+aponta para o commit da `main` anterior ao PR #13; por isso, a verificação do
+primeiro redirecionamento deve usar o Preview renovado desta branch, e a
+publicação em Production continua condicionada ao merge e ao deploy aprovado.
+
+A ausência de qualquer variável pública produz a mensagem `Supabase Auth não
+está configurado para este ambiente`; isso é uma falha de configuração do
+frontend, distinta de erro de OAuth/callback e distinta do bloqueio deliberado
+da autorização corporativa.
 
 ## Validação antes do piloto
 

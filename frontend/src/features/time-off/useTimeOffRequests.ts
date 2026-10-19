@@ -3,9 +3,10 @@ import { timeOffService } from './infrastructure/timeOffService'
 import { addDays, getCorporateToday } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import type { AbsenceType, TimeOffRequest } from './types'
+import { localDataAccessError } from '../session/sessionActor'
 
 export function useTimeOffRequests() {
-  const { profile } = useSession()
+  const { profile, session } = useSession()
   const today = getCorporateToday()
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
   const [absenceType, setAbsenceType] = useState<AbsenceType>('Folga')
@@ -18,6 +19,13 @@ export function useTimeOffRequests() {
   const [feedback, setFeedback] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setRequests([])
+      setIsLoading(false)
+      setError(`${corporateDataError} A persistência corporativa de folgas ainda não está disponível.`)
+      return
+    }
     if (!profile) return
     setIsLoading(true)
     setError(null)
@@ -29,11 +37,16 @@ export function useTimeOffRequests() {
     } finally {
       setIsLoading(false)
     }
-  }, [profile, today])
+  }, [profile, session, today])
 
   useEffect(() => { void load() }, [load])
 
   const create = async () => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setError(`${corporateDataError} A criação de folgas corporativas permanece bloqueada.`)
+      return
+    }
     if (!profile || isSubmitting) return
     setIsSubmitting(true); setError(null); setFeedback(null)
     try {
@@ -47,6 +60,8 @@ export function useTimeOffRequests() {
   }
 
   const removePending = async (request: TimeOffRequest) => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) throw new Error(`${corporateDataError} A exclusão de folgas corporativas permanece bloqueada.`)
     if (!profile) return
     await timeOffService.removePending(profile.id, request.id)
     setFeedback('Solicitação pendente retirada e preservada no histórico local.')
@@ -54,6 +69,8 @@ export function useTimeOffRequests() {
   }
 
   const cancelApproved = async (request: TimeOffRequest, cancellationReason: string) => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) throw new Error(`${corporateDataError} O cancelamento de folgas corporativas permanece bloqueado.`)
     if (!profile) return
     await timeOffService.cancelApproved(profile.id, request.id, cancellationReason)
     setFeedback('Ausência cancelada. A supervisão foi notificada e a projeção foi recalculada.')
