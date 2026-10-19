@@ -344,6 +344,7 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
     const { entries, index, entry } = this.getOwnEntry(readResult.data, collaboratorId, id)
     this.assertVersion(entry, expectedVersion)
     if (entry.status === 'CANCELLED') throw new Error('Um apontamento cancelado não pode ser editado.')
+    if (entry.status === 'APPROVED') throw new Error('Um apontamento aprovado não pode ser editado.')
     await this.ensureMutable(collaboratorId, entry.entryDate)
     await this.ensureMutable(collaboratorId, normalized.entryDate)
     await this.ensureDateAvailable(collaboratorId, entry.entryDate)
@@ -351,7 +352,11 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
     const updated: TimeEntry = {
       ...entry,
       ...normalized,
+      status: entry.status === 'REJECTED' ? 'PENDING' : entry.status,
       lastEditReason: editReason,
+      rejectionReason: entry.status === 'REJECTED' ? undefined : entry.rejectionReason,
+      decidedAt: entry.status === 'REJECTED' ? undefined : entry.decidedAt,
+      decidedBy: entry.status === 'REJECTED' ? undefined : entry.decidedBy,
       version: entry.version + 1,
       updatedAt: this.now(),
     }

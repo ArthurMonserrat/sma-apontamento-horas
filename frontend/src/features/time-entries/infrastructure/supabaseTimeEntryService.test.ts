@@ -14,6 +14,70 @@ function query(result: { data?: unknown, error?: { message: string } | null, cou
 }
 
 describe('SupabaseTimeEntryService', () => {
+  it('reabre um apontamento rejeitado por RPC atômico e preserva a decisão anterior no servidor', async () => {
+    const rejectedRow = {
+      id: 'entry-rejected',
+      profile_id: 'profile-1',
+      date: '2026-10-18',
+      duration_minutes: 90,
+      client_name: 'Cliente A',
+      project_code: 'CONTR-1',
+      contractor_number: null,
+      ld_document: null,
+      activity_id: 'activity-1',
+      discipline_code: 'E',
+      document_type_code: 'RN',
+      assignment_snapshot: null,
+      description: 'Versão original',
+      status: 'rejected',
+      version: 2,
+      created_at: '2026-10-18T10:00:00Z',
+      updated_at: '2026-10-18T10:00:00Z',
+      last_edit_reason: null,
+      source_entry_id: null,
+      cancelled_at: null,
+      cancel_reason: null,
+      rejection_reason: 'Detalhar a atividade.',
+      decided_at: '2026-10-18T11:00:00Z',
+      decided_by: 'supervisor-1',
+    }
+    const reworkedRow = {
+      ...rejectedRow,
+      date: '2026-10-19',
+      duration_minutes: 120,
+      description: 'Versão corrigida',
+      status: 'pending',
+      version: 3,
+      rejection_reason: null,
+      decided_at: null,
+      decided_by: null,
+      last_edit_reason: 'Corrigir detalhamento',
+    }
+    const entryQuery = query({ data: rejectedRow })
+    const rpc = vi.fn(async () => ({ data: [reworkedRow], error: null }))
+    const service = new SupabaseTimeEntryService({ from: vi.fn(() => entryQuery), rpc } as never)
+
+    const updated = await service.update('profile-1', 'entry-rejected', 2, {
+      entryDate: '2026-10-19',
+      clientName: 'Cliente A',
+      projectCode: 'CONTR-1',
+      activityId: 'activity-1',
+      disciplineCode: 'E',
+      documentTypeCode: 'RN',
+      durationMinutes: 120,
+      details: 'Versão corrigida',
+    }, 'Corrigir detalhamento')
+
+    expect(rpc).toHaveBeenCalledWith('rework_time_entry', expect.objectContaining({
+      target_entry_id: 'entry-rejected',
+      expected_version: 2,
+      edit_reason: 'Corrigir detalhamento',
+      new_date: '2026-10-19',
+      new_duration_minutes: 120,
+    }))
+    expect(updated).toMatchObject({ status: 'PENDING', version: 3, rejectionReason: undefined, decidedAt: undefined, decidedBy: undefined })
+  })
+
   it('mapeia todos os campos persistidos sem usar localStorage ou horários inventados', async () => {
     const entryQuery = query({ data: [{
       id: 'entry-1',

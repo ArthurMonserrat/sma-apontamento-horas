@@ -25,6 +25,7 @@ export type SupabaseQuery = {
 
 export type SupabaseDataClient = {
   from: (table: string) => SupabaseQuery
+  rpc: (name: string, args: Record<string, unknown>) => Promise<QueryResult<unknown>>
 }
 
 type DatabaseStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
@@ -170,7 +171,35 @@ export class SupabaseTimeEntryService implements TimeEntryService {
   }
 
   async update(collaboratorId: string, id: string, expectedVersion: number, data: CreateTimeEntryData, reason: string) {
-    if (!reason.trim()) throw new Error('Informe o motivo da edição.')
+    const editReason = reason.trim()
+    if (!editReason) throw new Error('Informe o motivo da edição.')
+    const current = await this.getById(collaboratorId, id)
+    if (!current) throw new Error('O apontamento não foi encontrado ou não pode mais ser editado.')
+    if (current.version !== expectedVersion) throw new Error('O apontamento foi alterado ou não pode mais ser editado.')
+    if (current.status === 'CANCELLED' || current.status === 'APPROVED') {
+      throw new Error('Um apontamento aprovado ou cancelado não pode ser editado.')
+    }
+    if (current.status === 'REJECTED') {
+      const result = await this.client.rpc('rework_time_entry', {
+        target_entry_id: id,
+        expected_version: expectedVersion,
+        new_date: data.entryDate,
+        new_duration_minutes: data.durationMinutes,
+        new_client_name: data.clientName.trim(),
+        new_project_code: data.projectCode.trim(),
+        new_activity_id: data.activityId,
+        new_discipline_code: data.disciplineCode,
+        new_document_type_code: data.documentTypeCode,
+        edit_reason: editReason,
+        new_contractor_number: data.contractorNumber?.trim() || null,
+        new_ld_document: data.ldDocument ?? null,
+        new_description: data.details.trim() || null,
+      })
+      dataError(result.error, 'Não foi possível reabrir o apontamento rejeitado.')
+      const row = Array.isArray(result.data) ? result.data[0] : result.data
+      if (!row) throw new Error('O banco não retornou o apontamento reaberto.')
+      return mapRow(row as DatabaseTimeEntry)
+    }
     const result = await this.client.from('time_entries').update({
       date: data.entryDate,
       duration_minutes: data.durationMinutes,
@@ -182,7 +211,7 @@ export class SupabaseTimeEntryService implements TimeEntryService {
       discipline_code: data.disciplineCode,
       document_type_code: data.documentTypeCode,
       description: data.details.trim() || null,
-      last_edit_reason: reason.trim(),
+      last_edit_reason: editReason,
       version: expectedVersion + 1,
     }).eq('id', id).eq('profile_id', collaboratorId).eq('version', expectedVersion).select('*').maybeSingle() as unknown as QueryResult<DatabaseTimeEntry>
     dataError(result.error, 'Não foi possível atualizar o apontamento.')

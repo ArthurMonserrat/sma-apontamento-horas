@@ -461,6 +461,35 @@ describe('comandos e consultas de apontamento', () => {
     })
   })
 
+  it('devolve apontamento rejeitado para pendente, limpa a decisão vigente e exige motivo de retrabalho', async () => {
+    const storage = new MemoryStorage()
+    storage.setItem(TIME_ENTRY_STORAGE_KEY, JSON.stringify({
+      version: 4,
+      entriesByCollaborator: {
+        [collaboratorId]: [v4Entry({
+          status: 'REJECTED',
+          version: 2,
+          rejectionReason: 'Detalhar a atividade.',
+          decidedAt: '2026-07-20T12:30:00.000Z',
+          decidedBy: 'supervisor-demo-001',
+        })],
+      },
+    }))
+    const service = buildService(storage)
+
+    await expect(service.update(collaboratorId, 'legacy-v2-entry-1', 2, validData, '  ')).rejects.toThrow('motivo')
+    const reworked = await service.update(collaboratorId, 'legacy-v2-entry-1', 2, validData, 'Corrigir detalhamento')
+
+    expect(reworked).toMatchObject({
+      status: 'PENDING',
+      version: 3,
+      lastEditReason: 'Corrigir detalhamento',
+      rejectionReason: undefined,
+      decidedAt: undefined,
+      decidedBy: undefined,
+    })
+  })
+
   it('recusa conflito de versão', async () => {
     const storage = new MemoryStorage()
     const service = buildService(storage)
