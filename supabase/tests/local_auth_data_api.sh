@@ -115,9 +115,14 @@ select set_config('test.director_id', :'director_id', false);
 select set_config('test.non_azure_user_id', :'unlinked_id', false);
 select set_config('test.collision_azure_id', :'collision_azure_id', false);
 
+-- Admin-created password users remain marked as provider=email even when
+-- app_metadata is supplied in the create request. Mark these fixtures as
+-- Azure identities explicitly so this test exercises the OAuth postcondition.
 update auth.users
 set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"provider":"azure"}'::jsonb
-where id = :'director_id';
+where id in (:'jit_azure_id', :'collision_azure_id', :'director_id');
+select private.provision_azure_collaborator(:'jit_azure_id'::uuid);
+select private.provision_azure_collaborator(:'collision_azure_id'::uuid);
 select private.provision_azure_collaborator(:'director_id'::uuid);
 
 do $$
