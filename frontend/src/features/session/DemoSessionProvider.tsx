@@ -1,100 +1,169 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { Session as SupabaseSession } from '@supabase/supabase-js'
 import { demoSessionService } from './infrastructure/demoSessionService'
 import { demoCollaborator } from '../../demo/fixtures/demoData'
 import { PROFILE_UPDATED_EVENT, profileService } from '../profile/infrastructure/profileService'
 import { SessionContext, type AuthState } from './sessionContext'
-import type { DemoRole, DemoSession } from './types'
+import type { CorporateProfile, DemoRole, DemoSession } from './types'
 import type { CollaboratorProfile } from '../profile/types'
+import { getCorporateProfile, mapCorporateRole } from '../auth/authService'
 import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
 
-// A demonstração é uma ferramenta de desenvolvimento/teste, não uma porta de
-// entrada para o bundle publicado. Mesmo que uma variável pública seja
-// configurada por engano na Vercel, o build de produção não restaura uma
-// sessão local nem autoriza uma rota corporativa.
 const demoModeEnabled = import.meta.env.MODE === 'test' || (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true')
-const UNAUTHORIZED_MESSAGE = 'A sessão corporativa ainda não foi autorizada.'
+const UNAUTHORIZED_MESSAGE = 'Não foi possível validar um perfil corporativo ativo. Contate a Administração.'
+
+function createCorporateSession(profile: CorporateProfile): DemoSession | null {
+  const role = mapCorporateRole(profile.role)
+  if (!role || !profile.active) return null
+  const now = new Date().toISOString()
+  return {
+    id: profile.id,
+    name: profile.full_name,
+    email: profile.email,
+    role,
+    createdAt: profile.created_at ?? now,
+    explicitLoginAt: now,
+    isDemo: false,
+    version: 2,
+    authProvider: 'supabase',
+    corporateProfile: profile,
+  }
+}
 
 export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<DemoSession | null>(null)
   const [profile, setProfile] = useState<CollaboratorProfile | null>(null)
-  const [corporateProfile, setCorporateProfile] = useState<NonNullable<DemoSession['corporateProfile']> | null>(null)
+  const [corporateProfile, setCorporateProfile] = useState<CorporateProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
   const [authState, setAuthState] = useState<AuthState>('initializing')
   const modeRef = useRef<'unknown' | 'none' | 'demo' | 'corporate'>('unknown')
   const corporateRequestRef = useRef(0)
+  const corporateProfileRequestsRef = useRef(new Map<string, Promise<CorporateProfile>>())
   const signOutInFlightRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const subscription = subscribeSupabase((event, supabaseSession) => {
-      if (cancelled) return
-      if (modeRef.current === 'demo') return
-      if (supabaseSession) {
-        modeRef.current = 'none'
+    let initialEventObserved = false
+    let sessionEventVersion = 0
+    const isDemoSessionActive = () => modeRef.current === 'demo'
+
+    const clearSession = (state: AuthState = 'unauthenticated', error: string | null = null) => {
+      corporateRequestRef.current += 1
+      modeRef.current = 'none'
+      setSession(null)
+      setProfile(null)
+      setCorporateProfile(null)
+      setAuthError(error)
+      setAuthState(state)
+      setIsLoading(false)
+    }
+
+    const resolveSession = async (supabaseSession: SupabaseSession) => {
+      if (cancelled || isDemoSessionActive()) return
+
+      const requestId = ++corporateRequestRef.current
+      const { access_token: accessToken, user } = supabaseSession
+      const requestKey = `${user.id}:${accessToken}`
+      let profileRequest = corporateProfileRequestsRef.current.get(requestKey)
+      if (!profileRequest) {
+        profileRequest = Promise.resolve().then(() => getCorporateProfile(accessToken))
+        corporateProfileRequestsRef.current.set(requestKey, profileRequest)
+        void profileRequest.then(
+          () => corporateProfileRequestsRef.current.delete(requestKey),
+          () => corporateProfileRequestsRef.current.delete(requestKey),
+        )
+      }
+
+      modeRef.current = 'none'
+      setSession(null)
+      setProfile(null)
+      setCorporateProfile(null)
+      setAuthError(null)
+      setAuthState('authenticating')
+      setIsLoading(true)
+
+      try {
+        const validatedProfile = await profileRequest
+        if (cancelled || requestId !== corporateRequestRef.current || isDemoSessionActive()) return
+        const corporateSession = createCorporateSession(validatedProfile)
+        if (!corporateSession) throw new Error(UNAUTHORIZED_MESSAGE)
+
+        modeRef.current = 'corporate'
+        setSession(corporateSession)
+        setCorporateProfile(validatedProfile)
+        setAuthError(null)
+        setAuthState('authorized')
+        setIsLoading(false)
+      } catch {
+        if (cancelled || requestId !== corporateRequestRef.current || isDemoSessionActive()) return
         setSession(null)
+        setProfile(null)
         setCorporateProfile(null)
         setAuthError(UNAUTHORIZED_MESSAGE)
         setAuthState('authenticated_unauthorized')
         setIsLoading(false)
+      }
+    }
+
+    const subscription = subscribeSupabase((event, supabaseSession) => {
+      if (cancelled || isDemoSessionActive()) return
+      if (event === 'INITIAL_SESSION') {
+        initialEventObserved = true
+        if (supabaseSession) void resolveSession(supabaseSession)
+        else clearSession()
         return
       }
-      if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-        modeRef.current = 'none'
-        setSession(null)
-        setCorporateProfile(null)
-        setAuthError(null)
-        setAuthState('unauthenticated')
-        setIsLoading(false)
+
+      sessionEventVersion += 1
+      if (supabaseSession) {
+        void resolveSession(supabaseSession)
+        return
       }
+      if (event === 'SIGNED_OUT') clearSession()
     })
 
     const localSession = demoModeEnabled ? demoSessionService.restore() : null
-
     if (localSession) {
       modeRef.current = 'demo'
       corporateRequestRef.current += 1
       setSession(localSession)
+      setProfile(null)
       setCorporateProfile(null)
       setAuthState('authorized')
       setIsLoading(false)
     } else {
       modeRef.current = 'none'
+      const versionAtBootstrap = sessionEventVersion
       void getCurrentSession().then((supabaseSession) => {
-        if (cancelled) return
-        if (supabaseSession) {
-          setAuthError(UNAUTHORIZED_MESSAGE)
-          setAuthState('authenticated_unauthorized')
-        } else {
-          setAuthState('unauthenticated')
-        }
-        setIsLoading(false)
+        if (cancelled || initialEventObserved || isDemoSessionActive() || sessionEventVersion !== versionAtBootstrap) return
+        if (supabaseSession) void resolveSession(supabaseSession)
+        else clearSession()
       }).catch(() => {
-        if (cancelled) return
-        setAuthState('error')
-        setAuthError('Não foi possível restaurar a sessão corporativa. Tente novamente.')
-        setIsLoading(false)
+        if (cancelled || initialEventObserved || isDemoSessionActive() || sessionEventVersion !== versionAtBootstrap) return
+        clearSession('error', 'Não foi possível restaurar a sessão corporativa. Tente novamente.')
       })
     }
 
     return () => {
       cancelled = true
+      corporateRequestRef.current += 1
       subscription.unsubscribe()
     }
   }, [])
 
   useEffect(() => {
     let cancelled = false
-    async function loadProfile() {
-      if (session?.role !== 'COLLABORATOR') {
+    async function loadDemoProfile() {
+      if (!session?.isDemo || session.role !== 'COLLABORATOR') {
         setProfile(null)
         return
       }
       const savedProfile = await profileService.getById(session.id)
       if (!cancelled) setProfile(savedProfile ?? demoCollaborator)
     }
-    void loadProfile()
-    const handleProfileUpdated = () => { void loadProfile() }
+    void loadDemoProfile()
+    const handleProfileUpdated = () => { void loadDemoProfile() }
     window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdated)
     return () => {
       cancelled = true
@@ -111,10 +180,11 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setCorporateProfile(null)
     setAuthError(null)
     setAuthState('authorized')
+    setIsLoading(false)
     return created
   }
 
-  const signInWithMicrosoft = (input: { id: string; name: string; email: string; role: DemoRole; corporateProfile: NonNullable<DemoSession['corporateProfile']> }) => {
+  const signInWithMicrosoft = (input: { id: string; name: string; email: string; role: DemoRole; corporateProfile: CorporateProfile }) => {
     const created = demoSessionService.signInWithMicrosoft(input)
     if (!created) return null
     modeRef.current = 'corporate'
@@ -122,6 +192,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     setSession(created)
     setCorporateProfile(input.corporateProfile)
     setAuthError(null)
+    setAuthState('authorized')
     setIsLoading(false)
     return created
   }
@@ -159,8 +230,6 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
         if (result.error) throw result.error
         setAuthState('unauthenticated')
       } catch {
-        // O estado local permanece sem sessão para bloquear as rotas. A falha
-        // explícita informa que o provedor ainda precisa ser confirmado.
         setAuthError('Não foi possível confirmar o encerramento da sessão. Tente novamente.')
         setAuthState('error')
       } finally {

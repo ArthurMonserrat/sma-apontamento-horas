@@ -13,7 +13,7 @@ type ProtectedRouteProps = {
 }
 
 export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: ProtectedRouteProps) {
-  const { session, isLoading } = useSession()
+  const { session, isLoading, authState } = useSession()
   const location = useLocation()
   if (isLoading) {
     return (
@@ -23,8 +23,9 @@ export function ProtectedRoute({ children, allowedRoles = COLLABORATOR_ONLY }: P
     )
   }
 
-  if (!hasAuthenticatedSession(session, null)) {
-    return <Navigate to="/" replace />
+  if (!hasAuthenticatedSession(session)) {
+    const destination = authState === 'authenticated_unauthorized' ? '/?authError=unauthorized' : '/'
+    return <Navigate to={destination} replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />
   }
   if (!session) return <Navigate to="/" replace />
 

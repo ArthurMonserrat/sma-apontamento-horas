@@ -10,7 +10,7 @@ export function EcosystemLogin() {
   const { isLoading, authError } = useSession()
   const [searchParams] = useSearchParams()
   const callbackError = searchParams.get('authError') === 'unauthorized'
-    ? 'Acesso corporativo não autorizado. Solicite sua pré-autorização à Administração.'
+    ? 'Não foi possível validar um perfil corporativo ativo. Contate a Administração.'
     : searchParams.get('authError') === 'invalid_callback'
       ? 'Não foi possível validar o retorno da autenticação. Tente novamente.'
       : null
