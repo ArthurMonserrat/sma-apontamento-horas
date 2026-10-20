@@ -45,6 +45,17 @@ Nesta máquina, o binário global do Supabase CLI e o Docker não estão instala
 
 Por isso, esta entrega prepara a execução real no GitHub Actions, mas não declara homologação local concluída até o workflow ser executado com sucesso. PostgreSQL sintético continua sendo evidência diferente da homologação completa do Supabase gerenciado.
 
+## Resultado desta implementação
+
+Verificado em 20/10/2026 no worktree:
+
+- `npm test`: 70 testes de API e 405 testes frontend passaram; 1 frontend foi ignorado;
+- `npm --prefix frontend run lint`: passou;
+- `npm --prefix frontend run typecheck` e `npm run typecheck`: passaram;
+- `npm run build`: passou, incluindo geração do service worker e `404.html` da SPA;
+- `bash -n supabase/tests/local_auth_data_api.sh` e `git diff --check`: passaram;
+- `npx supabase@2.121.0 start --yes`: não executável nesta máquina porque Docker/Podman não está instalado. O workflow do GitHub Actions ainda precisa passar antes de considerar a migration homologada.
+
 O trigger confia exclusivamente em `auth.users.raw_app_meta_data.provider = 'azure'`, e só provisiona e-mails confirmados. Ele nunca usa `user_metadata.role`, não promove cargos e não associa profiles somente por e-mail. O endpoint de sessão ainda valida a identidade Azure e o profile ativo antes de liberar a aplicação.
 
 Antes de produção, configure o provedor Azure do Supabase para aceitar somente o tenant corporativo SM&A e valide a migração num ambiente de homologação. Não aplique esta migration diretamente à produção sem essa configuração e revisão operacional.
