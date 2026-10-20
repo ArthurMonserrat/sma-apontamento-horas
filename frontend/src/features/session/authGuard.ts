@@ -1,11 +1,23 @@
-import type { DemoSession } from './types'
+import type { DemoRole, DemoSession } from './types'
 
-type MsalAccountLike = { homeAccountId?: string } | null
+const DEMO_ROLES = new Set<DemoRole>(['COLLABORATOR', 'SUPERVISOR', 'DIRECTOR_ADMIN'])
+const CORPORATE_ROLE_MAP: Record<string, DemoRole> = {
+  colaborador: 'COLLABORATOR',
+  supervisor: 'SUPERVISOR',
+  diretor: 'DIRECTOR_ADMIN',
+}
 
-export function hasAuthenticatedSession(session: Pick<DemoSession, 'authProvider' | 'isDemo'> | null, account: MsalAccountLike) {
-  void account
-  // Local session objects and MSAL accounts are never proof of corporate
-  // authorization. Only the explicitly selected demo session is accepted
-  // until a server-validated Supabase profile is wired into this guard.
-  return session?.isDemo === true && (session.authProvider === 'demo' || session.authProvider === undefined)
+export function hasAuthenticatedSession(session: DemoSession | null): boolean {
+  if (session?.isDemo === true) {
+    return session.authProvider === 'demo' || session.authProvider === undefined
+  }
+
+  if (session?.authProvider !== 'supabase' || !session.corporateProfile) return false
+  const corporate = session.corporateProfile
+  const expectedRole = CORPORATE_ROLE_MAP[corporate.role]
+  return corporate.active === true
+    && Boolean(corporate.id && corporate.email && corporate.full_name)
+    && expectedRole !== undefined
+    && session.role === expectedRole
+    && DEMO_ROLES.has(session.role)
 }

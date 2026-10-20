@@ -67,6 +67,6 @@ describe('acesso ao ecossistema', () => {
   it('exibe erro seguro quando o callback retorna não autorizado', async () => {
     await act(async () => renderLogin('/?authError=unauthorized'))
 
-    expect(container.textContent).toContain('Acesso corporativo não autorizado')
+    expect(container.textContent).toContain('Não foi possível validar um perfil corporativo ativo')
   })
 })
