@@ -1,10 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const authGetUser = vi.hoisted(() => vi.fn())
+const profileQuery = vi.hoisted(() => ({
+  data: null as unknown,
+  error: null as unknown,
+  lastFilter: null as { column: string; value: string } | null,
+}))
 const from = vi.hoisted(() => vi.fn())
-const createClient = vi.hoisted(() => vi.fn((url: string) => (
-  url.includes('admin') ? { from } : { auth: { getUser: authGetUser } }
-)))
+const createClient = vi.hoisted(() => vi.fn((_url: string, _key: string, _options?: Record<string, unknown>) => ({
+  auth: { getUser: authGetUser },
+  from,
+})))
 
 vi.mock('@supabase/supabase-js', () => ({ createClient }))
 
@@ -32,6 +38,17 @@ function request(overrides: Record<string, unknown> = {}) {
   }
 }
 
+const validProfile = {
+  id: 'auth-user-1',
+  email: 'ana@example.com',
+  full_name: 'Ana Silva',
+  role: 'colaborador',
+  squad_id: null,
+  active: true,
+  created_at: '2026-10-20T12:00:00Z',
+  updated_at: '2026-10-20T12:00:00Z',
+}
+
 const originalEnvironment = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
@@ -43,10 +60,28 @@ beforeEach(() => {
   process.env.SUPABASE_URL = 'https://project.supabase.co'
   process.env.SUPABASE_ANON_KEY = 'anon-key'
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'admin-key'
-  process.env.CORPORATE_AUTHORIZATION_READY = 'true'
+  process.env.CORPORATE_AUTHORIZATION_READY = 'false'
   authGetUser.mockReset()
   from.mockReset()
   createClient.mockClear()
+  profileQuery.data = validProfile
+  profileQuery.error = null
+  profileQuery.lastFilter = null
+  from.mockImplementation(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn((column: string, value: string) => ({
+        maybeSingle: vi.fn(async () => {
+          profileQuery.lastFilter = { column, value }
+          return { data: profileQuery.data, error: profileQuery.error }
+        }),
+      })),
+    })),
+  }))
+  authGetUser.mockResolvedValue({ data: { user: {
+    id: 'auth-user-1',
+    email: 'ana@example.com',
+    app_metadata: { provider: 'azure' },
+  } }, error: null })
 })
 
 afterEach(() => {
@@ -56,61 +91,87 @@ afterEach(() => {
   }
 })
 
-describe('supabase-session fail-closed', () => {
-  it('nega requisição sem bearer token', async () => {
+describe('supabase-session corporate profile contract', () => {
+  it('returns the authenticated Azure collaborator profile, ignoring client body claims', async () => {
     const response = createResponse()
 
-    await supabaseSession(request({ headers: {} }), response)
+    await supabaseSession(request(), response)
 
-    expect(response.statusCode).toBe(401)
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toEqual({ profile: validProfile })
+    expect(profileQuery.lastFilter).toEqual({ column: 'auth_user_id', value: 'auth-user-1' })
+    expect(from).toHaveBeenCalledWith('profiles')
+    expect(createClient).toHaveBeenCalledTimes(2)
+    expect(createClient.mock.calls[0]?.[1]).toBe('anon-key')
+    expect(createClient.mock.calls[1]?.[1]).toBe('anon-key')
+    expect(createClient.mock.calls[1]?.[2]).toMatchObject({
+      global: { headers: { Authorization: 'Bearer supabase-token' } },
+    })
+  })
+
+  it.each([
+    ['diretor', 'diretor'],
+    ['supervisor', 'supervisor'],
+  ])('preserves the database role %s', async (role, expectedRole) => {
+    profileQuery.data = { ...validProfile, role }
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toEqual({ profile: { ...validProfile, role: expectedRole } })
+  })
+
+  it('returns 401 for missing or invalid bearer tokens', async () => {
+    const missing = createResponse()
+    await supabaseSession(request({ headers: {} }), missing)
+    expect(missing.statusCode).toBe(401)
+    expect(createClient).not.toHaveBeenCalled()
+
+    authGetUser.mockResolvedValueOnce({ data: { user: null }, error: new Error('invalid token') })
+    const invalid = createResponse()
+    await supabaseSession(request(), invalid)
+    expect(invalid.statusCode).toBe(401)
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('returns 405 for unsupported methods', async () => {
+    const response = createResponse()
+    await supabaseSession(request({ method: 'POST' }), response)
+    expect(response.statusCode).toBe(405)
     expect(createClient).not.toHaveBeenCalled()
   })
 
-  it('nega token Supabase inválido', async () => {
-    authGetUser.mockResolvedValue({ data: { user: null }, error: new Error('invalid token') })
-    const response = createResponse()
-
-    await supabaseSession(request(), response)
-
-    expect(response.statusCode).toBe(401)
-    expect(createClient).toHaveBeenCalledTimes(1)
-    expect(from).not.toHaveBeenCalled()
-  })
-
-  it('continua negando mesmo com flag futura, perfil ativo e cargo enviado pelo cliente', async () => {
-    authGetUser.mockResolvedValue({ data: {
-      user: {
-        id: 'auth-user-1',
-        email: 'ana@example.com',
-        identities: [{ provider: 'azure' }],
-      },
-    }, error: null })
-    from.mockReturnValue({
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: {
-        id: 'auth-user-1', email: 'ana@example.com', active: true, role: 'diretor',
-      }, error: null }) }) }),
-    })
+  it.each([
+    ['non-Azure identity', { user: { id: 'auth-user-1', app_metadata: { provider: 'email' } } }, validProfile],
+    ['missing profile', { user: { id: 'auth-user-1', app_metadata: { provider: 'azure' } } }, null],
+    ['inactive profile', { user: { id: 'auth-user-1', app_metadata: { provider: 'azure' } } }, { ...validProfile, active: false }],
+    ['unknown role', { user: { id: 'auth-user-1', app_metadata: { provider: 'azure' } } }, { ...validProfile, role: 'owner' }],
+  ])('returns 403 for %s', async (_case, user, profile) => {
+    authGetUser.mockResolvedValueOnce({ data: user, error: null })
+    profileQuery.data = profile
     const response = createResponse()
 
     await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(403)
-    expect(response.body).toEqual({ error: 'Corporate authorization is not enabled.' })
-    expect(from).not.toHaveBeenCalled()
-    expect(createClient).toHaveBeenCalledTimes(1)
   })
 
-  it('não permite que claims editáveis no body provem identidade Microsoft', async () => {
-    authGetUser.mockResolvedValue({ data: { user: { id: 'auth-user-1', user_metadata: {
-      tid: 'tenant-1', oid: 'object-1', role: 'diretor',
-    } } }, error: null })
+  it('returns 403 when profile lookup is ambiguous', async () => {
+    profileQuery.error = { code: 'PGRST116', message: 'multiple rows returned' }
     const response = createResponse()
 
-    await supabaseSession(request({ body: {
-      tid: 'tenant-1', oid: 'object-1', role: 'diretor', email: 'ana@example.com',
-    } }), response)
+    await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(403)
-    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 for unexpected profile database failures', async () => {
+    profileQuery.error = { code: 'XX000', message: 'database unavailable' }
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(500)
   })
 })

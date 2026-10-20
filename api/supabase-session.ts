@@ -1,15 +1,31 @@
 import { createClient } from '@supabase/supabase-js'
-import { isCorporateAuthorizationReady, readBearerToken } from '../server/corporateAuthPolicy.js'
+import { readBearerToken } from '../server/corporateAuthPolicy.js'
+import type { CorporateProfile } from '../frontend/src/features/session/types.js'
 import type { VercelRequest, VercelResponse } from '../server/types.js'
 
-function getSupabasePublicClient() {
+const CORPORATE_ROLES = new Set(['colaborador', 'supervisor', 'diretor'])
+
+function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL
   const anonKey = process.env.SUPABASE_ANON_KEY
   if (!url || !anonKey) throw new Error('Supabase server session configuration is incomplete.')
+  return { url, anonKey }
+}
 
-  return createClient(url, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+function isAzureAuthUser(user: { app_metadata?: Record<string, unknown> }): boolean {
+  return user.app_metadata?.provider === 'azure'
+}
+
+function isCorporateProfile(profile: unknown): profile is CorporateProfile {
+  if (!profile || typeof profile !== 'object') return false
+  const candidate = profile as Partial<CorporateProfile>
+  return typeof candidate.id === 'string'
+    && typeof candidate.email === 'string'
+    && typeof candidate.full_name === 'string'
+    && typeof candidate.role === 'string'
+    && CORPORATE_ROLES.has(candidate.role)
+    && (typeof candidate.squad_id === 'string' || candidate.squad_id === null)
+    && candidate.active === true
 }
 
 export async function supabaseSession(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -25,23 +41,47 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
   }
 
   try {
-    const supabase = getSupabasePublicClient()
-    const { data, error } = await supabase.auth.getUser(accessToken)
-    if (error || !data.user) {
+    const { url, anonKey } = getSupabaseConfig()
+    const authClient = createClient(url, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data: authData, error: authError } = await authClient.auth.getUser(accessToken)
+    const user = authData?.user
+    if (authError || !user) {
       res.status(401).json({ error: 'Invalid Supabase session.' })
       return
     }
 
-    // Stage 2 deliberately has no corporate authorization implementation yet.
-    // This remains false even when an environment flag is accidentally enabled.
-    if (!isCorporateAuthorizationReady()) {
-      res.status(403).json({ error: 'Corporate authorization is not enabled.' })
+    if (!isAzureAuthUser(user)) {
+      res.status(403).json({ error: 'A Microsoft corporate identity is required.' })
       return
     }
 
-    // The definitive identity/pre-authorization/profile read is intentionally
-    // not reachable until a reviewed implementation turns the hard gate on.
-    res.status(403).json({ error: 'Corporate authorization is not enabled.' })
+    const userClient = createClient(url, anonKey, {
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data: profile, error: profileError } = await userClient
+      .from('profiles')
+      .select('id,email,full_name,role,squad_id,active,created_at,updated_at')
+      .eq('auth_user_id', user.id)
+      .maybeSingle()
+
+    if (profileError) {
+      if (profileError.code === 'PGRST116') {
+        res.status(403).json({ error: 'Corporate profile is missing or ambiguous.' })
+        return
+      }
+      res.status(500).json({ error: 'Could not load corporate profile.' })
+      return
+    }
+
+    if (!isCorporateProfile(profile)) {
+      res.status(403).json({ error: 'No active corporate profile is available for this account.' })
+      return
+    }
+
+    res.status(200).json({ profile })
   } catch {
     res.status(500).json({ error: 'Could not validate Supabase session.' })
   }
