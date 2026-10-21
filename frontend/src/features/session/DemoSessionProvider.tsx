@@ -40,6 +40,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const modeRef = useRef<'unknown' | 'none' | 'demo' | 'corporate'>('unknown')
   const corporateRequestRef = useRef(0)
   const corporateProfileRequestsRef = useRef(new Map<string, Promise<CorporateProfile>>())
+  const failedCorporateProfileUsersRef = useRef(new Set<string>())
   const signOutInFlightRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
@@ -65,6 +66,8 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       const requestId = ++corporateRequestRef.current
       const { access_token: accessToken, user } = supabaseSession
       const requestKey = `${user.id}:${accessToken}`
+      if (failedCorporateProfileUsersRef.current.has(user.id)) return
+
       let profileRequest = corporateProfileRequestsRef.current.get(requestKey)
       if (!profileRequest) {
         profileRequest = Promise.resolve().then(() => getCorporateProfile(accessToken))
@@ -89,6 +92,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
         const corporateSession = createCorporateSession(validatedProfile)
         if (!corporateSession) throw new Error(UNAUTHORIZED_MESSAGE)
 
+        failedCorporateProfileUsersRef.current.delete(user.id)
         modeRef.current = 'corporate'
         setSession(corporateSession)
         setCorporateProfile(validatedProfile)
@@ -97,6 +101,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
         setIsLoading(false)
       } catch {
         if (cancelled || requestId !== corporateRequestRef.current || isDemoSessionActive()) return
+        failedCorporateProfileUsersRef.current.add(user.id)
         setSession(null)
         setProfile(null)
         setCorporateProfile(null)
@@ -120,7 +125,10 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
         void resolveSession(supabaseSession)
         return
       }
-      if (event === 'SIGNED_OUT') clearSession()
+      if (event === 'SIGNED_OUT') {
+        failedCorporateProfileUsersRef.current.clear()
+        clearSession()
+      }
     })
 
     const localSession = demoModeEnabled ? demoSessionService.restore() : null
@@ -216,6 +224,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
     modeRef.current = 'none'
     corporateRequestRef.current += 1
+    failedCorporateProfileUsersRef.current.clear()
     demoSessionService.signOut()
     setSession(null)
     setProfile(null)

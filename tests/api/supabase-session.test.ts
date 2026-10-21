@@ -103,9 +103,9 @@ describe('supabase-session corporate profile contract', () => {
     expect(from).toHaveBeenCalledWith('profiles')
     expect(createClient).toHaveBeenCalledTimes(2)
     expect(createClient.mock.calls[0]?.[1]).toBe('anon-key')
-    expect(createClient.mock.calls[1]?.[1]).toBe('anon-key')
+    expect(createClient.mock.calls[1]?.[1]).toBe('admin-key')
     expect(createClient.mock.calls[1]?.[2]).toMatchObject({
-      global: { headers: { Authorization: 'Bearer supabase-token' } },
+      auth: { autoRefreshToken: false, persistSession: false },
     })
   })
 

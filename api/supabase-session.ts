@@ -8,8 +8,9 @@ const CORPORATE_ROLES = new Set(['colaborador', 'supervisor', 'diretor'])
 function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL
   const anonKey = process.env.SUPABASE_ANON_KEY
-  if (!url || !anonKey) throw new Error('Supabase server session configuration is incomplete.')
-  return { url, anonKey }
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !anonKey || !serviceRoleKey) throw new Error('Supabase server session configuration is incomplete.')
+  return { url, anonKey, serviceRoleKey }
 }
 
 function isAzureAuthUser(user: { app_metadata?: Record<string, unknown> }): boolean {
@@ -41,7 +42,7 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
   }
 
   try {
-    const { url, anonKey } = getSupabaseConfig()
+    const { url, anonKey, serviceRoleKey } = getSupabaseConfig()
     const authClient = createClient(url, anonKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
@@ -57,13 +58,14 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
       return
     }
 
-    const userClient = createClient(url, anonKey, {
-      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    // The bearer is verified above; derive the row key only from that verified user.
+    // Keep the service-role credential inside this serverless function, never in VITE env.
+    const profileClient = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data: profile, error: profileError } = await userClient
+    const { data: profile, error: profileError } = await profileClient
       .from('profiles')
-      .select('id,email,full_name,role,squad_id,active,created_at,updated_at')
+      .select('id,email,full_name,role,squad_id,active')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -72,6 +74,13 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
         res.status(403).json({ error: 'Corporate profile is missing or ambiguous.' })
         return
       }
+      console.error('[api/supabase-session] Profile lookup failed:', {
+        userId: user.id,
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint,
+      })
       res.status(500).json({ error: 'Could not load corporate profile.' })
       return
     }
@@ -82,7 +91,10 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
     }
 
     res.status(200).json({ profile })
-  } catch {
+  } catch (error) {
+    console.error('[api/supabase-session] Session validation failed:', error instanceof Error
+      ? { name: error.name, message: error.message }
+      : error)
     res.status(500).json({ error: 'Could not validate Supabase session.' })
   }
 }

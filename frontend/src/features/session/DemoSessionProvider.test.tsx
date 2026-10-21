@@ -227,12 +227,20 @@ describe('DemoSessionProvider', () => {
 
   it('mantém sessão não autorizada quando a consulta do perfil falha', async () => {
     demoServiceMock.restore.mockReturnValue(null)
-    authMock.getCurrentSession.mockResolvedValue(createSupabaseSession('user-1'))
+    let emit: ((event: 'SIGNED_IN' | 'TOKEN_REFRESHED', session: ReturnType<typeof createSupabaseSession>) => void) | undefined
+    authMock.subscribe.mockImplementation((listener: typeof emit) => {
+      emit = listener
+      return { unsubscribe: vi.fn() }
+    })
+    authMock.getCurrentSession.mockResolvedValue(null)
     corporateAuthMock.getCorporateProfile.mockRejectedValue(new Error('API indisponível'))
 
     await act(async () => root.render(<DemoSessionProvider><Consumer /></DemoSessionProvider>))
+    await act(async () => emit?.('SIGNED_IN', createSupabaseSession('user-1')))
+    await act(async () => emit?.('TOKEN_REFRESHED', createSupabaseSession('user-1', 'refreshed-token-user-1')))
 
     expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('none|authenticated_unauthorized|Não foi possível validar um perfil corporativo ativo. Contate a Administração.')
+    expect(corporateAuthMock.getCorporateProfile).toHaveBeenCalledTimes(1)
   })
 
   it('limpa sessão corporativa ao receber logout Supabase', async () => {

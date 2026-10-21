@@ -34,6 +34,12 @@ describe('getCorporateProfile', () => {
     await expect(getCorporateProfile('supabase-token')).rejects.toThrow('Sessão Microsoft ausente.')
   })
 
+  it.each([401, 403, 500])('preserva o status HTTP %s para a camada de sessão encerrar novas tentativas', async (status) => {
+    fetchMock.mockResolvedValue({ ok: false, status, json: async () => ({ error: 'Falha de validação do perfil.' }) })
+
+    await expect(getCorporateProfile('supabase-token')).rejects.toMatchObject({ status })
+  })
+
   it('não consulta o endpoint sem token Supabase', async () => {
     await expect(getCorporateProfile('')).rejects.toThrow('Sessão Supabase ausente.')
     expect(fetchMock).not.toHaveBeenCalled()

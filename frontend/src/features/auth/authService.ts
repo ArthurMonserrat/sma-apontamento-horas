@@ -5,6 +5,16 @@ type ProvisionResponse = {
   error?: string
 }
 
+export class CorporateProfileRequestError extends Error {
+  readonly status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'CorporateProfileRequestError'
+    this.status = status
+  }
+}
+
 export async function provisionMicrosoftProfile(email: string, fullName: string, accessToken: string): Promise<CorporateProfile> {
   const endpoint = '/api/provision'
   if (!accessToken.trim()) throw new Error('Token Microsoft ausente para provisionamento.')
@@ -56,13 +66,14 @@ export async function getCorporateProfile(accessToken: string): Promise<Corporat
 
     const payload = await response.json().catch(() => null) as ProvisionResponse | null
     if (!response.ok || !payload?.profile) {
+      const status = response.ok ? 502 : response.status
       console.error('[authService] Falha ao carregar perfil corporativo:', {
         endpoint,
         status: response.status,
         statusText: response.statusText,
         error: payload?.error ?? 'Resposta sem perfil corporativo',
       })
-      throw new Error(payload?.error ?? 'O perfil corporativo não foi retornado pelo servidor.')
+      throw new CorporateProfileRequestError(status, payload?.error ?? 'O perfil corporativo não foi retornado pelo servidor.')
     }
 
     return payload.profile
