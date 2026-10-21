@@ -99,7 +99,7 @@ describe('supabase-session corporate profile contract', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.body).toEqual({ profile: validProfile })
-    expect(profileQuery.lastFilter).toEqual({ column: 'auth_user_id', value: 'auth-user-1' })
+    expect(profileQuery.lastFilter).toEqual({ column: 'id', value: 'auth-user-1' })
     expect(from).toHaveBeenCalledWith('profiles')
     expect(createClient).toHaveBeenCalledTimes(2)
     expect(createClient.mock.calls[0]?.[1]).toBe('anon-key')

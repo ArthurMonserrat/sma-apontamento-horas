@@ -64,7 +64,7 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
     const { data: profile, error: profileError } = await userClient
       .from('profiles')
       .select('id,email,full_name,role,squad_id,active,created_at,updated_at')
-      .eq('auth_user_id', user.id)
+      .eq('id', user.id)
       .maybeSingle()
 
     if (profileError) {
