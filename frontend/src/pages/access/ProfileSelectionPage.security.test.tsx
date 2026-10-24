@@ -18,7 +18,6 @@ describe('seleção de perfil após autenticação corporativa', () => {
               email: 'ana@example.com',
               full_name: 'Ana Silva',
               role: 'supervisor',
-              squad_id: null,
               active: true,
             },
             isLoading: false,

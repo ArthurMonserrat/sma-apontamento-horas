@@ -5,6 +5,7 @@ const profileQuery = vi.hoisted(() => ({
   data: null as unknown,
   error: null as unknown,
   lastFilter: null as { column: string; value: string } | null,
+  selected: null as string | null,
 }))
 const from = vi.hoisted(() => vi.fn())
 const createClient = vi.hoisted(() => vi.fn((_url: string, _key: string, _options?: Record<string, unknown>) => ({
@@ -43,39 +44,44 @@ const validProfile = {
   email: 'ana@example.com',
   full_name: 'Ana Silva',
   role: 'colaborador',
-  squad_id: null,
   active: true,
-  created_at: '2026-10-20T12:00:00Z',
-  updated_at: '2026-10-20T12:00:00Z',
 }
 
 const originalEnvironment = {
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  CORPORATE_AUTHORIZATION_READY: process.env.CORPORATE_AUTHORIZATION_READY,
+  VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL,
+  VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+  SESSION_DEBUG: process.env.SESSION_DEBUG,
 }
 
 beforeEach(() => {
   process.env.SUPABASE_URL = 'https://project.supabase.co'
   process.env.SUPABASE_ANON_KEY = 'anon-key'
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'admin-key'
-  process.env.CORPORATE_AUTHORIZATION_READY = 'false'
+  delete process.env.VITE_SUPABASE_URL
+  delete process.env.VITE_SUPABASE_ANON_KEY
+  delete process.env.SESSION_DEBUG
   authGetUser.mockReset()
   from.mockReset()
   createClient.mockClear()
   profileQuery.data = validProfile
   profileQuery.error = null
   profileQuery.lastFilter = null
+  profileQuery.selected = null
   from.mockImplementation(() => ({
-    select: vi.fn(() => ({
+    select: vi.fn((columns: string) => {
+      profileQuery.selected = columns
+      return {
       eq: vi.fn((column: string, value: string) => ({
         maybeSingle: vi.fn(async () => {
           profileQuery.lastFilter = { column, value }
           return { data: profileQuery.data, error: profileQuery.error }
         }),
       })),
-    })),
+      }
+    }),
   }))
   authGetUser.mockResolvedValue({ data: { user: {
     id: 'auth-user-1',
@@ -100,6 +106,7 @@ describe('supabase-session corporate profile contract', () => {
     expect(response.statusCode).toBe(200)
     expect(response.body).toEqual({ profile: validProfile })
     expect(profileQuery.lastFilter).toEqual({ column: 'id', value: 'auth-user-1' })
+    expect(profileQuery.selected).toBe('id,email,full_name,role,active')
     expect(from).toHaveBeenCalledWith('profiles')
     expect(createClient).toHaveBeenCalledTimes(2)
     expect(createClient.mock.calls[0]?.[1]).toBe('anon-key')
@@ -166,12 +173,90 @@ describe('supabase-session corporate profile contract', () => {
     expect(response.statusCode).toBe(403)
   })
 
-  it('returns 500 for unexpected profile database failures', async () => {
-    profileQuery.error = { code: 'XX000', message: 'database unavailable' }
+  it('returns safe diagnostics for unexpected profile database failures', async () => {
+    profileQuery.error = {
+      code: 'XX000',
+      message: 'secret=should-not-escape; Bearer supabase-token',
+      details: 'admin-key should-not-escape',
+      hint: 'supabase-token should-not-escape',
+    }
+    const response = createResponse()
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(500)
+    expect(response.body).toMatchObject({ stage: 'profile_query', code: 'XX000' })
+    expect((response.body as { requestId?: string }).requestId).toEqual(expect.any(String))
+    expect(response.body).not.toHaveProperty('message')
+    expect(response.body).not.toHaveProperty('hint')
+    expect(JSON.stringify(response.body)).not.toContain('should-not-escape')
+    const logs = JSON.stringify(errorLog.mock.calls)
+    expect(logs).not.toContain('supabase-token')
+    expect(logs).not.toContain('admin-key')
+    expect(logs).toContain('should-not-escape')
+    errorLog.mockRestore()
+  })
+
+  it('logs unexpected exception messages only after redacting bearer and configured keys', async () => {
+    from.mockImplementationOnce(() => {
+      throw new Error('request failed for Bearer supabase-token using admin-key')
+    })
+    const response = createResponse()
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(500)
+    expect(response.body).not.toHaveProperty('message')
+    const logs = JSON.stringify(errorLog.mock.calls)
+    expect(logs).not.toContain('supabase-token')
+    expect(logs).not.toContain('admin-key')
+    expect(logs).toContain('request failed')
+    errorLog.mockRestore()
+  })
+
+  it('accepts the production profile shape without auth_user_id or squad_id', async () => {
+    profileQuery.data = validProfile
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toEqual({ profile: validProfile })
+  })
+
+  it('does not request or return columns outside the CorporateProfile contract', async () => {
+    profileQuery.data = { ...validProfile, auth_user_id: 'auth-user-1', squad_id: 'squad-1', microsoft_object_id: 'oid' }
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.body).toEqual({ profile: validProfile })
+    expect(profileQuery.selected).toBe('id,email,full_name,role,active')
+  })
+
+  it('returns 500 with stage=config when server env vars are missing', async () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY
     const response = createResponse()
 
     await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(500)
+    expect(response.body).toMatchObject({ stage: 'config' })
+  })
+
+  it('does not accept public VITE-prefixed values as server configuration', async () => {
+    delete process.env.SUPABASE_URL
+    delete process.env.SUPABASE_ANON_KEY
+    process.env.VITE_SUPABASE_URL = 'https://public.supabase.co'
+    process.env.VITE_SUPABASE_ANON_KEY = 'public-anon-key'
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(500)
+    expect(response.body).toMatchObject({ stage: 'config' })
+    expect(JSON.stringify(response.body)).not.toContain('public-anon-key')
   })
 })

@@ -138,7 +138,7 @@ begin
   select id, role, full_name, active, squad_id
     into jit_profile_id, jit_role, jit_name, jit_active, jit_squad
   from public.profiles
-  where auth_user_id = current_setting('test.jit_user_id')::uuid;
+  where id = current_setting('test.jit_user_id')::uuid;
   if jit_profile_id is distinct from current_setting('test.jit_user_id')::uuid
      or jit_role is distinct from 'colaborador'::public.app_role
      or jit_name is distinct from 'Synthetic Azure User'
@@ -147,21 +147,21 @@ begin
     raise exception 'Azure profile does not satisfy the fixed collaborator profile contract';
   end if;
 
-  select role into director_role from public.profiles where auth_user_id = current_setting('test.director_id')::uuid;
+  select role into director_role from public.profiles where id = current_setting('test.director_id')::uuid;
   if director_role is distinct from 'diretor'::public.app_role then
     raise exception 'existing director role was modified by idempotent provisioning';
   end if;
 
-  select count(*) into collision_count from public.profiles where auth_user_id = current_setting('test.collision_azure_id')::uuid;
+  select count(*) into collision_count from public.profiles where id = current_setting('test.collision_azure_id')::uuid;
   if collision_count <> 0 then raise exception 'email collision linked Azure identity to a legacy profile'; end if;
   if not exists (
     select 1 from private.corporate_provisioning_audit
     where auth_user_id = current_setting('test.collision_azure_id')::uuid
       and outcome = 'denied'
-      and reason = 'profile_email_or_id_collision'
+      and reason = 'profile_email_collision'
   ) then raise exception 'profile collision was not audited'; end if;
 
-  if exists (select 1 from public.profiles where auth_user_id = current_setting('test.non_azure_user_id')::uuid) then
+  if exists (select 1 from public.profiles where id = current_setting('test.non_azure_user_id')::uuid) then
     raise exception 'non-Azure Auth user received a profile';
   end if;
 end
@@ -189,23 +189,29 @@ expected="$(jq -cn --arg id "$COLLAB_ID" '[$id]')"
 assert_ids 'collaborator own entries' "$status" "$expected"
 
 status="$(request_status GET "$API_URL/rest/v1/time_entries?select=profile_id&order=profile_id" "$SUPERVISOR_TOKEN")"
-expected="$(jq -cn --arg id "$COLLAB_ID" '[$id]')"
-assert_ids 'supervisor squad entries' "$status" "$expected"
+expected='[]'
+assert_ids 'supervisor entries fail closed without a profile/team relationship' "$status" "$expected"
 
 status="$(request_status GET "$API_URL/rest/v1/time_entries?select=profile_id" "$DIRECTOR_TOKEN")"
 [[ "$status" =~ ^2 ]] || { echo "director read failed: HTTP $status" >&2; exit 1; }
 [[ "$(jq 'length' "$tmp_dir/response")" -eq 2 ]] || { echo 'director did not see both synthetic entries' >&2; exit 1; }
 
-for token in "$INACTIVE_TOKEN" "$UNLINKED_TOKEN"; do
-  status="$(request_status GET "$API_URL/rest/v1/profiles?select=id" "$token")"
-  [[ "$status" =~ ^2 ]] || { echo "unlinked/inactive profile request failed: HTTP $status" >&2; exit 1; }
-  [[ "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'unlinked or inactive user received a profile' >&2; exit 1; }
-done
+status="$(request_status GET "$API_URL/rest/v1/profiles?select=id" "$INACTIVE_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "inactive profile request failed: HTTP $status" >&2; exit 1; }
+jq -e --arg id "$INACTIVE_ID" 'length == 1 and .[0].id == $id' "$tmp_dir/response" >/dev/null || {
+  echo 'inactive user must see only their own profile row; session authorization rejects inactive profiles' >&2
+  cat "$tmp_dir/response" >&2
+  exit 1
+}
 
-status="$(request_status GET "$API_URL/rest/v1/profiles?select=id,auth_user_id,email,full_name,role,active,squad_id" "$JIT_AZURE_TOKEN")"
+status="$(request_status GET "$API_URL/rest/v1/profiles?select=id" "$UNLINKED_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "unlinked profile request failed: HTTP $status" >&2; exit 1; }
+[[ "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'user without a profile received a profile row' >&2; exit 1; }
+
+status="$(request_status GET "$API_URL/rest/v1/profiles?select=id,email,full_name,role,active" "$JIT_AZURE_TOKEN")"
 [[ "$status" =~ ^2 ]] || { echo "JIT collaborator profile read failed: HTTP $status" >&2; exit 1; }
 [[ "$(jq 'length' "$tmp_dir/response")" -eq 1 ]] || { echo 'JIT collaborator cannot read exactly one own profile' >&2; exit 1; }
-jq -e --arg id "$JIT_AZURE_ID" '.[0].id == $id and .[0].auth_user_id == $id and .[0].role == "colaborador" and .[0].active == true and .[0].squad_id == null' "$tmp_dir/response" >/dev/null || {
+jq -e --arg id "$JIT_AZURE_ID" '.[0].id == $id and .[0].role == "colaborador" and .[0].active == true' "$tmp_dir/response" >/dev/null || {
   echo 'JIT profile fields do not match the collaborator contract' >&2
   cat "$tmp_dir/response" >&2
   exit 1
@@ -221,8 +227,8 @@ status="$(request_status GET "$API_URL/rest/v1/profiles?select=id")"
 status="$(request_status GET "$API_URL/rest/v1/access_preapprovals?select=email" "$COLLAB_TOKEN")"
 [[ ! "$status" =~ ^2 ]] || { echo 'authenticated user unexpectedly read access_preapprovals' >&2; exit 1; }
 
-status="$(request_status PATCH "$API_URL/rest/v1/profiles?id=eq.$COLLAB_ID" "$COLLAB_TOKEN" '{"role":"diretor","auth_user_id":"00000000-0000-0000-0000-000000000099"}')"
-[[ ! "$status" =~ ^2 ]] || { echo 'direct role/auth_user_id update unexpectedly succeeded' >&2; exit 1; }
+status="$(request_status PATCH "$API_URL/rest/v1/profiles?id=eq.$COLLAB_ID" "$COLLAB_TOKEN" '{"role":"diretor"}')"
+[[ ! "$status" =~ ^2 ]] || { echo 'direct role update unexpectedly succeeded' >&2; exit 1; }
 
 status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"00000000-0000-0000-0000-000000000099","date":"2026-01-06","start_time":"08:00","end_time":"09:00","duration_minutes":60,"project_code":"FORBIDDEN","status":"pending"}')"
 [[ ! "$status" =~ ^2 ]] || { echo 'cross-profile time entry insert unexpectedly succeeded' >&2; exit 1; }

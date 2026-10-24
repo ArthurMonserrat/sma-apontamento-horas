@@ -13,7 +13,6 @@ function corporateSession(role: CorporateProfile['role'], active = true): DemoSe
     email: 'user@example.com',
     full_name: 'Pessoa Usuária',
     role,
-    squad_id: null,
     active,
   }
   return {

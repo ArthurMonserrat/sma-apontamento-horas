@@ -73,7 +73,6 @@ function createProfile(id: string, role = 'colaborador', active = true) {
     email: `${id}@example.com`,
     full_name: `Nome ${id}`,
     role,
-    squad_id: null,
     active,
   }
 }

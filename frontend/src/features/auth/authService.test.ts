@@ -6,7 +6,6 @@ const existingProfile = {
   email: 'ana@example.com',
   full_name: 'Ana Silva',
   role: 'colaborador' as const,
-  squad_id: null,
   active: true,
 }
 

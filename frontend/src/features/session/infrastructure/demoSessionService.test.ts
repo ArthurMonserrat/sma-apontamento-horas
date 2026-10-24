@@ -149,7 +149,7 @@ describe('LocalDemoSessionService', () => {
       name: 'Usuário Microsoft',
       email: 'user@example.com',
       role: 'DIRECTOR_ADMIN',
-      corporateProfile: { id: 'profile-1', email: 'user@example.com', full_name: 'Diretor', role: 'diretor', squad_id: null, active: true },
+      corporateProfile: { id: 'profile-1', email: 'user@example.com', full_name: 'Diretor', role: 'diretor', active: true },
     })).toBeNull()
     expect(storage.getItem(SESSION_KEY)).toBeNull()
   })

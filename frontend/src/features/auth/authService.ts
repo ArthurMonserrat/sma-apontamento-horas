@@ -3,15 +3,29 @@ import type { CorporateProfile, DemoRole } from '../session/types'
 type ProvisionResponse = {
   profile?: CorporateProfile
   error?: string
+  /** Campos de diagnóstico do BFF /api/supabase-session. */
+  requestId?: string
+  stage?: string
+  code?: string | null
+  reason?: string
+}
+
+export type CorporateProfileErrorDiagnostics = {
+  requestId?: string
+  stage?: string
+  code?: string | null
+  reason?: string
 }
 
 export class CorporateProfileRequestError extends Error {
   readonly status: number
+  readonly diagnostics: CorporateProfileErrorDiagnostics
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, diagnostics: CorporateProfileErrorDiagnostics = {}) {
     super(message)
     this.name = 'CorporateProfileRequestError'
     this.status = status
+    this.diagnostics = diagnostics
   }
 }
 
@@ -67,17 +81,30 @@ export async function getCorporateProfile(accessToken: string): Promise<Corporat
     const payload = await response.json().catch(() => null) as ProvisionResponse | null
     if (!response.ok || !payload?.profile) {
       const status = response.ok ? 502 : response.status
+      const diagnostics: CorporateProfileErrorDiagnostics = {
+        requestId: payload?.requestId ?? response.headers?.get?.('x-request-id') ?? undefined,
+        stage: payload?.stage,
+        code: payload?.code,
+        reason: payload?.reason,
+      }
       console.error('[authService] Falha ao carregar perfil corporativo:', {
         endpoint,
         status: response.status,
         statusText: response.statusText,
         error: payload?.error ?? 'Resposta sem perfil corporativo',
+        ...diagnostics,
       })
-      throw new CorporateProfileRequestError(status, payload?.error ?? 'O perfil corporativo não foi retornado pelo servidor.')
+      throw new CorporateProfileRequestError(
+        status,
+        payload?.error ?? 'O perfil corporativo não foi retornado pelo servidor.',
+        diagnostics,
+      )
     }
 
     return payload.profile
   } catch (error) {
+    // Erro HTTP já foi registrado acima com requestId/stage; não duplicar o log.
+    if (error instanceof CorporateProfileRequestError) throw error
     console.error('[authService] Erro de rede ou resposta inválida:', {
       endpoint,
       error: error instanceof Error ? { name: error.name, message: error.message } : error,

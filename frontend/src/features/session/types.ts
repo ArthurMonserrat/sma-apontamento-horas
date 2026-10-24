@@ -9,7 +9,6 @@ export type CorporateProfile = {
   email: string
   full_name: string
   role: CorporateRole
-  squad_id: string | null
   active: boolean
   created_at?: string
   updated_at?: string
