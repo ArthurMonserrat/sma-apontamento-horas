@@ -1,14 +1,19 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { getEcosystemModulePath, OAUTH_DESTINATION_KEY, type EcosystemModule } from './ecosystemModules'
 import { startCorporateOAuth } from '../../features/auth/infrastructure/supabaseSessionService'
 import { useSession } from '../../features/session/useSession'
+import { hasAuthenticatedSession } from '../../features/session/authGuard'
+import { getDemoHomePath } from '../../features/session/routePolicy'
 
 export function EcosystemLogin() {
-  const { isLoading, authError } = useSession()
+  const { session, isLoading, authError } = useSession()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  // Sessão corporativa já validada pelo BFF: a área vem do cargo do perfil, nunca do cliente.
+  const authorizedHome = session && hasAuthenticatedSession(session) ? getDemoHomePath(session.role) : null
   const callbackError = searchParams.get('authError') === 'unauthorized'
     ? 'Não foi possível validar um perfil corporativo ativo. Contate a Administração.'
     : searchParams.get('authError') === 'invalid_callback'
@@ -21,6 +26,10 @@ export function EcosystemLogin() {
   async function handleAccess(module: EcosystemModule) {
     if (isAuthenticating) return
     setError(null)
+    if (module === 'BANCO_1' && authorizedHome) {
+      navigate(authorizedHome, { replace: true })
+      return
+    }
     beginAuthentication?.()
     setIsAuthenticating(true)
 
@@ -49,6 +58,11 @@ export function EcosystemLogin() {
 
   const busy = isAuthenticating
   const buttonLabel = busy ? 'Processando autenticação...' : 'Acessar Banco'
+
+  // Retorno do OAuth (/?modulo=banco1): assim que o perfil é validado, entra na área do cargo.
+  if (!isLoading && authorizedHome && searchParams.get('modulo') === 'banco1') {
+    return <Navigate to={authorizedHome} replace />
+  }
 
   if (isLoading) {
     return (
