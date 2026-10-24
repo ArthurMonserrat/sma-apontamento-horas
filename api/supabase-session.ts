@@ -45,6 +45,19 @@ function isCorporateRole(role: string): role is CorporateProfile['role'] {
   return CORPORATE_ROLES.has(role)
 }
 
+function redactLogText(value: string | null | undefined, accessToken: string): string | undefined {
+  if (value == null) return undefined
+  let redacted = value.replace(/\bBearer\s+\S+/gi, 'Bearer [REDACTED]')
+  for (const secret of [
+    accessToken,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.SUPABASE_ANON_KEY,
+  ]) {
+    if (secret) redacted = redacted.replaceAll(secret, '[REDACTED]')
+  }
+  return redacted
+}
+
 /**
  * Converte a linha do banco no contrato CorporateProfile.
  * Recebe apenas os campos suportados pelo contrato corporativo, sem propagar
@@ -137,6 +150,9 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
         requestId,
         userId,
         code: profileError.code,
+        message: redactLogText(profileError.message, accessToken),
+        details: redactLogText(profileError.details, accessToken),
+        hint: redactLogText(profileError.hint, accessToken),
       })
       res.status(500).json({
         error: 'Could not load corporate profile.',
@@ -173,12 +189,14 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
       stage,
       userId,
       errorName,
+      message: redactLogText(error instanceof Error ? error.message : String(error), accessToken),
       ...(errorCode ? { code: errorCode } : {}),
     })
     res.status(500).json({
       error: 'Could not validate Supabase session.',
       requestId,
       stage,
+      code: errorCode ?? null,
     })
   }
 }

@@ -174,7 +174,12 @@ describe('supabase-session corporate profile contract', () => {
   })
 
   it('returns safe diagnostics for unexpected profile database failures', async () => {
-    profileQuery.error = { code: 'XX000', message: 'secret=should-not-escape', hint: 'supabase-token should-not-escape' }
+    profileQuery.error = {
+      code: 'XX000',
+      message: 'secret=should-not-escape; Bearer supabase-token',
+      details: 'admin-key should-not-escape',
+      hint: 'supabase-token should-not-escape',
+    }
     const response = createResponse()
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 
@@ -186,7 +191,28 @@ describe('supabase-session corporate profile contract', () => {
     expect(response.body).not.toHaveProperty('message')
     expect(response.body).not.toHaveProperty('hint')
     expect(JSON.stringify(response.body)).not.toContain('should-not-escape')
-    expect(JSON.stringify(errorLog.mock.calls)).not.toContain('supabase-token')
+    const logs = JSON.stringify(errorLog.mock.calls)
+    expect(logs).not.toContain('supabase-token')
+    expect(logs).not.toContain('admin-key')
+    expect(logs).toContain('should-not-escape')
+    errorLog.mockRestore()
+  })
+
+  it('logs unexpected exception messages only after redacting bearer and configured keys', async () => {
+    from.mockImplementationOnce(() => {
+      throw new Error('request failed for Bearer supabase-token using admin-key')
+    })
+    const response = createResponse()
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(500)
+    expect(response.body).not.toHaveProperty('message')
+    const logs = JSON.stringify(errorLog.mock.calls)
+    expect(logs).not.toContain('supabase-token')
+    expect(logs).not.toContain('admin-key')
+    expect(logs).toContain('request failed')
     errorLog.mockRestore()
   })
 
