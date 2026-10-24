@@ -54,6 +54,6 @@ describe('ícones das navegações laterais', () => {
   it('mostra ícones semânticos em todas as abas da Direção', () => {
     const names = iconNames(renderArea('DIRECTOR_ADMIN', '/administracao'))
 
-    expect(names).toEqual(['dashboard', 'users', 'bar-chart', 'bell'])
+    expect(names).toEqual(['dashboard', 'users', 'bar-chart', 'bell', 'user'])
   })
 })

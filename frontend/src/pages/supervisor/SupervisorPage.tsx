@@ -15,6 +15,8 @@ import type { SupervisorPendingEntry, SupervisorTimeOffRequest } from '../../fea
 import { useSupervisorDashboard } from '../../features/supervisor/useSupervisorDashboard'
 import { ApprovalDeadlineBanner } from '../../features/supervisor/ApprovalDeadlineBanner'
 import { useSession } from '../../features/session/useSession'
+import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
+import { CorporateIdentityPanel } from '../../features/profile/CorporateIdentityPanel'
 import { formatMinutes } from '../../features/time-entries/domain'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
 import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
@@ -119,7 +121,7 @@ function SupervisorSidebar({ activeView, profile, onChange, onSignOut }: {
     >
       <section className="border-b border-[var(--color-sidebar-border)] p-4" aria-label="Perfil atual do supervisor">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[var(--color-sidebar-border)] bg-[var(--color-sidebar-surface)] text-sm font-extrabold">JA</span>
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[var(--color-sidebar-border)] bg-[var(--color-sidebar-surface)] text-sm font-extrabold">{profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase('pt-BR') || '?'}</span>
           <div className="min-w-0">
             <p className="text-sm font-extrabold leading-tight">{profile.name}</p>
             <p className="mt-0.5 text-xs leading-tight text-[var(--color-sidebar-text-muted)]">{profile.jobTitle}</p>
@@ -282,6 +284,11 @@ export function SupervisorPage() {
   const [appliedRange, setAppliedRange] = useState(monthRange)
   const [rangeError, setRangeError] = useState<string | null>(null)
   const [supervisorProfile, setSupervisorProfile] = useState<SupervisorProfile>(() => readSupervisorProfile())
+  // Login Microsoft: nome, e-mail e cargo vêm da conta corporativa, não do perfil local de demonstração.
+  const corporateIdentity = useCorporateIdentity()
+  const displayedProfile: SupervisorProfile = corporateIdentity
+    ? { name: corporateIdentity.fullName, email: corporateIdentity.email, jobTitle: corporateIdentity.roleLabel, squadName: 'Não definida' }
+    : supervisorProfile
   const [collaboratorFilter, setCollaboratorFilter] = useState('Todos')
   const [statusFilter, setStatusFilter] = useState<EntryStatusFilter>('ALL')
   const [filtroProjeto, setFiltroProjeto] = useState('Todos')
@@ -495,13 +502,13 @@ export function SupervisorPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-            <span className="hidden text-right text-xs font-semibold text-[var(--color-text-muted)] md:block">{supervisorProfile.name}</span>
+            <span className="hidden text-right text-xs font-semibold text-[var(--color-text-muted)] md:block">{displayedProfile.name}</span>
           <ThemeToggle />
         </div>
       </header>
 
       <div data-layout-body className="flex min-w-0">
-        <SupervisorSidebar activeView={activeView} profile={supervisorProfile} onChange={changeActiveView} onSignOut={exitDemo} />
+        <SupervisorSidebar activeView={activeView} profile={displayedProfile} onChange={changeActiveView} onSignOut={exitDemo} />
 
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
@@ -663,7 +670,12 @@ export function SupervisorPage() {
             )}
 
             {activeView === 'history' && <HistoryView entries={dashboard.entries} />}
-            {activeView === 'profile' && <SupervisorProfileView profile={supervisorProfile} onSave={updateSupervisorProfile} onStartTour={() => { changeActiveView('entries'); startTour() }} />}
+            {activeView === 'profile' && (corporateIdentity ? (
+              <div className="space-y-4">
+                <div className="flex justify-end"><button type="button" onClick={() => { changeActiveView('entries'); startTour() }} className="ui-button-secondary">Ver Tutorial do Sistema</button></div>
+                <CorporateIdentityPanel identity={corporateIdentity} />
+              </div>
+            ) : <SupervisorProfileView profile={supervisorProfile} onSave={updateSupervisorProfile} onStartTour={() => { changeActiveView('entries'); startTour() }} />)}
             {activeView === 'announcements' && <AvisosPage embedded />}
             </div>
           </div>

@@ -8,6 +8,8 @@ import { WorkloadHistory } from '../../features/workloads/WorkloadHistory'
 import { WorkloadRequestForm, type WorkloadFormField } from '../../features/workloads/WorkloadRequestForm'
 import { getCorporateToday } from '../../shared/lib/date'
 import { useTour } from '../../app/providers/tourContext'
+import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
+import { CorporateIdentityPanel } from '../../features/profile/CorporateIdentityPanel'
 
 type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; justification: string }
 type ProfileForm = { name: string; email: string; jobTitle: string; activeSquadId: string }
@@ -30,6 +32,10 @@ export function PerfilPage() {
   const navigate = useNavigate()
   const { startTour } = useTour()
   const profileState = useProfile()
+  // Login Microsoft: dados pessoais vêm da conta corporativa. Os dados profissionais locais
+  // (assinatura, carga horária) só aparecem quando existirem para este usuário.
+  const corporateIdentity = useCorporateIdentity()
+  const showLocalProfileError = Boolean(profileState.error) && !corporateIdentity
   const [form, setForm] = useState<WorkloadForm>(initialForm)
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
   const [isEditing, setEditing] = useState(false)
@@ -139,8 +145,9 @@ export function PerfilPage() {
 
   return (
     <PageContainer title="Meu perfil" description="Informações profissionais, alocação e carga horária da sessão corporativa.">
+      {corporateIdentity && <CorporateIdentityPanel identity={corporateIdentity} />}
       {profileState.isLoading && <p aria-live="polite" className="text-sm ui-text-muted">Carregando perfil profissional...</p>}
-      {profileState.error && <div role="alert" className="ui-alert-danger rounded-xl p-4 text-sm font-semibold"><p>{profileState.error}</p><button type="button" onClick={() => void profileState.reload()} className="mt-2 underline">Tentar novamente</button></div>}
+      {showLocalProfileError && <div role="alert" className="ui-alert-danger rounded-xl p-4 text-sm font-semibold"><p>{profileState.error}</p><button type="button" onClick={() => void profileState.reload()} className="mt-2 underline">Tentar novamente</button></div>}
       {operationError && <p role="alert" className="ui-alert-danger rounded-xl p-4 text-sm font-semibold">{operationError}</p>}
       {feedback && <p aria-live="polite" className="rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{feedback}</p>}
       {profileState.data && !profileState.isLoading && (
