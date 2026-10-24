@@ -88,6 +88,17 @@ describe('profiles.id Azure JIT reconciliation migration contract', () => {
     expect(sql).toMatch(/drop function if exists private\.current_profile_role\(\)[\s\S]*create function private\.current_profile_role\(\)[\s\S]*returns text/)
   })
 
+  it('guards optional workforce policy drops and creation by table existence', () => {
+    const sql = readMigration()
+
+    expect(sql).toMatch(/if to_regclass\('public\.squads'\) is not null then[\s\S]*drop policy if exists squads_select_member/)
+    expect(sql).toMatch(/if to_regclass\('public\.workloads'\) is not null then[\s\S]*create policy workloads_select_own/)
+    expect(sql).toMatch(/if to_regclass\('public\.time_entries'\) is not null then[\s\S]*create policy time_entries_select_own/)
+    expect(sql).toMatch(/if to_regclass\('public\.daily_approvals'\) is not null then[\s\S]*create policy daily_approvals_select_own/)
+    expect(sql).toMatch(/if to_regclass\('public\.daily_approvals'\) is not null then[\s\S]*create policy time_entries_update_own_unapproved_day/)
+    expect(sql).not.toMatch(/drop policy if exists (?:squads|workloads|time_entries|daily_approvals)_[\w]+ on public\.(?:squads|workloads|time_entries|daily_approvals);/)
+  })
+
   it('suppresses any trigger-level provisioning exception so auth.users insertion succeeds', () => {
     const sql = readMigration()
     const triggerFunction = sql.slice(sql.indexOf('create or replace function private.handle_azure_auth_user_created()'))

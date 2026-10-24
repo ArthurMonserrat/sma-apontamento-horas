@@ -187,20 +187,32 @@ revoke all privileges on table private.corporate_provisioning_audit from public,
 drop policy if exists profiles_select_own on public.profiles;
 drop policy if exists profiles_select_supervisor_team on public.profiles;
 drop policy if exists profiles_select_director on public.profiles;
-drop policy if exists squads_select_member on public.squads;
-drop policy if exists workloads_select_own on public.workloads;
-drop policy if exists workloads_select_supervisor_team on public.workloads;
-drop policy if exists workloads_select_director on public.workloads;
-drop policy if exists time_entries_select_own on public.time_entries;
-drop policy if exists time_entries_insert_own on public.time_entries;
-drop policy if exists time_entries_update_own_unapproved_day on public.time_entries;
-drop policy if exists time_entries_select_supervisor_team on public.time_entries;
-drop policy if exists time_entries_update_supervisor_team on public.time_entries;
-drop policy if exists time_entries_select_director on public.time_entries;
-drop policy if exists daily_approvals_select_own on public.daily_approvals;
-drop policy if exists daily_approvals_select_supervisor_team on public.daily_approvals;
-drop policy if exists daily_approvals_insert_supervisor_team on public.daily_approvals;
-drop policy if exists daily_approvals_select_director on public.daily_approvals;
+do $$
+begin
+  if to_regclass('public.squads') is not null then
+    execute 'drop policy if exists squads_select_member on public.squads';
+  end if;
+  if to_regclass('public.workloads') is not null then
+    execute 'drop policy if exists workloads_select_own on public.workloads';
+    execute 'drop policy if exists workloads_select_supervisor_team on public.workloads';
+    execute 'drop policy if exists workloads_select_director on public.workloads';
+  end if;
+  if to_regclass('public.time_entries') is not null then
+    execute 'drop policy if exists time_entries_select_own on public.time_entries';
+    execute 'drop policy if exists time_entries_insert_own on public.time_entries';
+    execute 'drop policy if exists time_entries_update_own_unapproved_day on public.time_entries';
+    execute 'drop policy if exists time_entries_select_supervisor_team on public.time_entries';
+    execute 'drop policy if exists time_entries_update_supervisor_team on public.time_entries';
+    execute 'drop policy if exists time_entries_select_director on public.time_entries';
+  end if;
+  if to_regclass('public.daily_approvals') is not null then
+    execute 'drop policy if exists daily_approvals_select_own on public.daily_approvals';
+    execute 'drop policy if exists daily_approvals_select_supervisor_team on public.daily_approvals';
+    execute 'drop policy if exists daily_approvals_insert_supervisor_team on public.daily_approvals';
+    execute 'drop policy if exists daily_approvals_select_director on public.daily_approvals';
+  end if;
+end;
+$$;
 
 create or replace function private.current_profile_id()
 returns uuid
@@ -412,45 +424,96 @@ $$;
 create policy profiles_select_own on public.profiles for select to authenticated
 using (id = auth.uid());
 
-create policy squads_select_member on public.squads for select to authenticated
-using (id = private.current_profile_squad_id() or supervisor_id = private.current_profile_id() or private.current_profile_role() = 'diretor');
-
-create policy workloads_select_own on public.workloads for select to authenticated
-using (profile_id = private.current_profile_id());
-create policy workloads_select_supervisor_team on public.workloads for select to authenticated
-using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id));
-create policy workloads_select_director on public.workloads for select to authenticated
-using (private.current_profile_role() = 'diretor');
-
-create policy time_entries_select_own on public.time_entries for select to authenticated
-using (profile_id = private.current_profile_id());
-create policy time_entries_insert_own on public.time_entries for insert to authenticated
-with check (profile_id = private.current_profile_id() and status = 'pending');
-create policy time_entries_update_own_unapproved_day on public.time_entries for update to authenticated
-using (profile_id = private.current_profile_id() and not exists (
-  select 1 from public.daily_approvals as a
-  where a.profile_id = time_entries.profile_id and a.date = time_entries.date and a.status = 'approved'
-))
-with check (profile_id = private.current_profile_id() and status <> 'approved' and not exists (
-  select 1 from public.daily_approvals as a
-  where a.profile_id = time_entries.profile_id and a.date = time_entries.date and a.status = 'approved'
-));
-create policy time_entries_select_supervisor_team on public.time_entries for select to authenticated
-using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id));
-create policy time_entries_update_supervisor_team on public.time_entries for update to authenticated
-using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id))
-with check (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id));
-create policy time_entries_select_director on public.time_entries for select to authenticated
-using (private.current_profile_role() = 'diretor');
-
-create policy daily_approvals_select_own on public.daily_approvals for select to authenticated
-using (profile_id = private.current_profile_id());
-create policy daily_approvals_select_supervisor_team on public.daily_approvals for select to authenticated
-using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id));
-create policy daily_approvals_insert_supervisor_team on public.daily_approvals for insert to authenticated
-with check (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id) and supervisor_id = private.current_profile_id());
-create policy daily_approvals_select_director on public.daily_approvals for select to authenticated
-using (private.current_profile_role() = 'diretor');
+-- Tables below only exist if the legacy workforce schema was applied.
+-- Recreate their policies only when the table is present; otherwise skip.
+do $$
+begin
+  if to_regclass('public.squads') is not null then
+    execute $policy$
+      create policy squads_select_member on public.squads for select to authenticated
+      using (id = private.current_profile_squad_id() or supervisor_id = private.current_profile_id() or private.current_profile_role() = 'diretor')
+    $policy$;
+  else
+    raise notice 'Skipped RLS policies for public.squads: table does not exist.';
+  end if;
+  if to_regclass('public.workloads') is not null then
+    execute $policy$
+      create policy workloads_select_own on public.workloads for select to authenticated
+      using (profile_id = private.current_profile_id())
+    $policy$;
+    execute $policy$
+      create policy workloads_select_supervisor_team on public.workloads for select to authenticated
+      using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id))
+    $policy$;
+    execute $policy$
+      create policy workloads_select_director on public.workloads for select to authenticated
+      using (private.current_profile_role() = 'diretor')
+    $policy$;
+  else
+    raise notice 'Skipped RLS policies for public.workloads: table does not exist.';
+  end if;
+  if to_regclass('public.time_entries') is not null then
+    execute $policy$
+      create policy time_entries_select_own on public.time_entries for select to authenticated
+      using (profile_id = private.current_profile_id())
+    $policy$;
+    execute $policy$
+      create policy time_entries_insert_own on public.time_entries for insert to authenticated
+      with check (profile_id = private.current_profile_id() and status = 'pending')
+    $policy$;
+    if to_regclass('public.daily_approvals') is not null then
+      execute $policy$
+        create policy time_entries_update_own_unapproved_day on public.time_entries for update to authenticated
+        using (profile_id = private.current_profile_id() and not exists (
+          select 1 from public.daily_approvals as a
+          where a.profile_id = time_entries.profile_id and a.date = time_entries.date and a.status = 'approved'
+        ))
+        with check (profile_id = private.current_profile_id() and status <> 'approved' and not exists (
+          select 1 from public.daily_approvals as a
+          where a.profile_id = time_entries.profile_id and a.date = time_entries.date and a.status = 'approved'
+        ))
+      $policy$;
+    else
+      raise notice 'Skipped time_entries_update_own_unapproved_day: public.daily_approvals does not exist; edits remain unavailable under this policy.';
+    end if;
+    execute $policy$
+      create policy time_entries_select_supervisor_team on public.time_entries for select to authenticated
+      using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id))
+    $policy$;
+    execute $policy$
+      create policy time_entries_update_supervisor_team on public.time_entries for update to authenticated
+      using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id))
+      with check (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id))
+    $policy$;
+    execute $policy$
+      create policy time_entries_select_director on public.time_entries for select to authenticated
+      using (private.current_profile_role() = 'diretor')
+    $policy$;
+  else
+    raise notice 'Skipped RLS policies for public.time_entries: table does not exist.';
+  end if;
+  if to_regclass('public.daily_approvals') is not null then
+    execute $policy$
+      create policy daily_approvals_select_own on public.daily_approvals for select to authenticated
+      using (profile_id = private.current_profile_id())
+    $policy$;
+    execute $policy$
+      create policy daily_approvals_select_supervisor_team on public.daily_approvals for select to authenticated
+      using (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id))
+    $policy$;
+    execute $policy$
+      create policy daily_approvals_insert_supervisor_team on public.daily_approvals for insert to authenticated
+      with check (private.current_profile_role() = 'supervisor' and private.is_in_current_squad(profile_id) and supervisor_id = private.current_profile_id())
+    $policy$;
+    execute $policy$
+      create policy daily_approvals_select_director on public.daily_approvals for select to authenticated
+      using (private.current_profile_role() = 'diretor')
+    $policy$;
+  else
+    raise notice 'Skipped RLS policies for public.daily_approvals: table does not exist.';
+  end if;
+end;
+$$;
 
 grant select on public.profiles to service_role;
 
