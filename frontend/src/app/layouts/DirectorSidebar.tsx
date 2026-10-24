@@ -18,6 +18,7 @@ const navigationItems: NavigationItem[] = [
   { label: 'Equipes', icon: 'users', to: '/administracao/equipes', matches: (pathname) => pathname === '/administracao/equipes' },
   { label: 'Relatórios', icon: 'bar-chart', to: '/administracao/relatorios', matches: (pathname) => pathname === '/administracao/relatorios', tourClassName: 'tour-relatorios' },
   { label: 'Avisos', icon: 'bell', to: '/administracao?view=avisos', matches: (pathname, search) => pathname === '/administracao' && new URLSearchParams(search).get('view') === 'avisos' },
+  { label: 'Meu perfil', icon: 'user', to: '/administracao/perfil', matches: (pathname) => pathname === '/administracao/perfil' },
 ]
 
 export function DirectorSidebar({ onSignOut }: DirectorSidebarProps) {
