@@ -36,6 +36,7 @@ describe('rota raiz do ecossistema', () => {
       ['/administracao', "['DIRECTOR_ADMIN']", 'DiretoriaPage'],
       ['/administracao/equipes', "['DIRECTOR_ADMIN']", 'EquipesPage'],
       ['/administracao/relatorios', "['DIRECTOR_ADMIN']", 'RelatoriosPage'],
+      ['/administracao/perfil', "['DIRECTOR_ADMIN']", 'DiretorPerfilPage'],
     ] as const
     const collaboratorChildren = [
       '<Route index element={<ColaboradorPage />} />',

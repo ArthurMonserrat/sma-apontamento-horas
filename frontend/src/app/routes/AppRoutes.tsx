@@ -12,6 +12,7 @@ import { DiretoriaPage } from '../../pages/administration/DiretoriaPage'
 import { EquipesPage } from '../../pages/administration/EquipesPage'
 import { RelatoriosPage } from '../../pages/administration/RelatoriosPage'
 import { AvisosPage } from '../../pages/administration/AvisosPage'
+import { DiretorPerfilPage } from '../../pages/administration/DiretorPerfilPage'
 import { ManagerNoticesRedirect } from '../../features/session/ManagerNoticesRedirect'
 import { AuthCallbackPage } from '../../pages/access/AuthCallbackPage'
 
@@ -35,6 +36,7 @@ export function AppRoutes() {
       <Route path="/administracao" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><DiretoriaPage /></ProtectedRoute>} />
       <Route path="/administracao/equipes" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><EquipesPage /></ProtectedRoute>} />
       <Route path="/administracao/relatorios" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><RelatoriosPage /></ProtectedRoute>} />
+      <Route path="/administracao/perfil" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><DiretorPerfilPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
