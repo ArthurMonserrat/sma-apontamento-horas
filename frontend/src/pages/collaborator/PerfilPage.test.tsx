@@ -6,8 +6,9 @@ import type { useProfile } from '../../features/collaborator/useProfile'
 import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersions } from '../../demo/fixtures/demoData'
 import { PerfilPage } from './PerfilPage'
 
-const { useProfileMock } = vi.hoisted(() => ({ useProfileMock: vi.fn() }))
+const { useProfileMock, useCorporateIdentityMock } = vi.hoisted(() => ({ useProfileMock: vi.fn(), useCorporateIdentityMock: vi.fn() }))
 vi.mock('../../features/collaborator/useProfile', () => ({ useProfile: useProfileMock }))
+vi.mock('../../features/profile/useCorporateIdentity', () => ({ useCorporateIdentity: useCorporateIdentityMock }))
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }))
 vi.mock('../../app/providers/tourContext', () => ({ useTour: () => ({ startTour: vi.fn() }) }))
 
@@ -37,6 +38,7 @@ beforeEach(() => {
     changeSquad: vi.fn(), createInitialWorkload: vi.fn(), requestWorkloadChange: vi.fn(),
   }
   useProfileMock.mockImplementation(() => state)
+  useCorporateIdentityMock.mockReturnValue(null)
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -85,5 +87,23 @@ describe('assinatura no perfil', () => {
     })
 
     expect(profileFields().map((field) => field.value)).toEqual(draft)
+  })
+})
+
+describe('perfil preenchido pelo login Microsoft', () => {
+  it('mostra os dados da conta corporativa e não exibe erro do perfil local de demonstração', () => {
+    useCorporateIdentityMock.mockReturnValue({
+      firstName: 'Fernando', lastName: 'Almeida', fullName: 'Fernando Almeida', initials: 'FA',
+      email: 'fernando.almeida@sma-eng.com.br', roleLabel: 'Colaborador', active: true,
+      providerLabel: 'Microsoft (conta corporativa SM&A)', firstAccessAt: null, lastSignInAt: null,
+    })
+    state = { ...state, data: null, error: 'Sessão corporativa não encontrada.' }
+    act(() => root.render(<PerfilPage />))
+
+    const text = container.textContent ?? ''
+    expect(text).toContain('NomeFernando')
+    expect(text).toContain('SobrenomeAlmeida')
+    expect(text).toContain('fernando.almeida@sma-eng.com.br')
+    expect(text).not.toContain('Sessão corporativa não encontrada')
   })
 })

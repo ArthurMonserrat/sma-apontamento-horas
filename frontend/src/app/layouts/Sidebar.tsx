@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { collaboratorNavigation } from '../../demo/fixtures/navigation'
 import { useSession } from '../../features/session/useSession'
 import { profileService } from '../../features/profile/infrastructure/profileService'
+import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
 import { InstallAppButton } from '../../shared/ui/InstallAppButton'
 import { NavigationIcon } from '../../shared/ui/NavigationIcon'
 
@@ -23,6 +24,7 @@ function getInitials(name: string) {
 
 function SidebarContent({ onNavigate }: SidebarContentProps) {
   const { profile, signOut } = useSession()
+  const corporateIdentity = useCorporateIdentity()
   const navigate = useNavigate()
   const assignment = profile ? profileService.resolveAssignment(profile.id) : null
 
@@ -34,6 +36,17 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
 
   return (
     <>
+      {!profile && corporateIdentity && (
+        <section className="border-b border-[var(--color-sidebar-border)] p-4" aria-label="Perfil atual do colaborador">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[var(--color-sidebar-border)] bg-[var(--color-sidebar-surface)] text-sm font-extrabold" aria-label={`Iniciais de ${corporateIdentity.fullName}`}>{corporateIdentity.initials}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold leading-tight">{corporateIdentity.fullName}</p>
+              <p className="mt-0.5 text-xs leading-tight text-[var(--color-sidebar-text-muted)]">{corporateIdentity.roleLabel}</p>
+            </div>
+          </div>
+        </section>
+      )}
       {profile && (
         <section className="border-b border-[var(--color-sidebar-border)] p-4" aria-label="Perfil atual do colaborador">
           <div className="flex items-center gap-3">

@@ -10,7 +10,7 @@ type HeaderProps = {
 }
 
 export const Header = forwardRef<HTMLButtonElement, HeaderProps>(function Header({ isMenuOpen, onMenuToggle }, menuButtonRef) {
-  const { profile } = useSession()
+  const { profile, session } = useSession()
   return (
     <header data-layout-region="global-header" className="sticky top-0 z-40 flex h-20 w-full items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-header)] px-4 shadow-sm sm:px-6 lg:px-8">
       <div className="flex items-center gap-3">
@@ -33,7 +33,7 @@ export const Header = forwardRef<HTMLButtonElement, HeaderProps>(function Header
       </div>
       <div className="flex items-center gap-3">
         <OfflineStatusIndicator />
-        <span className="hidden text-right text-xs font-semibold text-[var(--color-text-muted)] sm:block">{profile?.name}</span>
+        <span className="hidden text-right text-xs font-semibold text-[var(--color-text-muted)] sm:block">{profile?.name ?? session?.name}</span>
         <ThemeToggle />
       </div>
     </header>
