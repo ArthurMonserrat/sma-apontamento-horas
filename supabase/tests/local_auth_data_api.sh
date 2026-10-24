@@ -196,11 +196,17 @@ status="$(request_status GET "$API_URL/rest/v1/time_entries?select=profile_id" "
 [[ "$status" =~ ^2 ]] || { echo "director read failed: HTTP $status" >&2; exit 1; }
 [[ "$(jq 'length' "$tmp_dir/response")" -eq 2 ]] || { echo 'director did not see both synthetic entries' >&2; exit 1; }
 
-for token in "$INACTIVE_TOKEN" "$UNLINKED_TOKEN"; do
-  status="$(request_status GET "$API_URL/rest/v1/profiles?select=id" "$token")"
-  [[ "$status" =~ ^2 ]] || { echo "unlinked/inactive profile request failed: HTTP $status" >&2; exit 1; }
-  [[ "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'unlinked or inactive user received a profile' >&2; exit 1; }
-done
+status="$(request_status GET "$API_URL/rest/v1/profiles?select=id" "$INACTIVE_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "inactive profile request failed: HTTP $status" >&2; exit 1; }
+jq -e --arg id "$INACTIVE_ID" 'length == 1 and .[0].id == $id' "$tmp_dir/response" >/dev/null || {
+  echo 'inactive user must see only their own profile row; session authorization rejects inactive profiles' >&2
+  cat "$tmp_dir/response" >&2
+  exit 1
+}
+
+status="$(request_status GET "$API_URL/rest/v1/profiles?select=id" "$UNLINKED_TOKEN")"
+[[ "$status" =~ ^2 ]] || { echo "unlinked profile request failed: HTTP $status" >&2; exit 1; }
+[[ "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'user without a profile received a profile row' >&2; exit 1; }
 
 status="$(request_status GET "$API_URL/rest/v1/profiles?select=id,email,full_name,role,active" "$JIT_AZURE_TOKEN")"
 [[ "$status" =~ ^2 ]] || { echo "JIT collaborator profile read failed: HTTP $status" >&2; exit 1; }
