@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
+import { SwitchSystemButton } from '../../features/session/SwitchSystemButton'
 
 type DirectorSidebarProps = {
   onSignOut: () => void
@@ -55,6 +56,7 @@ export function DirectorSidebar({ onSignOut }: DirectorSidebarProps) {
         })}
       </nav>
       <div className="border-t border-[var(--color-sidebar-border)] p-4">
+        <SwitchSystemButton />
         <button type="button" onClick={onSignOut} className="w-full rounded-xl border border-[var(--color-sidebar-border)] px-4 py-3 text-left text-sm font-bold text-[var(--color-sidebar-text)] hover:bg-[var(--color-navigation-hover)]">
           Sair do sistema
         </button>
