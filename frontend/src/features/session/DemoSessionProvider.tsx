@@ -7,13 +7,17 @@ import { SessionContext, type AuthState } from './sessionContext'
 import type { CorporateProfile, DemoRole, DemoSession } from './types'
 import type { CollaboratorProfile } from '../profile/types'
 import { getCorporateProfile, mapCorporateRole } from '../auth/authService'
+import { resolveDisplayName } from '../profile/corporateIdentity'
+import { getModuleRole } from './moduleAccess'
 import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
 
 const demoModeEnabled = import.meta.env.MODE === 'test' || (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true')
 const UNAUTHORIZED_MESSAGE = 'Não foi possível validar um perfil corporativo ativo. Contate a Administração.'
 
 function createCorporateSession(profile: CorporateProfile): DemoSession | null {
-  const role = mapCorporateRole(profile.role)
+  // Cargo do Banco 1 (pode ser diferente do cargo geral do perfil); sem acesso ao Banco 1 usa o cargo geral,
+  // e as rotas do Banco 1 continuam bloqueadas pelo authGuard.
+  const role = mapCorporateRole(getModuleRole(profile, 'BANCO_1') ?? profile.role)
   if (!role || !profile.active) return null
   const now = new Date().toISOString()
   return {
@@ -163,7 +167,27 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
     async function loadDemoProfile() {
-      if (!session?.isDemo || session.role !== 'COLLABORATOR') {
+      if (session?.role !== 'COLLABORATOR') {
+        setProfile(null)
+        return
+      }
+      // Login Microsoft: o perfil profissional é criado a partir da conta corporativa.
+      if (!session.isDemo && session.corporateProfile) {
+        try {
+          const corporateProfile = await profileService.ensureCorporateProfile({
+            id: session.corporateProfile.id,
+            name: resolveDisplayName(session.corporateProfile),
+            email: session.corporateProfile.email,
+            jobTitle: 'Colaborador',
+          })
+          if (!cancelled) setProfile(corporateProfile)
+        } catch (error) {
+          console.error('[session] Não foi possível preparar o perfil profissional corporativo.', error)
+          if (!cancelled) setProfile(null)
+        }
+        return
+      }
+      if (!session.isDemo) {
         setProfile(null)
         return
       }

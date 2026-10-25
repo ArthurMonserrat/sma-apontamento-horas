@@ -12,7 +12,7 @@ const { demoServiceMock, profileServiceMock, authMock, corporateAuthMock } = vi.
     signIn: vi.fn(),
     signOut: vi.fn(),
   },
-  profileServiceMock: { getById: vi.fn() },
+  profileServiceMock: { getById: vi.fn(), ensureCorporateProfile: vi.fn() },
   authMock: {
     getCurrentSession: vi.fn(),
     signOut: vi.fn(),
@@ -58,6 +58,11 @@ function DemoLoginButton() {
   return <button type="button" onClick={() => signIn('COLLABORATOR')}>demo</button>
 }
 
+function ProfileProbe() {
+  const { profile } = useContext(SessionContext)!
+  return <output data-testid="profile">{profile ? `${profile.id}|${profile.name}|${profile.email}` : 'sem-perfil'}</output>
+}
+
 function SignOutButton() {
   const { signOut } = useContext(SessionContext)!
   return <button type="button" onClick={() => void signOut()}>sair</button>
@@ -100,6 +105,9 @@ beforeEach(() => {
   authMock.signOut.mockResolvedValue({ error: null })
   authMock.subscribe.mockReturnValue({ unsubscribe: vi.fn() })
   profileServiceMock.getById.mockResolvedValue(null)
+  profileServiceMock.ensureCorporateProfile.mockImplementation(async (seed: { id: string; name: string; email: string; jobTitle: string }) => ({
+    ...seed, active: true, activeSquadId: 'squad-automation', location: { countryCode: 'BR', stateCode: 'SP', city: 'São Paulo', timeZone: 'America/Sao_Paulo' },
+  }))
   corporateAuthMock.getCorporateProfile.mockResolvedValue(createProfile('user-1'))
   corporateAuthMock.mapCorporateRole.mockImplementation((role: unknown) => ({
     colaborador: 'COLLABORATOR', supervisor: 'SUPERVISOR', diretor: 'DIRECTOR_ADMIN',
@@ -112,6 +120,27 @@ afterEach(() => {
 })
 
 describe('DemoSessionProvider', () => {
+  it('cria o perfil profissional do colaborador a partir do login Microsoft (área do colaborador não fica vazia)', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    authMock.getCurrentSession.mockResolvedValue(createSupabaseSession('user-1'))
+
+    await act(async () => root.render(<DemoSessionProvider><ProfileProbe /></DemoSessionProvider>))
+
+    expect(profileServiceMock.ensureCorporateProfile).toHaveBeenCalledWith({ id: 'user-1', name: 'Nome user-1', email: 'user-1@example.com', jobTitle: 'Colaborador' })
+    expect(container.querySelector('[data-testid="profile"]')?.textContent).toBe('user-1|Nome user-1|user-1@example.com')
+  })
+
+  it('não cria perfil de colaborador para diretoria', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    authMock.getCurrentSession.mockResolvedValue(createSupabaseSession('user-1'))
+    corporateAuthMock.getCorporateProfile.mockResolvedValue(createProfile('user-1', 'diretor'))
+
+    await act(async () => root.render(<DemoSessionProvider><ProfileProbe /></DemoSessionProvider>))
+
+    expect(profileServiceMock.ensureCorporateProfile).not.toHaveBeenCalled()
+    expect(container.querySelector('[data-testid="profile"]')?.textContent).toBe('sem-perfil')
+  })
+
   it('mantém a demonstração isolada de eventos Supabase corporativos', async () => {
     let emit: ((event: 'SIGNED_OUT' | 'SIGNED_IN' | 'TOKEN_REFRESHED', session: null) => void) | undefined
     authMock.subscribe.mockImplementation((listener: (event: 'SIGNED_OUT' | 'SIGNED_IN' | 'TOKEN_REFRESHED', session: null) => void) => {

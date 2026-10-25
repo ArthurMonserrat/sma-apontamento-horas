@@ -7,7 +7,7 @@ import type { VercelRequest, VercelResponse } from '../server/types.js'
 const CORPORATE_ROLES = new Set(['colaborador', 'supervisor', 'diretor'])
 
 /** Etapa em que a validação parou; vai no log e na resposta para facilitar o debug. */
-type SessionStage = 'config' | 'auth' | 'profile_query' | 'profile_validation'
+type SessionStage = 'config' | 'auth' | 'profile_query' | 'profile_validation' | 'module_access_query'
 
 type ProfileRejection = 'profile_not_found' | 'profile_inactive' | 'profile_role_unknown' | 'profile_shape_invalid'
 
@@ -84,6 +84,26 @@ function toCorporateProfile(row: unknown): { profile: CorporateProfile } | { rej
       active: true,
     },
   }
+}
+
+const ECOSYSTEM_MODULES = new Set(['BANCO_1', 'BANCO_2'])
+// Tabela ainda não criada (migration não aplicada): mantém o comportamento antigo (só Banco 1).
+const MISSING_TABLE_CODES = new Set(['42P01', 'PGRST205'])
+
+type ModuleAccess = NonNullable<CorporateProfile['modules']>[number]
+
+/** Converte as linhas de profile_module_access; cargo vazio herda o cargo do perfil. */
+function toModuleAccessList(rows: unknown, fallbackRole: CorporateProfile['role']): ModuleAccess[] {
+  if (!Array.isArray(rows)) return []
+  const modules = new Map<ModuleAccess['module'], ModuleAccess>()
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue
+    const { module, role } = row as Record<string, unknown>
+    if (typeof module !== 'string' || !ECOSYSTEM_MODULES.has(module)) continue
+    const resolvedRole = typeof role === 'string' && isCorporateRole(role) ? role : fallbackRole
+    modules.set(module as ModuleAccess['module'], { module: module as ModuleAccess['module'], role: resolvedRole })
+  }
+  return [...modules.values()].sort((a, b) => a.module.localeCompare(b.module))
 }
 
 export async function supabaseSession(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -177,7 +197,33 @@ export async function supabaseSession(req: VercelRequest, res: VercelResponse): 
       return
     }
 
-    res.status(200).json({ profile: result.profile })
+    stage = 'module_access_query'
+    const { data: accessRows, error: accessError } = await profileClient
+      .from('profile_module_access')
+      .select('module,role')
+      .eq('profile_id', user.id)
+      .eq('active', true)
+
+    let modules: ModuleAccess[]
+    if (accessError) {
+      if (!MISSING_TABLE_CODES.has(accessError.code ?? '')) {
+        console.error('[api/supabase-session] Module access lookup failed', {
+          requestId,
+          userId,
+          code: accessError.code,
+          message: redactLogText(accessError.message, accessToken),
+          hint: redactLogText(accessError.hint, accessToken),
+        })
+        res.status(500).json({ error: 'Could not load module access.', requestId, stage, code: accessError.code ?? null })
+        return
+      }
+      console.warn('[api/supabase-session] profile_module_access missing; falling back to Banco 1 only', { requestId, code: accessError.code })
+      modules = [{ module: 'BANCO_1', role: result.profile.role }]
+    } else {
+      modules = toModuleAccessList(accessRows, result.profile.role)
+    }
+
+    res.status(200).json({ profile: { ...result.profile, modules } })
   } catch (error) {
     const errorName = error instanceof Error ? error.name : 'UnknownError'
     const errorCode = error && typeof error === 'object' && 'code' in error

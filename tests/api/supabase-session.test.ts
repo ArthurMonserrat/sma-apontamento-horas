@@ -7,6 +7,11 @@ const profileQuery = vi.hoisted(() => ({
   lastFilter: null as { column: string; value: string } | null,
   selected: null as string | null,
 }))
+const accessQuery = vi.hoisted(() => ({
+  data: [] as unknown,
+  error: null as unknown,
+  filters: [] as Array<{ column: string; value: unknown }>,
+}))
 const from = vi.hoisted(() => vi.fn())
 const createClient = vi.hoisted(() => vi.fn((_url: string, _key: string, _options?: Record<string, unknown>) => ({
   auth: { getUser: authGetUser },
@@ -70,7 +75,21 @@ beforeEach(() => {
   profileQuery.error = null
   profileQuery.lastFilter = null
   profileQuery.selected = null
-  from.mockImplementation(() => ({
+  accessQuery.data = [{ module: 'BANCO_1', role: null }]
+  accessQuery.error = null
+  accessQuery.filters = []
+  from.mockImplementation((table: string) => table === 'profile_module_access' ? ({
+    select: vi.fn(() => {
+      const chain = {
+        eq: vi.fn((column: string, value: unknown) => {
+          accessQuery.filters.push({ column, value })
+          return chain
+        }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: accessQuery.data, error: accessQuery.error }),
+      }
+      return chain
+    }),
+  }) : ({
     select: vi.fn((columns: string) => {
       profileQuery.selected = columns
       return {
@@ -104,7 +123,7 @@ describe('supabase-session corporate profile contract', () => {
     await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(200)
-    expect(response.body).toEqual({ profile: validProfile })
+    expect(response.body).toEqual({ profile: { ...validProfile, modules: [{ module: 'BANCO_1', role: validProfile.role }] } })
     expect(profileQuery.lastFilter).toEqual({ column: 'id', value: 'auth-user-1' })
     expect(profileQuery.selected).toBe('id,email,full_name,role,active')
     expect(from).toHaveBeenCalledWith('profiles')
@@ -126,7 +145,7 @@ describe('supabase-session corporate profile contract', () => {
     await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(200)
-    expect(response.body).toEqual({ profile: { ...validProfile, role: expectedRole } })
+    expect(response.body).toEqual({ profile: { ...validProfile, role: expectedRole, modules: [{ module: 'BANCO_1', role: expectedRole }] } })
   })
 
   it('returns 401 for missing or invalid bearer tokens', async () => {
@@ -223,7 +242,7 @@ describe('supabase-session corporate profile contract', () => {
     await supabaseSession(request(), response)
 
     expect(response.statusCode).toBe(200)
-    expect(response.body).toEqual({ profile: validProfile })
+    expect(response.body).toEqual({ profile: { ...validProfile, modules: [{ module: 'BANCO_1', role: validProfile.role }] } })
   })
 
   it('does not request or return columns outside the CorporateProfile contract', async () => {
@@ -232,7 +251,7 @@ describe('supabase-session corporate profile contract', () => {
 
     await supabaseSession(request(), response)
 
-    expect(response.body).toEqual({ profile: validProfile })
+    expect(response.body).toEqual({ profile: { ...validProfile, modules: [{ module: 'BANCO_1', role: validProfile.role }] } })
     expect(profileQuery.selected).toBe('id,email,full_name,role,active')
   })
 
@@ -258,5 +277,58 @@ describe('supabase-session corporate profile contract', () => {
     expect(response.statusCode).toBe(500)
     expect(response.body).toMatchObject({ stage: 'config' })
     expect(JSON.stringify(response.body)).not.toContain('public-anon-key')
+  })
+
+  it('returns the banks released for the user, with per-bank role overrides', async () => {
+    accessQuery.data = [
+      { module: 'BANCO_2', role: 'supervisor' },
+      { module: 'BANCO_1', role: null },
+      { module: 'BANCO_9', role: 'diretor' },
+      { module: 'BANCO_2', role: 'dono' },
+    ]
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(200)
+    expect((response.body as { profile: { modules: unknown } }).profile.modules).toEqual([
+      { module: 'BANCO_1', role: 'colaborador' },
+      { module: 'BANCO_2', role: 'colaborador' },
+    ])
+    expect(accessQuery.filters).toEqual([{ column: 'profile_id', value: 'auth-user-1' }, { column: 'active', value: true }])
+  })
+
+  it('returns an empty module list when the user has no bank released', async () => {
+    accessQuery.data = []
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(200)
+    expect((response.body as { profile: { modules: unknown } }).profile.modules).toEqual([])
+  })
+
+  it('falls back to Banco 1 only while the access table migration is not applied', async () => {
+    accessQuery.error = { code: 'PGRST205', message: 'Could not find the table' }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(200)
+    expect((response.body as { profile: { modules: unknown } }).profile.modules).toEqual([{ module: 'BANCO_1', role: 'colaborador' }])
+    warn.mockRestore()
+  })
+
+  it('returns 500 with stage module_access_query for other access lookup failures', async () => {
+    accessQuery.error = { code: '42501', message: 'permission denied' }
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const response = createResponse()
+
+    await supabaseSession(request(), response)
+
+    expect(response.statusCode).toBe(500)
+    expect(response.body).toMatchObject({ stage: 'module_access_query', code: '42501' })
+    errorLog.mockRestore()
   })
 })
