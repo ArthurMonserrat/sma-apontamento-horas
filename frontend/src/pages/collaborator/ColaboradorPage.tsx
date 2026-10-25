@@ -52,7 +52,13 @@ export function ColaboradorPage() {
     navigate(`/colaborador/apontamentos/novo?date=${date}`)
   }
 
-  if (!profile) return null
+  if (!profile) {
+    return (
+      <PageContainer title="Visão geral" description="Preparando seu ambiente de apontamento.">
+        <p className="rounded-2xl ui-surface p-8 text-center font-semibold ui-text-muted" aria-live="polite">Carregando seu perfil…</p>
+      </PageContainer>
+    )
+  }
   const contextDescription = dashboard.data
     ? `${profile.jobTitle} · ${dashboard.data.assignment?.squadName ?? 'Squad não definida'} · Supervisão: ${dashboard.data.assignment?.supervisorName ?? 'não definida'}. Carga vigente ${dashboard.data.currentWorkload ? formatMinutes(dashboard.data.currentWorkload.dailyMinutes) : 'não cadastrada'}.`
     : `${profile.jobTitle} · Carregando contexto profissional.`

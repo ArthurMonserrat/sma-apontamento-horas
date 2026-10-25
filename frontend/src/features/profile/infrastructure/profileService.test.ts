@@ -88,3 +88,27 @@ describe('perfil e squad ativa', () => {
     await expect(service.getById(demoCollaborator.id)).resolves.not.toHaveProperty('assinaturaBase64')
   })
 })
+
+describe('perfil profissional do login Microsoft', () => {
+  it('cria o perfil do colaborador corporativo com nome, e-mail e squad padrão', async () => {
+    const service = new LocalProfileService({ storage: new MemoryStorage() })
+
+    const profile = await service.ensureCorporateProfile({ id: 'auth-pedro', name: 'Pedro Souza Xavier', email: 'pedro.xavier@sma-eng.com.br', jobTitle: 'Colaborador' })
+
+    expect(profile).toMatchObject({ id: 'auth-pedro', name: 'Pedro Souza Xavier', email: 'pedro.xavier@sma-eng.com.br', jobTitle: 'Colaborador', active: true })
+    expect(await service.getById('auth-pedro')).toEqual(profile)
+    expect(service.resolveAssignment('auth-pedro')).not.toBeNull()
+  })
+
+  it('mantém assinatura e squad já salvas e atualiza nome e e-mail da conta corporativa', async () => {
+    const service = new LocalProfileService({ storage: new MemoryStorage() })
+    await service.ensureCorporateProfile({ id: 'auth-pedro', name: 'Pedro', email: 'pedro.xavier@sma-eng.com.br', jobTitle: 'Colaborador' })
+    const signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+    await service.updateSignature('auth-pedro', signature)
+
+    const profile = await service.ensureCorporateProfile({ id: 'auth-pedro', name: 'Pedro Souza Xavier', email: 'pedro.xavier@sma-eng.com.br', jobTitle: 'Colaborador' })
+
+    expect(profile.name).toBe('Pedro Souza Xavier')
+    expect(profile.assinaturaBase64).toBe(signature)
+  })
+})

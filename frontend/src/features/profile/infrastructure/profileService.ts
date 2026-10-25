@@ -1,12 +1,13 @@
 import type { AuditEvent } from '../../audit/types'
 import type { CollaboratorProfile } from '../types'
 import type { AssignmentSnapshot } from '../../squads/types'
-import { demoCollaborator, demoSquads, demoSupervisors } from '../../../demo/fixtures/demoData'
+import { demoCollaborator, demoSquads, demoSupervisors, demoWorkLocation } from '../../../demo/fixtures/demoData'
 import { auditService } from '../../audit/infrastructure/auditService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from '../../../services/postCommit'
 
 const PROFILE_STORAGE_KEY = 'sma:collaborator-profile:v1'
+const DEFAULT_SQUAD_ID = demoCollaborator.activeSquadId
 export const PROFILE_UPDATED_EVENT = 'sma:profile-updated'
 
 export type UpdateProfileInput = {
@@ -16,8 +17,16 @@ export type UpdateProfileInput = {
   activeSquadId: string
 }
 
+export type CorporateProfileSeed = {
+  id: string
+  name: string
+  email: string
+  jobTitle: string
+}
+
 export interface ProfileService {
   getById(collaboratorId: string): Promise<CollaboratorProfile | null>
+  ensureCorporateProfile(seed: CorporateProfileSeed): Promise<CollaboratorProfile>
   updateProfile(collaboratorId: string, input: UpdateProfileInput): Promise<CollaboratorProfile>
   updateSignature(collaboratorId: string, assinaturaBase64: string): Promise<CollaboratorProfile>
   changeActiveSquad(collaboratorId: string, squadId: string): Promise<CollaboratorProfile>
@@ -86,6 +95,22 @@ export class LocalProfileService implements ProfileService {
   async getById(collaboratorId: string) {
     const profile = this.read()
     return profile.id === collaboratorId ? profile : null
+  }
+
+  /**
+   * Login Microsoft: garante o perfil profissional local do usuário corporativo.
+   * Nome e e-mail vêm sempre da conta corporativa; assinatura e squad já salvos são mantidos.
+   * Usuário novo começa na squad padrão (a alocação real ainda não existe no banco) e pode trocá-la em Meu perfil.
+   */
+  async ensureCorporateProfile(seed: CorporateProfileSeed) {
+    const current = this.read()
+    const base: CollaboratorProfile = current.id === seed.id
+      ? current
+      : { id: seed.id, name: seed.name, email: seed.email, jobTitle: seed.jobTitle, active: true, activeSquadId: DEFAULT_SQUAD_ID, location: { ...demoWorkLocation } }
+    const updated: CollaboratorProfile = { ...base, name: seed.name, email: seed.email, active: true }
+    const changed = JSON.stringify(updated) !== JSON.stringify(current)
+    if (changed) this.storage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated))
+    return updated
   }
 
   async updateProfile(collaboratorId: string, input: UpdateProfileInput) {
