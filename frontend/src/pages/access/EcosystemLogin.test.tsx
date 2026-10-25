@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ThemeContext } from '../../app/providers/themeContext'
 import { SessionContext } from '../../features/session/sessionContext'
 import { EcosystemLogin } from './EcosystemLogin'
-import { getEcosystemModulePath, isAllowedOAuthDestination } from './ecosystemModules'
+import { getBanco2Url, getEcosystemModulePath, isAllowedOAuthDestination } from './ecosystemModules'
 import ecosystemLoginSource from './EcosystemLogin.tsx?raw'
 import portalSource from './Portal.tsx?raw'
 
@@ -38,10 +38,20 @@ describe('EcosystemLogin', () => {
 
   it('não aponta módulos para a seleção manual de cargos', () => {
     expect(getEcosystemModulePath('BANCO_1')).toBe('/?modulo=banco1')
-    expect(getEcosystemModulePath('BANCO_2')).toBeNull()
+    expect(getEcosystemModulePath('BANCO_2')).toBe('/?modulo=banco2')
     expect(isAllowedOAuthDestination('/?modulo=banco1')).toBe(true)
+    expect(isAllowedOAuthDestination('/?modulo=banco2')).toBe(true)
     expect(isAllowedOAuthDestination('https://banco2.example.com')).toBe(false)
-    expect(isAllowedOAuthDestination('/?modulo=banco2')).toBe(false)
+    expect(isAllowedOAuthDestination('/selecao-perfil')).toBe(false)
+  })
+
+  it('só aceita endereço seguro para o site do Banco 2', () => {
+    expect(getBanco2Url('https://banco2.sma-eng.com.br')).toBe('https://banco2.sma-eng.com.br/')
+    expect(getBanco2Url('http://localhost:5174')).toBe('http://localhost:5174/')
+    expect(getBanco2Url('http://banco2.sma-eng.com.br')).toBeNull()
+    expect(getBanco2Url('javascript:alert(1)')).toBeNull()
+    expect(getBanco2Url('')).toBeNull()
+    expect(getBanco2Url(undefined)).toBeNull()
   })
 
   it('usa Supabase OAuth e não oferece entrada demonstrativa', () => {
