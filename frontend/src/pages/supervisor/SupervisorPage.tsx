@@ -16,6 +16,7 @@ import { useSupervisorDashboard } from '../../features/supervisor/useSupervisorD
 import { ApprovalDeadlineBanner } from '../../features/supervisor/ApprovalDeadlineBanner'
 import { useSession } from '../../features/session/useSession'
 import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
+import { SwitchSystemButton } from '../../features/session/SwitchSystemButton'
 import { CorporateIdentityPanel } from '../../features/profile/CorporateIdentityPanel'
 import { formatMinutes } from '../../features/time-entries/domain'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
@@ -156,6 +157,7 @@ function SupervisorSidebar({ activeView, profile, onChange, onSignOut }: {
       </nav>
 
       <div className="border-t border-[var(--color-sidebar-border)] p-4">
+        <SwitchSystemButton />
         <button type="button" onClick={onSignOut} className="w-full rounded-xl border border-[var(--color-sidebar-border)] px-4 py-3 text-left text-sm font-bold text-[var(--color-sidebar-text)] hover:bg-[var(--color-navigation-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-sidebar-text)]">
           Sair do sistema
         </button>

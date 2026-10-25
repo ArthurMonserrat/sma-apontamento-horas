@@ -2,6 +2,7 @@ import type { KeyboardEventHandler } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { collaboratorNavigation } from '../../demo/fixtures/navigation'
 import { useSession } from '../../features/session/useSession'
+import { SwitchSystemButton } from '../../features/session/SwitchSystemButton'
 import { profileService } from '../../features/profile/infrastructure/profileService'
 import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
 import { InstallAppButton } from '../../shared/ui/InstallAppButton'
@@ -90,6 +91,7 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
       </nav>
 
       <div className="border-t border-[var(--color-sidebar-border)] p-4">
+        <SwitchSystemButton onNavigate={onNavigate} />
         <InstallAppButton />
         <button type="button" onClick={handleSignOut} className="mt-3 w-full rounded-xl border border-[var(--color-sidebar-border)] px-4 py-3 text-left text-sm font-bold text-[var(--color-sidebar-text)] hover:bg-[var(--color-navigation-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-sidebar-text)]">
           Sair do sistema
