@@ -83,6 +83,16 @@ jobs:
           PGPASSWORD: postgres
         run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/reconciliation_assertions.sql
 
+      - name: Apply Banco 2 persistence contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261026190000_banco2_time_entries.sql
+
+      - name: Assert Banco 2 persistence contract
+        env:
+          PGPASSWORD: postgres
+        run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/banco2_time_entries_assertions.sql
+
       - name: Publish validation scope
         run: |
           {
@@ -147,6 +157,8 @@ jobs:
         run: |
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_assertions.sql
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/reconciliation_assertions.sql
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261026190000_banco2_time_entries.sql
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/banco2_time_entries_assertions.sql
           {
             echo '### Migration validation scope'
             echo '- Legacy synthetic → prerequisites → Stage 3B.1 → convergence: PASS'
