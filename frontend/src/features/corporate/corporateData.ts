@@ -57,6 +57,8 @@ export type CorporatePerson = {
   teamName: string | null
   supervisorId: string | null
   supervisorName: string | null
+  /** Cargo definido pela diretoria (profiles.job_title). */
+  jobTitle: string | null
 }
 
 type PeopleRow = {
@@ -68,6 +70,7 @@ type PeopleRow = {
   team_name: string | null
   supervisor_id: string | null
   supervisor_name: string | null
+  job_title?: string | null
 }
 
 let peopleCache: { userId: string; at: number; promise: Promise<CorporatePerson[]> } | null = null
@@ -98,6 +101,7 @@ export function toCorporatePerson(row: PeopleRow): CorporatePerson {
     teamName: row.team_name,
     supervisorId: row.supervisor_id,
     supervisorName: row.supervisor_name?.trim() || null,
+    jobTitle: row.job_title?.trim() || null,
   }
 }
 

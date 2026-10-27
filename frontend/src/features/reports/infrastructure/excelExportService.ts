@@ -131,7 +131,7 @@ function resolveActivityName(activityId: string) {
 
 function resolveCollaboratorMeta(entry: TimeEntry, storage: StorageLike = createBrowserStorage()): CollaboratorMeta {
   const corporateName = (entry as VisibleTimeEntry).collaboratorName
-  if (corporateName) return { name: corporateName, jobTitle: '—' }
+  if (corporateName) return { name: corporateName, jobTitle: (entry as VisibleTimeEntry).collaboratorJobTitle || '—' }
   const currentProfile = readCurrentProfileMeta(storage)
   if (currentProfile && entry.collaboratorId === currentProfile.id) {
     return {
@@ -307,7 +307,7 @@ export async function exportGeneralHoursReport({ organograma, mesSelecionado, an
     { key: 'horasLancadas', width: 16 },
   ]
   applyCorporateHeader(workbook, worksheet, 'Apontamento de Horas', 9)
-  worksheet.getRow(2).values = [null, 'Squad', 'Supervisor', 'Colaborador', 'Cargo', 'Data do Apontamento', 'Cliente', 'Projeto', 'Atividade', 'Horas Lançadas']
+  worksheet.getRow(2).values = ['Squad', 'Supervisor', 'Colaborador', 'Cargo', 'Data do Apontamento', 'Cliente', 'Projeto', 'Atividade', 'Horas Lançadas']
   worksheet.getRow(2).height = 26
   rows.forEach((row, index) => {
     const addedRow = worksheet.addRow(row)
@@ -360,7 +360,7 @@ export async function exportSquadHoursReport({ organograma, squadName, mesSeleci
     { key: 'horasLancadas', width: 16 },
   ]
   applyCorporateHeader(workbook, worksheet, 'Apontamento de Horas', 7)
-  worksheet.getRow(2).values = [null, 'Colaborador', 'Cargo', 'Data do Apontamento', 'Cliente', 'Projeto', 'Atividade', 'Horas Lançadas']
+  worksheet.getRow(2).values = ['Colaborador', 'Cargo', 'Data do Apontamento', 'Cliente', 'Projeto', 'Atividade', 'Horas Lançadas']
   worksheet.getRow(2).height = 26
   rows.forEach((row, index) => {
     const addedRow = worksheet.addRow(row)

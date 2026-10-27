@@ -4,9 +4,9 @@ import type { CorporatePerson } from '../../corporate/corporateData'
 import { OnlineTeamService } from './onlineTeamService'
 
 const people: CorporatePerson[] = [
-  { id: 'renato', name: 'Renato Resende', email: 'r@x', role: 'supervisor', teamId: null, teamName: null, supervisorId: null, supervisorName: null },
-  { id: 'hugo', name: 'Hugo Barbosa', email: 'h@x', role: 'colaborador', teamId: 't1', teamName: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende' },
-  { id: 'hamilton', name: 'Hamilton Junior', email: 'j@x', role: 'colaborador', teamId: 't1', teamName: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende' },
+  { id: 'renato', name: 'Renato Resende', email: 'r@x', role: 'supervisor', teamId: null, teamName: null, supervisorId: null, supervisorName: null, jobTitle: null },
+  { id: 'hugo', name: 'Hugo Barbosa', email: 'h@x', role: 'colaborador', teamId: 't1', teamName: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', jobTitle: null },
+  { id: 'hamilton', name: 'Hamilton Junior', email: 'j@x', role: 'colaborador', teamId: 't1', teamName: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', jobTitle: null },
 ]
 
 let fake: FakeSupabase
@@ -54,5 +54,17 @@ describe('OnlineTeamService', () => {
   it('desativa pela função do banco', async () => {
     await service.deactivateTeam('t1')
     expect(fake.calls.at(-1)).toMatchObject({ rpc: 'banco1_deactivate_team', payload: { team_id: 't1' } })
+  })
+})
+
+describe('OnlineTeamService.setJobTitle', () => {
+  it('salva o cargo pela função do banco (vazio apaga)', async () => {
+    fake.rpcs.set('banco1_set_job_title', () => ({ data: null, error: null }))
+    await service.setJobTitle('hugo', ' Engenheiro ')
+    expect(fake.calls.at(-1)).toMatchObject({ rpc: 'banco1_set_job_title', payload: { target: 'hugo', job_title: 'Engenheiro' } })
+    await service.setJobTitle('hugo', '  ')
+    expect(fake.calls.at(-1)).toMatchObject({ payload: { target: 'hugo', job_title: null } })
+    fake.failNext({ code: '42501', message: 'Somente a diretoria pode alterar o cargo.' })
+    await expect(service.setJobTitle('hugo', 'X')).rejects.toThrow('Somente a diretoria pode alterar o cargo.')
   })
 })

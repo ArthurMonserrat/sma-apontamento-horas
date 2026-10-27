@@ -14,6 +14,7 @@ export interface ReportEntry {
   supervisorName?: string
   squadName?: string
   collaboratorName?: string
+  collaboratorJobTitle?: string
 }
 
 export interface ReportCollaborator {

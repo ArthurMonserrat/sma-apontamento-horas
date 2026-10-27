@@ -88,6 +88,13 @@ export class OnlineTeamService {
     return String(data)
   }
 
+  /** Diretoria: define o cargo da pessoa (vazio apaga). */
+  async setJobTitle(personId: string, jobTitle: string) {
+    const { error } = await this.client().rpc('banco1_set_job_title', { target: personId, job_title: jobTitle.trim() || null })
+    if (error) throw corporateDataError(error, 'Não foi possível salvar o cargo.')
+    this.onChanged()
+  }
+
   async deactivateTeam(teamId: string) {
     const { error } = await this.client().rpc('banco1_deactivate_team', { team_id: teamId })
     if (error) throw corporateDataError(error, 'Não foi possível desativar a supervisão.')
