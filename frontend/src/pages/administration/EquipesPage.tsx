@@ -6,6 +6,8 @@ import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { useSession } from '../../features/session/useSession'
 import { organogramaDEP, type DEPColaborador, type DEPGerencia, type DEPSquad } from '../../demo/fixtures/mockDEP'
 import { exportGeneralHoursReport, exportSquadHoursReport } from '../../features/reports/infrastructure/excelExportService'
+import { isCorporateDataActive } from '../../features/corporate/corporateData'
+import { OnlineTeamsPanel } from '../../features/teams/OnlineTeamsPanel'
 
 const ORGANOGRAMA_STORAGE_KEY = 'organograma_editavel_sma'
 const cargoOptions = ['Engenheiro', 'Projetista', 'Desenhista', 'Estagiário', 'Estagiário 4h']
@@ -333,9 +335,12 @@ export function EquipesPage() {
               </div>
             )}
 
+            {isCorporateDataActive() && <OnlineTeamsPanel />}
+
             <section className="space-y-5" aria-labelledby="dep-org-title">
               <div>
                 <h2 id="dep-org-title" className="text-xl font-extrabold text-[var(--color-text)]">Organograma de Equipes (DEP)</h2>
+                {isCorporateDataActive() && <p className="mt-1 text-sm text-[var(--color-text-muted)]">Organograma de referência, salvo só neste navegador. As supervisões que valem no sistema são as de cima.</p>}
               </div>
               <div className="flex flex-col gap-6 md:flex-row">
                 <aside className="md:w-72 md:shrink-0" aria-label="Squads do DEP">

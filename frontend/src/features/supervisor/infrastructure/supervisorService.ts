@@ -12,6 +12,8 @@ import { normalizeTimeEntry, type TimeEntryStorageV4 } from '../../time-entries'
 import { TIME_OFF_STORAGE_KEY, timeOffService, type TimeOffStorage } from '../../time-off/infrastructure/timeOffService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { getDaysUntilMonthClosing } from '../../../shared/lib/date'
+import { getCorporateDataClient, isCorporateDataActive } from '../../corporate/corporateData'
+import { SupabaseSupervisorService } from './supabaseSupervisorService'
 
 export const SUPERVISOR_APPROVAL_STORAGE_KEY = 'sma:supervisor-approvals:v1'
 
@@ -443,4 +445,40 @@ export class LocalStorageSupervisorService implements SupervisorService {
   }
 }
 
-export const supervisorService = new LocalStorageSupervisorService(createBrowserStorage())
+export const localSupervisorService = new LocalStorageSupervisorService(createBrowserStorage())
+
+const corporateSupervisorService = new SupabaseSupervisorService({
+  getClient: getCorporateDataClient,
+  timeOff: localSupervisorService,
+})
+
+/** Login Microsoft: aprovações no banco de dados. Demonstração e testes: armazenamento local. */
+export class RuntimeSupervisorService implements SupervisorService {
+  private readonly local: SupervisorService
+  private readonly remote: SupervisorService
+  private readonly useRemote: () => boolean
+
+  constructor(local: SupervisorService, remote: SupervisorService, useRemote: () => boolean = isCorporateDataActive) {
+    this.local = local
+    this.remote = remote
+    this.useRemote = useRemote
+  }
+
+  private active() { return this.useRemote() ? this.remote : this.local }
+
+  listEntries() { return this.active().listEntries() }
+  listEscalatedEntries() { return this.active().listEscalatedEntries() }
+  listCollaborators() { return this.active().listCollaborators() }
+  approve(entryId: string, supervisorId: string) { return this.active().approve(entryId, supervisorId) }
+  approveMany(entryIds: string[], supervisorId: string) { return this.active().approveMany(entryIds, supervisorId) }
+  approveEscalated(entryId: string, directorId: string) { return this.active().approveEscalated(entryId, directorId) }
+  reject(entryId: string, supervisorId: string, reason: string) { return this.active().reject(entryId, supervisorId, reason) }
+  rejectMany(entryIds: string[], supervisorId: string, reason: string) { return this.active().rejectMany(entryIds, supervisorId, reason) }
+  listTimeOffRequests(supervisorId: string) { return this.active().listTimeOffRequests(supervisorId) }
+  approveTimeOffRequest(requestId: string, supervisorId: string) { return this.active().approveTimeOffRequest(requestId, supervisorId) }
+  rejectTimeOffRequest(requestId: string, supervisorId: string, reason: string) { return this.active().rejectTimeOffRequest(requestId, supervisorId, reason) }
+  getSummary() { return this.active().getSummary() }
+  getRequestSummary(supervisorId: string) { return this.active().getRequestSummary(supervisorId) }
+}
+
+export const supervisorService: SupervisorService = new RuntimeSupervisorService(localSupervisorService, corporateSupervisorService)

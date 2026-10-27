@@ -13,6 +13,7 @@ export interface ReportEntry {
   activityName?: string
   supervisorName?: string
   squadName?: string
+  collaboratorName?: string
 }
 
 export interface ReportCollaborator {
