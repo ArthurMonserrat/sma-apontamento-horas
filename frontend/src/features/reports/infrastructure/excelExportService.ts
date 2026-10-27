@@ -8,6 +8,8 @@ import type { TimeEntry } from '../../time-entries/types'
 import { normalizeTimeEntry, type TimeEntryStorageV4 } from '../../time-entries'
 import { TIME_ENTRY_STORAGE_KEY } from '../../time-entries'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
+import { isCorporateDataActive } from '../../corporate/corporateData'
+import { listVisibleTimeEntries, type VisibleTimeEntry } from '../../time-entries/infrastructure/visibleTimeEntries'
 
 const COLLABORATOR_PROFILE_STORAGE_KEY = 'sma:collaborator-profile:v1'
 
@@ -128,6 +130,8 @@ function resolveActivityName(activityId: string) {
 }
 
 function resolveCollaboratorMeta(entry: TimeEntry, storage: StorageLike = createBrowserStorage()): CollaboratorMeta {
+  const corporateName = (entry as VisibleTimeEntry).collaboratorName
+  if (corporateName) return { name: corporateName, jobTitle: '—' }
   const currentProfile = readCurrentProfileMeta(storage)
   if (currentProfile && entry.collaboratorId === currentProfile.id) {
     return {
@@ -246,6 +250,16 @@ function autoFitColumns(worksheet: ExcelJS.Worksheet) {
   })
 }
 
+/**
+ * Apontamentos usados nas exportações.
+ * Login Microsoft: só o banco de dados (sem cancelados). Demonstração: armazenamento local.
+ */
+async function loadExportEntries(storage: StorageLike): Promise<TimeEntry[]> {
+  if (!isCorporateDataActive()) return readTimeEntryStorage(storage)
+  const entries = await listVisibleTimeEntries() as VisibleTimeEntry[]
+  return entries.filter((entry) => entry.status !== 'CANCELLED')
+}
+
 async function writeWorkbook(workbook: ExcelJS.Workbook, fileName: string) {
   const buffer = await workbook.xlsx.writeBuffer()
   saveAs(new Blob([buffer]), fileName)
@@ -258,7 +272,7 @@ export async function exportGeneralHoursReport({ organograma, mesSelecionado, an
     // O organograma pode estar vazio em ambientes de teste; seguimos exportando somente o que existir no storage.
   }
   const monthKey = buildMonthKey(mesSelecionado, anoSelecionado)
-  const entries = filterEntriesByMonth(readTimeEntryStorage(storage), monthKey)
+  const entries = filterEntriesByMonth(await loadExportEntries(storage), monthKey)
   const rows: GeneralReportRow[] = entries.map((entry) => {
     const squad = entry.assignmentSnapshot?.squadName ?? '—'
     const supervisor = entry.assignmentSnapshot?.supervisorName ?? '—'
@@ -315,7 +329,7 @@ export async function exportGeneralHoursReport({ organograma, mesSelecionado, an
 export async function exportSquadHoursReport({ organograma, squadName, mesSelecionado, anoSelecionado }: SquadExportInput) {
   const storage = createBrowserStorage()
   const monthKey = buildMonthKey(mesSelecionado, anoSelecionado)
-  const entries = filterEntriesByMonth(readTimeEntryStorage(storage), monthKey)
+  const entries = filterEntriesByMonth(await loadExportEntries(storage), monthKey)
   const squad = findSquad(organograma, squadName)
   const filteredEntries = filterEntriesBySquad(entries, squadName)
   const rows = filteredEntries.map((entry) => {
