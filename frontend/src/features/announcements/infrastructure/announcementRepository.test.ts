@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFakeSupabase, type FakeSupabase } from '../../corporate/testing/fakeSupabaseClient'
-import { BANCO1_ANNOUNCEMENTS_TABLE, BANCO1_ANNOUNCEMENT_HIDDEN_TABLE, SupabaseAnnouncementRepository } from './announcementRepository'
+import { BANCO1_ANNOUNCEMENTS_TABLE, BANCO1_ANNOUNCEMENT_HIDDEN_TABLE, BANCO1_ANNOUNCEMENT_READS_TABLE, SupabaseAnnouncementRepository } from './announcementRepository'
 
 const ME = 'hugo'
 let fake: FakeSupabase
@@ -49,5 +49,27 @@ describe('SupabaseAnnouncementRepository', () => {
   it('oculta só para o usuário', async () => {
     await repository.hide('2', ME)
     expect(fake.tables.get(BANCO1_ANNOUNCEMENT_HIDDEN_TABLE)).toContainEqual(expect.objectContaining({ announcement_id: '2', profile_id: ME }))
+  })
+})
+
+describe('SupabaseAnnouncementRepository - lidos', () => {
+  it('marca lidos sem duplicar e traz o status na lista; autor conta como lido', async () => {
+    fake.tables.set(BANCO1_ANNOUNCEMENT_READS_TABLE, [{ announcement_id: '2', profile_id: ME }])
+    let list = await repository.list()
+    expect(list.map((item) => [item.id, item.lido])).toEqual([['3', false], ['2', true], ['1', false]])
+    await repository.markRead(['3', '2', '3'], ME)
+    expect(fake.tables.get(BANCO1_ANNOUNCEMENT_READS_TABLE)!.filter((item) => item.profile_id === ME)).toHaveLength(2)
+    list = await repository.list()
+    expect(list.find((item) => item.id === '3')?.lido).toBe(true)
+    const own = new SupabaseAnnouncementRepository(() => fake.client, () => 'diretor')
+    expect((await own.list()).every((item) => item.lido)).toBe(true)
+  })
+
+  it('sem a tabela de lidos não mostra contador (todos contam como lidos)', async () => {
+    const original = fake.client.from.bind(fake.client)
+    vi.spyOn(fake.client, 'from').mockImplementation(((table: string) => table === BANCO1_ANNOUNCEMENT_READS_TABLE
+      ? { select: () => Promise.resolve({ data: null, error: { code: 'PGRST205', message: 'not found' } }) }
+      : original(table)) as never)
+    expect((await repository.list()).every((item) => item.lido)).toBe(true)
   })
 })

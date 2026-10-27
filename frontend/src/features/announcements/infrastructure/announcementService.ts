@@ -45,6 +45,14 @@ export function isAnnouncementHiddenForUser(announcement: Comunicado, userId: st
   return Boolean(userId && Array.isArray(announcement.oculto_por) && announcement.oculto_por.includes(userId))
 }
 
+/** Modo demonstração: o aviso é destinado ao colaborador? (no banco de dados a RLS já filtra) */
+export function isVisibleToCollaborator(comunicado: Comunicado, collaboratorId: string | undefined, email: string | undefined, squadId: string | undefined) {
+  if (comunicado.tipo_destinatario === 'all') return true
+  if (!comunicado.alvo_referencia) return false
+  if (comunicado.tipo_destinatario === 'team') return comunicado.alvo_referencia === squadId
+  return comunicado.alvo_referencia === collaboratorId || comunicado.alvo_referencia.toLowerCase() === email?.toLowerCase()
+}
+
 export function sortAnnouncements(announcements: Comunicado[]) {
   return [...announcements].sort((left, right) => (
     new Date(right.dataPublicacao).getTime() - new Date(left.dataPublicacao).getTime()

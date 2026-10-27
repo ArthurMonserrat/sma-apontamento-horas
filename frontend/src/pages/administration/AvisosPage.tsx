@@ -1,53 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PageContainer } from '../../shared/ui/PageContainer'
 import { useSession } from '../../features/session/useSession'
 import { CriarAviso } from '../../features/announcements/CriarAviso'
 import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../../features/announcements/types'
-import { ANNOUNCEMENTS_UPDATED_EVENT, canDeleteAnnouncement, isAnnouncementHiddenForUser } from '../../features/announcements/infrastructure/announcementService'
-import { LocalAnnouncementRepository, SupabaseAnnouncementRepository, type AnnouncementRepository } from '../../features/announcements/infrastructure/announcementRepository'
+import { ANNOUNCEMENTS_UPDATED_EVENT, canDeleteAnnouncement, isAnnouncementHiddenForUser, isVisibleToCollaborator } from '../../features/announcements/infrastructure/announcementService'
+import { getAnnouncementRepository, type AnnouncementRepository } from '../../features/announcements/infrastructure/announcementRepository'
 import { isCorporateDataActive } from '../../features/corporate/corporateData'
+import { useAnnouncementNotifications } from '../../features/announcements/notifications/announcementNotificationsContext'
 
-const comunicadosMock: Comunicado[] = [
-  {
-    id: 'aviso-fechamento-julho-2026',
-    titulo: 'Fechamento do mês antecipado',
-    mensagem: 'Em razão do feriado nacional, o fechamento dos apontamentos de julho acontecerá antecipadamente no dia 03/08, às 12h. Revise seus lançamentos e envie eventuais ajustes antes desse horário.',
-    dataPublicacao: '2026-07-29',
-    timestamp: '2026-07-29T12:00:00.000Z',
-    autor: 'RH',
-    tipo: 'alerta',
-    urgencia: 'alerta',
-    tipo_destinatario: 'all',
-    alvo_referencia: null,
-    oculto_por: [],
-  },
-  {
-    id: 'aviso-politica-apontamentos',
-    titulo: 'Revisão dos apontamentos da semana',
-    mensagem: 'Reserve alguns minutos ao final de cada dia para conferir horas, projeto e detalhamento. Essa rotina ajuda a manter o fechamento da operação mais ágil.',
-    dataPublicacao: '2026-07-24',
-    timestamp: '2026-07-24T12:00:00.000Z',
-    autor: 'Diretoria',
-    tipo: 'info',
-    urgencia: 'info',
-    tipo_destinatario: 'all',
-    alvo_referencia: null,
-    oculto_por: [],
-  },
-  {
-    id: 'aviso-prazo-urgente',
-    titulo: 'Ação necessária: regularize pendências',
-    mensagem: 'Existem apontamentos pendentes de revisão no seu histórico. Confira os registros e encaminhe as correções solicitadas antes do prazo de fechamento.',
-    dataPublicacao: '2026-07-22',
-    timestamp: '2026-07-22T12:00:00.000Z',
-    autor: 'Supervisão',
-    tipo: 'urgente',
-    urgencia: 'urgente',
-    tipo_destinatario: 'all',
-    alvo_referencia: null,
-    oculto_por: [],
-  },
-]
 
 const tipoPresentation: Record<ComunicadoTipo, { label: string, border: string, badge: string }> = {
   info: {
@@ -73,12 +33,6 @@ const recipientPresentation: Record<ComunicadoDestinatario, string> = {
   individual: 'Mensagem Direta',
 }
 
-function isVisibleToCollaborator(comunicado: Comunicado, collaboratorId: string | undefined, email: string | undefined, squadId: string | undefined) {
-  if (comunicado.tipo_destinatario === 'all') return true
-  if (!comunicado.alvo_referencia) return false
-  if (comunicado.tipo_destinatario === 'team') return comunicado.alvo_referencia === squadId
-  return comunicado.alvo_referencia === collaboratorId || comunicado.alvo_referencia.toLowerCase() === email?.toLowerCase()
-}
 
 function formatPublicationDate(date: string) {
   const parsedDate = new Date(date.includes('T') ? date : `${date}T00:00:00.000Z`)
@@ -86,14 +40,12 @@ function formatPublicationDate(date: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeZone: 'UTC' }).format(parsedDate)
 }
 
-const corporateRepository = new SupabaseAnnouncementRepository()
-const demoRepository = new LocalAnnouncementRepository(comunicadosMock)
 
 export function AvisosPage({ embedded = false, repository: injectedRepository }: { embedded?: boolean, repository?: AnnouncementRepository }) {
   const { profile, session } = useSession()
   // Login Microsoft: avisos no banco de dados (cada pessoa recebe só os destinados a ela).
   const corporate = isCorporateDataActive()
-  const repository = useMemo(() => injectedRepository ?? (corporate ? corporateRepository : demoRepository), [corporate, injectedRepository])
+  const repository = useMemo(() => injectedRepository ?? getAnnouncementRepository(corporate), [corporate, injectedRepository])
   const [comunicados, setComunicados] = useState<Comunicado[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -101,6 +53,18 @@ export function AvisosPage({ embedded = false, repository: injectedRepository }:
   const visibleAnnouncements = safeAnnouncements
     .filter((comunicado) => !isAnnouncementHiddenForUser(comunicado, session?.id))
     .filter((comunicado) => corporate || session?.role !== 'COLLABORATOR' || isVisibleToCollaborator(comunicado, profile?.id, profile?.email, profile?.activeSquadId))
+
+  const { markAllRead, browserNotifications, enableBrowserNotifications } = useAnnouncementNotifications()
+
+  // Abriu a tela de Avisos: os avisos visíveis contam como lidos (zera o contador do menu).
+  const unreadVisibleIds = visibleAnnouncements.filter((item) => !item.lido).map((item) => item.id).join(',')
+  const markedRef = useRef(new Set<string>())
+  useEffect(() => {
+    const ids = unreadVisibleIds ? unreadVisibleIds.split(',').filter((id) => !markedRef.current.has(id)) : []
+    if (ids.length === 0) return
+    ids.forEach((id) => markedRef.current.add(id))
+    void markAllRead(ids)
+  }, [markAllRead, unreadVisibleIds])
 
   const reload = useCallback(async () => {
     try {
@@ -139,6 +103,12 @@ export function AvisosPage({ embedded = false, repository: injectedRepository }:
 
   const content = (
     <>
+      {browserNotifications === 'default' && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-[var(--color-text-muted)]">Receba um balão de notificação no computador ou celular quando chegar um aviso novo.</p>
+          <button type="button" onClick={() => void enableBrowserNotifications()} className="ui-button-primary whitespace-nowrap">Ativar notificações</button>
+        </div>
+      )}
       <CriarAviso repository={repository} />
       {loadError && <p role="alert" className="rounded-2xl border border-[var(--color-danger)] p-4 text-sm font-semibold text-[var(--color-danger)]">{loadError}</p>}
       <section className="space-y-4" aria-labelledby="announcements-title">

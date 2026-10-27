@@ -86,6 +86,12 @@ export function createFakeSupabase(): FakeSupabase {
       insert(rows: Row | Row[]) { op = 'insert'; payload = rows; return api },
       update(values: Row) { op = 'update'; payload = values; return api },
       delete() { op = 'delete'; return api },
+      upsert(rows: Row | Row[], options?: { onConflict?: string }) {
+        const keys = (options?.onConflict ?? 'id').split(',')
+        const all = rowsOf(table)
+        const fresh = (Array.isArray(rows) ? rows : [rows]).filter((row) => !all.some((existing) => keys.every((key) => existing[key] === row[key])))
+        op = 'insert'; payload = fresh; return api
+      },
       eq(column: string, value: unknown) { filters.push((row) => row[column] === value); return api },
       neq(column: string, value: unknown) { filters.push((row) => row[column] !== value); return api },
       gte(column: string, value: string) { filters.push((row) => String(row[column]) >= value); return api },

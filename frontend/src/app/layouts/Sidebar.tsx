@@ -1,4 +1,5 @@
 import type { KeyboardEventHandler } from 'react'
+import { AnnouncementBadge } from '../../features/announcements/notifications/AnnouncementBadge'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { collaboratorNavigation } from '../../demo/fixtures/navigation'
 import { useSession } from '../../features/session/useSession'
@@ -83,6 +84,7 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
               <>
                 <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${isActive ? 'bg-[var(--color-navigation-active-detail)] text-[var(--color-primary)]' : 'bg-[var(--color-sidebar-surface)]'}`}><NavigationIcon name={item.icon} /></span>
                 <span className={`flex-1 ${item.path === '/colaborador/avisos' ? 'tour-avisos' : ''}`}>{item.label}</span>
+                {item.path === '/colaborador/avisos' && <AnnouncementBadge />}
                 {isActive && <span className="text-[10px] font-extrabold uppercase" aria-label="Página atual">Atual</span>}
               </>
             )}
