@@ -10,6 +10,7 @@ import { getCorporateProfile, mapCorporateRole } from '../auth/authService'
 import { resolveDisplayName } from '../profile/corporateIdentity'
 import { getModuleRole } from './moduleAccess'
 import { getCurrentSession, signOut as signOutSupabase, subscribe as subscribeSupabase } from '../auth/infrastructure/supabaseSessionService'
+import { setCorporateDataSession } from '../corporate/corporateData'
 
 const demoModeEnabled = import.meta.env.MODE === 'test' || (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_MODE === 'true')
 const UNAUTHORIZED_MESSAGE = 'Não foi possível validar um perfil corporativo ativo. Contate a Administração.'
@@ -56,6 +57,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     const clearSession = (state: AuthState = 'unauthenticated', error: string | null = null) => {
       corporateRequestRef.current += 1
       modeRef.current = 'none'
+      setCorporateDataSession(null)
       setSession(null)
       setProfile(null)
       setCorporateProfile(null)
@@ -83,6 +85,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       }
 
       modeRef.current = 'none'
+      setCorporateDataSession(null)
       setSession(null)
       setProfile(null)
       setCorporateProfile(null)
@@ -98,6 +101,8 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
         failedCorporateProfileUsersRef.current.delete(user.id)
         modeRef.current = 'corporate'
+        // Antes de liberar as telas: os serviços passam a ler e gravar no banco de dados.
+        setCorporateDataSession(corporateSession.id)
         setSession(corporateSession)
         setCorporateProfile(validatedProfile)
         setAuthError(null)
@@ -106,6 +111,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
       } catch {
         if (cancelled || requestId !== corporateRequestRef.current || isDemoSessionActive()) return
         failedCorporateProfileUsersRef.current.add(user.id)
+        setCorporateDataSession(null)
         setSession(null)
         setProfile(null)
         setCorporateProfile(null)
@@ -139,6 +145,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     if (localSession) {
       modeRef.current = 'demo'
       corporateRequestRef.current += 1
+      setCorporateDataSession(null)
       setSession(localSession)
       setProfile(null)
       setCorporateProfile(null)
@@ -208,6 +215,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     const created = demoSessionService.signIn(role)
     modeRef.current = 'demo'
     corporateRequestRef.current += 1
+    setCorporateDataSession(null)
     setSession(created)
     setCorporateProfile(null)
     setAuthError(null)
@@ -250,6 +258,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     corporateRequestRef.current += 1
     failedCorporateProfileUsersRef.current.clear()
     demoSessionService.signOut()
+    setCorporateDataSession(null)
     setSession(null)
     setProfile(null)
     setCorporateProfile(null)

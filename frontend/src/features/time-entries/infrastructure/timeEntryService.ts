@@ -1,4 +1,4 @@
-import { MAX_CLIENT_NAME_LENGTH, MAX_ENTRY_MINUTES, MAX_HISTORY_PAGE_SIZE, MAX_PROJECT_CODE_LENGTH } from '../../../config/business'
+import { MAX_HISTORY_PAGE_SIZE } from '../../../config/business'
 import { calculateDaySummary } from '../../calendar/domain'
 import type { DailySummary } from '../../calendar/types'
 import type { AuditEvent } from '../../audit/types'
@@ -6,14 +6,15 @@ import type { AssignmentSnapshot } from '../../squads/types'
 import type { CreateTimeEntryData, DisciplineCode, DocumentTypeCode, TimeEntry } from '../types'
 import { expandTimeEntryDates } from '../domain'
 import type { WorkloadVersion } from '../../workloads/types'
-import { isIsoDate } from '../../../shared/lib/date'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { auditService } from '../../audit/infrastructure/auditService'
 import { dayApprovalService } from '../../approvals'
 import { profileService } from '../../profile/infrastructure/profileService'
 import type { EntryDateBlock } from '../../calendar/entryDatePolicy'
 import { entryDateAvailabilityService } from '../../approvals'
-import { isAllowedDocumentType, isDisciplineCode, isLdDocumentSnapshot } from '../documentCatalog'
+import { normalizeCreateData } from './timeEntryValidation'
+import { SupabaseTimeEntryService } from './supabaseTimeEntryService'
+import { getCorporateDataClient, isCorporateDataActive } from '../../corporate/corporateData'
 import {
   LEGACY_V1_TIME_ENTRY_STORAGE_KEY,
   LEGACY_V2_TIME_ENTRY_STORAGE_KEY,
@@ -94,27 +95,6 @@ type ServiceDependencies = {
 type ReadResult = {
   data: TimeEntryStorageV4
   canWrite: boolean
-}
-
-function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryData {
-  const { endDate: _endDate, weekdaysOnly: _weekdaysOnly, ...baseData } = data
-  const projectCode = data.projectCode.trim()
-  const clientName = data.clientName.trim()
-  const details = data.details.trim()
-  if (!isIsoDate(data.entryDate)) throw new Error('Informe uma data válida.')
-  if (data.endDate && !isIsoDate(data.endDate)) throw new Error('Informe uma data final válida.')
-  if (data.endDate && data.endDate < data.entryDate) throw new Error('A data final deve ser igual ou posterior à data inicial.')
-  if (!clientName || clientName.length > MAX_CLIENT_NAME_LENGTH) throw new Error('Informe um cliente válido.')
-  if (!projectCode || projectCode.length > MAX_PROJECT_CODE_LENGTH) throw new Error('Informe um código de projeto válido.')
-  if (!data.activityId) throw new Error('Informe a atividade.')
-  if (!isDisciplineCode(data.disciplineCode)) throw new Error('Informe a disciplina.')
-  if (!isAllowedDocumentType(data.documentTypeCode, data.ldDocument)) throw new Error('Informe o tipo de documento.')
-  if (data.ldDocument !== undefined && !isLdDocumentSnapshot(data.ldDocument)) throw new Error('Documento da LD inválido.')
-  if (data.contractorNumber !== undefined && (typeof data.contractorNumber !== 'string' || data.contractorNumber.trim().length > 160)) throw new Error('Número da contratada inválido.')
-  if (!Number.isInteger(data.durationMinutes) || data.durationMinutes <= 0 || data.durationMinutes > MAX_ENTRY_MINUTES) {
-    throw new Error('Informe uma duração válida.')
-  }
-  return { ...baseData, clientName, projectCode, details, contractorNumber: data.contractorNumber?.trim() }
 }
 
 function emptyStorage(): TimeEntryStorageV4 {
@@ -440,10 +420,49 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
   }
 }
 
-export const timeEntryService = new LocalStorageTimeEntryService({
+export const localTimeEntryService = new LocalStorageTimeEntryService({
   storage: createBrowserStorage(),
   resolveAssignment: (collaboratorId) => profileService.resolveAssignment(collaboratorId),
   mutationPolicy: dayApprovalService,
   dateGuard: entryDateAvailabilityService,
   audit: auditService,
 })
+
+const corporateTimeEntryService = new SupabaseTimeEntryService({
+  getClient: getCorporateDataClient,
+  mutationPolicy: dayApprovalService,
+  dateGuard: entryDateAvailabilityService,
+  audit: auditService,
+})
+
+/**
+ * Login Microsoft (sessão corporativa): apontamentos no banco de dados (Supabase).
+ * Demonstração e testes: armazenamento local do navegador.
+ */
+export class RuntimeTimeEntryService implements TimeEntryService {
+  private readonly local: TimeEntryService
+  private readonly remote: TimeEntryService
+  private readonly useRemote: () => boolean
+
+  constructor(local: TimeEntryService, remote: TimeEntryService, useRemote: () => boolean = isCorporateDataActive) {
+    this.local = local
+    this.remote = remote
+    this.useRemote = useRemote
+  }
+
+  private active() {
+    return this.useRemote() ? this.remote : this.local
+  }
+
+  list(query: TimeEntryListQuery) { return this.active().list(query) }
+  listByDate(collaboratorId: string, date: string) { return this.active().listByDate(collaboratorId, date) }
+  listByRange(collaboratorId: string, startDate: string, endDate: string) { return this.active().listByRange(collaboratorId, startDate, endDate) }
+  getById(collaboratorId: string, id: string) { return this.active().getById(collaboratorId, id) }
+  create(collaboratorId: string, data: CreateTimeEntryData) { return this.active().create(collaboratorId, data) }
+  update(collaboratorId: string, id: string, expectedVersion: number, data: CreateTimeEntryData, reason: string) { return this.active().update(collaboratorId, id, expectedVersion, data, reason) }
+  duplicate(collaboratorId: string, id: string, expectedVersion: number, overrides: Partial<CreateTimeEntryData>) { return this.active().duplicate(collaboratorId, id, expectedVersion, overrides) }
+  cancel(collaboratorId: string, id: string, expectedVersion: number, reason: string) { return this.active().cancel(collaboratorId, id, expectedVersion, reason) }
+  getDailySummary(collaboratorId: string, date: string, workloadVersions: WorkloadVersion[]) { return this.active().getDailySummary(collaboratorId, date, workloadVersions) }
+}
+
+export const timeEntryService: TimeEntryService = new RuntimeTimeEntryService(localTimeEntryService, corporateTimeEntryService)

@@ -6,7 +6,8 @@ import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { useSession } from '../../features/session/useSession'
 import { TIME_OFF_STORAGE_KEY } from '../../features/time-off/infrastructure/timeOffService'
-import { TIME_ENTRY_STORAGE_KEY } from '../../features/time-entries'
+import { listVisibleTimeEntries } from '../../features/time-entries/infrastructure/visibleTimeEntries'
+import { isCorporateDataActive } from '../../features/corporate/corporateData'
 import { getMonthKey } from '../../shared/lib/date'
 import { diretoriaService } from '../../features/reports/infrastructure/diretoriaService'
 import { squadService } from '../../features/squads/infrastructure/squadService'
@@ -48,11 +49,6 @@ function readJsonArray(key: string): unknown[] {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(key) || '[]') as unknown
     if (Array.isArray(parsed)) return parsed
-    if (parsed && typeof parsed === 'object' && key === TIME_ENTRY_STORAGE_KEY) {
-      const entriesByCollaborator = (parsed as { entriesByCollaborator?: unknown }).entriesByCollaborator
-      if (!entriesByCollaborator || typeof entriesByCollaborator !== 'object') return []
-      return Object.values(entriesByCollaborator).flatMap((entries) => Array.isArray(entries) ? entries : [])
-    }
     if (parsed && typeof parsed === 'object' && key === TIME_OFF_STORAGE_KEY) {
       const requests = (parsed as { requests?: unknown }).requests
       return Array.isArray(requests) ? requests : []
@@ -134,17 +130,23 @@ export function DiretoriaPage() {
   const currentMonth = getMonthKey(new Date().toISOString().slice(0, 10))
 
   useEffect(() => {
-    const storedEntries = readJsonArray(TIME_ENTRY_STORAGE_KEY).flatMap((entry) => {
-      const normalized = normalizeEntry(entry)
-      return normalized ? [normalized] : []
-    })
+    let active = true
+    void listVisibleTimeEntries()
+      .then((rawEntries) => {
+        if (!active) return
+        setEntries(rawEntries.flatMap((entry) => {
+          const normalized = normalizeEntry(entry)
+          return normalized ? [normalized] : []
+        }))
+      })
+      .catch(() => { if (active) setEntries([]) })
     const storedAbsences = readJsonArray(TIME_OFF_STORAGE_KEY).flatMap((absence) => {
       const normalized = normalizeAbsence(absence)
       return normalized ? [normalized] : []
     })
-    setEntries(storedEntries)
     setAbsences(storedAbsences)
-    void diretoriaService.listEscalatedEntries().then(setEscalatedEntries).catch(() => setEscalatedEntries([]))
+    void diretoriaService.listEscalatedEntries().then((loaded) => { if (active) setEscalatedEntries(loaded) }).catch(() => { if (active) setEscalatedEntries([]) })
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
@@ -217,7 +219,7 @@ export function DiretoriaPage() {
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores da diretoria">
               <SummaryCard label="Total de Horas Apontadas (Mês)" value={totalMonthHours > 0 ? totalMonthHours.toFixed(1) : '298'} helper="Horas consolidadas no mês atual" />
               <SummaryCard label="Projetos Ativos" value={activeProjects || 3} helper="Projetos com apontamentos registrados" />
-              <SummaryCard label="Apontamentos Registrados" value={entries.length} helper="Base persistida em localStorage" />
+              <SummaryCard label="Apontamentos Registrados" value={entries.length} helper={isCorporateDataActive() ? 'Base no banco de dados' : 'Base persistida em localStorage'} />
               <SummaryCard label="Pendências Gerais" value={pendingAbsences} helper="Ausências aguardando decisão" />
             </section>
 
@@ -229,7 +231,7 @@ export function DiretoriaPage() {
                   <p className="ui-eyebrow text-xs font-bold uppercase tracking-[0.16em]">Dashboard</p>
                   <h2 id="project-allocation-title" className="mt-1 text-xl font-extrabold text-[var(--color-text)]">Alocação de Tempo por Projeto</h2>
                 </div>
-                <p className="text-sm text-[var(--color-text-muted)]">{entries.length > 0 ? 'Dados reais do localStorage' : 'Dados corporativos para aprovação visual'}</p>
+                <p className="text-sm text-[var(--color-text-muted)]">{entries.length > 0 ? (isCorporateDataActive() ? 'Dados do banco de dados' : 'Dados reais do localStorage') : 'Dados corporativos para aprovação visual'}</p>
               </div>
               <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
