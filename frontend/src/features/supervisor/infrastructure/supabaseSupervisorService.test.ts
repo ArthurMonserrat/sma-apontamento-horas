@@ -9,9 +9,9 @@ const ANA = 'ana-1'
 const BRUNO = 'bruno-1'
 
 const people: CorporatePerson[] = [
-  { id: SUP, name: 'Sueli Supervisora', email: 's@x', role: 'supervisor', teamId: null, teamName: null, supervisorId: null, supervisorName: null },
-  { id: ANA, name: 'Ana Souza', email: 'a@x', role: 'colaborador', teamId: 't1', teamName: 'Automação', supervisorId: SUP, supervisorName: 'Sueli Supervisora' },
-  { id: BRUNO, name: 'Bruno Lima', email: 'b@x', role: 'colaborador', teamId: 't1', teamName: 'Automação', supervisorId: SUP, supervisorName: 'Sueli Supervisora' },
+  { id: SUP, name: 'Sueli Supervisora', email: 's@x', role: 'supervisor', teamId: null, teamName: null, supervisorId: null, supervisorName: null, jobTitle: null },
+  { id: ANA, name: 'Ana Souza', email: 'a@x', role: 'colaborador', teamId: 't1', teamName: 'Automação', supervisorId: SUP, supervisorName: 'Sueli Supervisora', jobTitle: null },
+  { id: BRUNO, name: 'Bruno Lima', email: 'b@x', role: 'colaborador', teamId: 't1', teamName: 'Automação', supervisorId: SUP, supervisorName: 'Sueli Supervisora', jobTitle: null },
 ]
 
 function row(id: string, collaborator: string, entryDate: string, status = 'PENDING', extra: Record<string, unknown> = {}) {

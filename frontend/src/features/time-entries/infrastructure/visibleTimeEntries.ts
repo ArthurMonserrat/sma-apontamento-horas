@@ -5,6 +5,7 @@ import { TIME_ENTRY_STORAGE_KEY } from './timeEntryService'
 
 export type VisibleTimeEntry = TimeEntry & {
   collaboratorName?: string
+  collaboratorJobTitle?: string
   rejectionReason?: string
 }
 
@@ -50,6 +51,7 @@ export async function listVisibleTimeEntries(): Promise<unknown[]> {
       ...entry,
       assignmentSnapshot,
       collaboratorName: person?.name,
+      collaboratorJobTitle: person?.jobTitle ?? undefined,
       rejectionReason: row.rejection_reason ?? undefined,
     }
   })

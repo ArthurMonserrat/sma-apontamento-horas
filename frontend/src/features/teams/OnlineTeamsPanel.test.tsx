@@ -6,9 +6,9 @@ import type { CorporatePerson } from '../corporate/corporateData'
 import { OnlineTeamsPanel } from './OnlineTeamsPanel'
 import type { OnlineTeam, OnlineTeamService } from './infrastructure/onlineTeamService'
 
-const renato: CorporatePerson = { id: 'renato', name: 'Renato Resende', email: 'renato@x', role: 'colaborador', teamId: null, teamName: null, supervisorId: null, supervisorName: null }
-const hugo: CorporatePerson = { id: 'hugo', name: 'Hugo Barbosa', email: 'hugo@x', role: 'colaborador', teamId: null, teamName: null, supervisorId: null, supervisorName: null }
-const hamilton: CorporatePerson = { id: 'hamilton', name: 'Hamilton Junior', email: 'hamilton@x', role: 'colaborador', teamId: 'old', teamName: 'Antiga', supervisorId: null, supervisorName: null }
+const renato: CorporatePerson = { id: 'renato', name: 'Renato Resende', email: 'renato@x', role: 'colaborador', teamId: null, teamName: null, supervisorId: null, supervisorName: null, jobTitle: null }
+const hugo: CorporatePerson = { id: 'hugo', name: 'Hugo Barbosa', email: 'hugo@x', role: 'colaborador', teamId: null, teamName: null, supervisorId: null, supervisorName: null, jobTitle: null }
+const hamilton: CorporatePerson = { id: 'hamilton', name: 'Hamilton Junior', email: 'hamilton@x', role: 'colaborador', teamId: 'old', teamName: 'Antiga', supervisorId: null, supervisorName: null, jobTitle: null }
 
 let root: Root
 let container: HTMLDivElement
@@ -29,6 +29,7 @@ beforeEach(() => {
       return 't1'
     }),
     deactivateTeam: vi.fn(),
+    setJobTitle: vi.fn(async (_id: string, title: string) => { hamilton.jobTitle = title }),
   } as unknown as OnlineTeamService
 })
 
@@ -66,6 +67,17 @@ describe('OnlineTeamsPanel', () => {
     expect(container.textContent).toContain('Supervisão criada no banco de dados.')
     expect(container.textContent).toContain('Supervisor: Renato Resende')
     expect(container.textContent).toContain('2 colaborador(es)')
+  })
+
+  it('a diretoria define o cargo de quem está na supervisão e de quem está sem supervisão', async () => {
+    teams = [{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', members: [hamilton] }]
+    await act(async () => { root.render(<OnlineTeamsPanel service={service} />) })
+    expect(container.textContent).toContain('Sem supervisão (1)')
+    expect(container.querySelector('select[aria-label="Cargo de Hugo Barbosa"]')).toBeTruthy()
+    const select = container.querySelector<HTMLSelectElement>('select[aria-label="Cargo de Hamilton Junior"]')!
+    await act(async () => { setValue(select, 'Projetista') })
+    expect(service.setJobTitle).toHaveBeenCalledWith('hamilton', 'Projetista')
+    expect(container.textContent).toContain('Cargo de Hamilton Junior: Projetista.')
   })
 
   it('mostra o erro do banco sem fechar o formulário', async () => {

@@ -17,6 +17,25 @@ const roleLabel: Record<CorporatePerson['role'], string> = {
   diretor: 'Diretoria',
 }
 
+const JOB_TITLE_OPTIONS = ['Engenheiro', 'Projetista', 'Desenhista', 'Estagiário', 'Estagiário 4h']
+
+function JobTitleSelect({ person, disabled, onChange }: { person: CorporatePerson; disabled: boolean; onChange: (person: CorporatePerson, jobTitle: string) => void }) {
+  const current = person.jobTitle ?? ''
+  return (
+    <select
+      aria-label={`Cargo de ${person.name}`}
+      value={current}
+      disabled={disabled}
+      onChange={(event) => onChange(person, event.target.value)}
+      className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-2 py-1 text-xs font-semibold text-[var(--color-text)]"
+    >
+      <option value="">Sem cargo</option>
+      {JOB_TITLE_OPTIONS.map((title) => <option key={title} value={title}>{title}</option>)}
+      {current && !JOB_TITLE_OPTIONS.includes(current) && <option value={current}>{current}</option>}
+    </select>
+  )
+}
+
 const inputClassName = 'mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-2 text-sm font-semibold text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20'
 
 /**
@@ -95,6 +114,21 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
     }
   }
 
+  async function changeJobTitle(person: CorporatePerson, jobTitle: string) {
+    if (isSaving) return
+    setSaving(true)
+    setError(null)
+    try {
+      await service.setJobTitle(person.id, jobTitle)
+      setMessage(jobTitle ? `Cargo de ${person.name}: ${jobTitle}.` : `Cargo de ${person.name} removido.`)
+      await load()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o cargo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function deactivate(team: OnlineTeam) {
     if (isSaving) return
     if (typeof window !== 'undefined' && !window.confirm(`Desativar a supervisão ${team.name}? Os colaboradores ficam sem equipe.`)) return
@@ -111,6 +145,8 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
     }
   }
 
+  const supervisorIds = new Set(teams.map((team) => team.supervisorId))
+  const withoutTeam = sortedPeople.filter((person) => !person.teamId && !supervisorIds.has(person.id) && person.role !== 'diretor')
   const supervisor = form ? people.find((person) => person.id === form.supervisorId) : undefined
   const candidates = form ? sortedPeople.filter((person) => person.id !== form.supervisorId) : []
 
@@ -164,7 +200,7 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
                       <input type="checkbox" checked={checked} onChange={() => toggleMember(person.id)} className="mt-1 accent-[var(--color-primary)]" />
                       <span>
                         <span className="block font-bold text-[var(--color-text)]">{person.name}</span>
-                        <span className="block text-xs text-[var(--color-text-muted)]">{person.email}</span>
+                        <span className="block text-xs text-[var(--color-text-muted)]">{person.jobTitle ? `${person.jobTitle} · ` : ''}{person.email}</span>
                         {currentTeam && <span className="block text-xs font-semibold text-[var(--color-text-muted)]">Hoje em {currentTeam}{checked ? ' — será movido' : ''}</span>}
                       </span>
                     </label>
@@ -202,8 +238,13 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
                 </div>
               </div>
               <p className="mt-3 text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">{team.members.length} colaborador(es)</p>
-              <ul className="mt-1 space-y-0.5 text-sm text-[var(--color-text)]">
-                {team.members.map((member) => <li key={member.id}>{member.name}</li>)}
+              <ul className="mt-1 space-y-1.5 text-sm text-[var(--color-text)]">
+                {team.members.map((member) => (
+                  <li key={member.id} className="flex items-center justify-between gap-2">
+                    <span>{member.name}</span>
+                    <JobTitleSelect person={member} disabled={isSaving} onChange={(person, title) => void changeJobTitle(person, title)} />
+                  </li>
+                ))}
               </ul>
               {onExportTeam && (
                 <button type="button" onClick={() => onExportTeam(team)} disabled={isExporting} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-primary)] disabled:opacity-60">
@@ -213,6 +254,20 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
               )}
             </article>
           ))}
+        </div>
+      )}
+
+      {!isLoading && withoutTeam.length > 0 && (
+        <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">Sem supervisão ({withoutTeam.length})</p>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {withoutTeam.map((person) => (
+              <li key={person.id} className="flex items-center justify-between gap-2 text-sm text-[var(--color-text)]">
+                <span>{person.name}</span>
+                <JobTitleSelect person={person} disabled={isSaving} onChange={(changed, title) => void changeJobTitle(changed, title)} />
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>
