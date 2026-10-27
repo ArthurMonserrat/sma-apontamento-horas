@@ -24,7 +24,12 @@ const inputClassName = 'mt-1 w-full rounded-xl border border-[var(--color-border
  * A diretoria cria a supervisão, escolhe o supervisor e os colaboradores; o supervisor
  * passa a ver e aprovar os apontamentos da equipe.
  */
-export function OnlineTeamsPanel({ service = onlineTeamService }: { service?: OnlineTeamService }) {
+export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, isExporting = false }: {
+  service?: OnlineTeamService
+  /** Exporta as horas da supervisão no mês/ano escolhido na página. */
+  onExportTeam?: (team: OnlineTeam) => void
+  isExporting?: boolean
+}) {
   const [teams, setTeams] = useState<OnlineTeam[]>([])
   const [people, setPeople] = useState<CorporatePerson[]>([])
   const [isLoading, setLoading] = useState(true)
@@ -200,6 +205,12 @@ export function OnlineTeamsPanel({ service = onlineTeamService }: { service?: On
               <ul className="mt-1 space-y-0.5 text-sm text-[var(--color-text)]">
                 {team.members.map((member) => <li key={member.id}>{member.name}</li>)}
               </ul>
+              {onExportTeam && (
+                <button type="button" onClick={() => onExportTeam(team)} disabled={isExporting} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-primary)] disabled:opacity-60">
+                  <span className="rounded bg-[var(--color-navigation-active-detail)] px-1 text-[10px] font-black">XL</span>
+                  Exportar horas da supervisão
+                </button>
+              )}
             </article>
           ))}
         </div>

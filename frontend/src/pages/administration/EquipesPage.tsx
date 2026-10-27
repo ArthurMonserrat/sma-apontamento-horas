@@ -156,6 +156,8 @@ function EditableCollaboratorCard({ colaborador, squadName, squadOptions, onSave
 export function EquipesPage() {
   const { session, signOut } = useSession()
   const navigate = useNavigate()
+  // Login Microsoft: só supervisões e apontamentos do banco de dados (o organograma de demonstração some).
+  const corporate = isCorporateDataActive()
   const [dadosOrganograma, setDadosOrganograma] = useState<DEPGerencia[]>([])
   const [squadSelecionada, setSquadSelecionada] = useState(getFirstSquadName(organogramaDEP))
   const now = new Date()
@@ -242,9 +244,21 @@ export function EquipesPage() {
     setIsExporting(true)
     setExportError(null)
     try {
-      await exportGeneralHoursReport({ organograma: organogramaAtual, mesSelecionado, anoSelecionado })
+      await exportGeneralHoursReport({ organograma: corporate ? [] : organogramaAtual, mesSelecionado, anoSelecionado })
     } catch (error) {
       setExportError(error instanceof Error ? error.message : 'Não foi possível exportar o relatório geral.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function handleExportOnlineTeam(teamName: string) {
+    setIsExporting(true)
+    setExportError(null)
+    try {
+      await exportSquadHoursReport({ organograma: [], squadName: teamName, mesSelecionado, anoSelecionado })
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Não foi possível exportar o relatório da supervisão.')
     } finally {
       setIsExporting(false)
     }
@@ -293,7 +307,7 @@ export function EquipesPage() {
                 <div>
                   <p className="ui-eyebrow text-xs font-bold uppercase tracking-[0.16em]">Estrutura DEP</p>
                   <h1 className="mt-2 text-3xl font-extrabold text-[var(--color-text)]">SM&A - Gerenciamento de Equipes</h1>
-                  <p className="mt-2 text-sm text-[var(--color-text-muted)]">Gerencie colaboradores, cargos e transferências entre squads.</p>
+                  <p className="mt-2 text-sm text-[var(--color-text-muted)]">{corporate ? 'Supervisões e horas do banco de dados. O mês e o ano valem para as exportações.' : 'Gerencie colaboradores, cargos e transferências entre squads.'}</p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
@@ -335,12 +349,11 @@ export function EquipesPage() {
               </div>
             )}
 
-            {isCorporateDataActive() && <OnlineTeamsPanel />}
+            {corporate && <OnlineTeamsPanel onExportTeam={(team) => void handleExportOnlineTeam(team.name)} isExporting={isExporting} />}
 
-            <section className="space-y-5" aria-labelledby="dep-org-title">
+            {!corporate && <section className="space-y-5" aria-labelledby="dep-org-title">
               <div>
                 <h2 id="dep-org-title" className="text-xl font-extrabold text-[var(--color-text)]">Organograma de Equipes (DEP)</h2>
-                {isCorporateDataActive() && <p className="mt-1 text-sm text-[var(--color-text-muted)]">Organograma de referência, salvo só neste navegador. As supervisões que valem no sistema são as de cima.</p>}
               </div>
               <div className="flex flex-col gap-6 md:flex-row">
                 <aside className="md:w-72 md:shrink-0" aria-label="Squads do DEP">
@@ -432,7 +445,7 @@ export function EquipesPage() {
                   )}
                 </section>
               </div>
-            </section>
+            </section>}
           </div>
         </main>
       </div>

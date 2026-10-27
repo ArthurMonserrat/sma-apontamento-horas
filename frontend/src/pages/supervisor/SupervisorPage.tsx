@@ -21,6 +21,7 @@ import { CorporateIdentityPanel } from '../../features/profile/CorporateIdentity
 import { formatMinutes } from '../../features/time-entries/domain'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
 import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
+import { isCorporateDataActive } from '../../features/corporate/corporateData'
 import { useTour } from '../../app/providers/tourContext'
 import { AvisosPage } from '../administration/AvisosPage'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
@@ -297,7 +298,10 @@ export function SupervisorPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [rejectionTarget, setRejectionTarget] = useState<RejectionTarget | null>(null)
   const [rejectionError, setRejectionError] = useState<string | null>(null)
-  const collaboratorOptions = useMemo(() => ['Todos', ...getAllColaboradores()], [])
+  // Login Microsoft: só as pessoas que aparecem nos apontamentos do banco (equipe real).
+  const collaboratorOptions = useMemo(() => ['Todos', ...(isCorporateDataActive()
+    ? Array.from(new Set(dashboard.entries.map((entry) => entry.collaboratorName))).sort((left, right) => left.localeCompare(right, 'pt-BR'))
+    : getAllColaboradores())], [dashboard.entries])
 
   useEffect(() => {
     setRange(monthRange)

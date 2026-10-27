@@ -11,6 +11,7 @@ import { isCorporateDataActive } from '../../features/corporate/corporateData'
 import { getMonthKey } from '../../shared/lib/date'
 import { diretoriaService } from '../../features/reports/infrastructure/diretoriaService'
 import { squadService } from '../../features/squads/infrastructure/squadService'
+import { onlineTeamService } from '../../features/teams/infrastructure/onlineTeamService'
 import { supervisorService } from '../../features/supervisor/infrastructure/supervisorService'
 import type { SupervisorPendingEntry } from '../../features/supervisor/types'
 import type { Squad } from '../../features/squads/types'
@@ -128,6 +129,7 @@ export function DiretoriaPage() {
   const [managerEntries, setManagerEntries] = useState<SupervisorPendingEntry[]>([])
   const [managerSquads, setManagerSquads] = useState<Array<Pick<Squad, 'id' | 'name'>>>([])
   const currentMonth = getMonthKey(new Date().toISOString().slice(0, 10))
+  const corporate = isCorporateDataActive()
 
   useEffect(() => {
     let active = true
@@ -151,7 +153,10 @@ export function DiretoriaPage() {
 
   useEffect(() => {
     let active = true
-    void Promise.all([supervisorService.listEntries(), squadService.listActive()])
+    const loadSquads = isCorporateDataActive()
+      ? onlineTeamService.listTeams().then((teams) => teams.map(({ id, name }) => ({ id, name })))
+      : squadService.listActive()
+    void Promise.all([supervisorService.listEntries(), loadSquads])
       .then(([loadedEntries, loadedSquads]) => {
         if (!active) return
         setManagerEntries(loadedEntries)
@@ -167,7 +172,7 @@ export function DiretoriaPage() {
 
   const projectHours = useMemo(() => {
     const activeEntries = entries.filter((entry) => entry.status !== 'CANCELLED')
-    if (activeEntries.length === 0) return fallbackProjectHours
+    if (activeEntries.length === 0) return isCorporateDataActive() ? [] : fallbackProjectHours
     const grouped = activeEntries.reduce<Record<string, number>>((totals, entry) => {
       totals[entry.projectCode] = (totals[entry.projectCode] ?? 0) + entry.durationMinutes / 60
       return totals
@@ -217,9 +222,9 @@ export function DiretoriaPage() {
             </section>
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores da diretoria">
-              <SummaryCard label="Total de Horas Apontadas (Mês)" value={totalMonthHours > 0 ? totalMonthHours.toFixed(1) : '298'} helper="Horas consolidadas no mês atual" />
-              <SummaryCard label="Projetos Ativos" value={activeProjects || 3} helper="Projetos com apontamentos registrados" />
-              <SummaryCard label="Apontamentos Registrados" value={entries.length} helper={isCorporateDataActive() ? 'Base no banco de dados' : 'Base persistida em localStorage'} />
+              <SummaryCard label="Total de Horas Apontadas (Mês)" value={totalMonthHours > 0 ? totalMonthHours.toFixed(1) : corporate ? '0' : '298'} helper="Horas consolidadas no mês atual" />
+              <SummaryCard label="Projetos Ativos" value={activeProjects || (corporate ? 0 : 3)} helper="Projetos com apontamentos registrados" />
+              <SummaryCard label="Apontamentos Registrados" value={entries.length} helper={corporate ? 'Base no banco de dados' : 'Base persistida em localStorage'} />
               <SummaryCard label="Pendências Gerais" value={pendingAbsences} helper="Ausências aguardando decisão" />
             </section>
 
@@ -231,9 +236,11 @@ export function DiretoriaPage() {
                   <p className="ui-eyebrow text-xs font-bold uppercase tracking-[0.16em]">Dashboard</p>
                   <h2 id="project-allocation-title" className="mt-1 text-xl font-extrabold text-[var(--color-text)]">Alocação de Tempo por Projeto</h2>
                 </div>
-                <p className="text-sm text-[var(--color-text-muted)]">{entries.length > 0 ? (isCorporateDataActive() ? 'Dados do banco de dados' : 'Dados reais do localStorage') : 'Dados corporativos para aprovação visual'}</p>
+                <p className="text-sm text-[var(--color-text-muted)]">{corporate ? 'Dados do banco de dados' : entries.length > 0 ? 'Dados reais do localStorage' : 'Dados corporativos para aprovação visual'}</p>
               </div>
-              <div className="h-[320px]">
+              {corporate && projectHours.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm font-semibold text-[var(--color-text-muted)]">Nenhum apontamento no banco de dados ainda.</p>
+              ) : <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={projectHours} margin={{ top: 10, right: 16, left: 0, bottom: 8 }}>
                     <XAxis dataKey="projeto" tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }} axisLine={{ stroke: 'var(--color-border)' }} tickLine={false} />
@@ -246,7 +253,7 @@ export function DiretoriaPage() {
                     <Bar dataKey="horas" name="Horas" fill="var(--color-primary)" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </div>}
             </section>
 
             <ManagerCalendar
