@@ -24,6 +24,7 @@ import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
 import { isCorporateDataActive } from '../../features/corporate/corporateData'
 import { useTour } from '../../app/providers/tourContext'
 import { AvisosPage } from '../administration/AvisosPage'
+import { AnnouncementBadge } from '../../features/announcements/notifications/AnnouncementBadge'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
 
 type ActiveView = 'entries' | 'requests' | 'history' | 'profile' | 'announcements'
@@ -151,6 +152,7 @@ function SupervisorSidebar({ activeView, profile, onChange, onSignOut }: {
             >
               <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${isActive ? 'bg-[var(--color-navigation-active-detail)] text-[var(--color-primary)]' : 'bg-[var(--color-sidebar-surface)]'}`}><NavigationIcon name={item.icon} /></span>
               <span className="flex-1">{item.label}</span>
+              {item.id === 'announcements' && <AnnouncementBadge />}
               {isActive && <span className="text-[10px] font-extrabold uppercase" aria-label="Página atual">Atual</span>}
             </button>
           )

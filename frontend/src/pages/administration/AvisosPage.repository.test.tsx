@@ -39,6 +39,7 @@ describe('AvisosPage com repositório', () => {
       create: vi.fn(async (input) => { stored = [aviso('2', input.titulo), ...stored] }),
       remove: vi.fn(async (id) => { stored = stored.filter((item) => item.id !== id); return true }),
       hide: vi.fn(async () => true),
+      markRead: vi.fn(async () => undefined),
     }
     await act(async () => {
       root.render(<SessionContext.Provider value={{ session: director, profile: null, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
@@ -67,7 +68,7 @@ describe('AvisosPage com repositório', () => {
   })
 
   it('mostra o erro do banco ao carregar', async () => {
-    const repository = { list: vi.fn(async () => { throw new Error('Não foi possível carregar os avisos.') }), create: vi.fn(), remove: vi.fn(), hide: vi.fn() } as unknown as AnnouncementRepository
+    const repository = { list: vi.fn(async () => { throw new Error('Não foi possível carregar os avisos.') }), create: vi.fn(), remove: vi.fn(), hide: vi.fn(), markRead: vi.fn() } as unknown as AnnouncementRepository
     await act(async () => {
       root.render(<SessionContext.Provider value={{ session: director, profile: null, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
         <AvisosPage embedded repository={repository} />

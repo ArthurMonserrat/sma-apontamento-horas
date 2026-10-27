@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnnouncementBadge } from '../../features/announcements/notifications/AnnouncementBadge'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { ThemeToggle } from './ThemeToggle'
@@ -57,7 +58,7 @@ export function GestorLayout() {
             </NavLink>
             {isDirector && <NavLink to="/administracao/equipes" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-sidebar-surface)]"><NavigationIcon name="users" /></span><span className="flex-1">Equipes</span></NavLink>}
             {isDirector && <NavLink to="/administracao/relatorios" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-sidebar-surface)]"><NavigationIcon name="bar-chart" /></span><span className="flex-1">Relatórios</span></NavLink>}
-            <NavLink to="/avisos" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-navigation-active-detail)] text-[var(--color-primary)]"><NavigationIcon name="bell" /></span><span className="flex-1">Avisos</span></NavLink>
+            <NavLink to="/avisos" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-navigation-active-detail)] text-[var(--color-primary)]"><NavigationIcon name="bell" /></span><span className="flex-1">Avisos</span><AnnouncementBadge /></NavLink>
           </nav>
           <div className="border-t border-[var(--color-sidebar-border)] p-4">
             <button type="button" onClick={exit} className="w-full rounded-xl border border-[var(--color-sidebar-border)] px-4 py-3 text-left text-sm font-bold text-[var(--color-sidebar-text)] hover:bg-[var(--color-navigation-hover)]">Sair do sistema</button>

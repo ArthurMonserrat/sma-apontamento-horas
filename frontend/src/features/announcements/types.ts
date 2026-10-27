@@ -14,4 +14,6 @@ export interface Comunicado {
   urgencia: ComunicadoTipo
   tipo_destinatario: ComunicadoDestinatario
   alvo_referencia: string | null
+  /** O usuário logado já leu (contador e balão de notificação). */
+  lido?: boolean
 }

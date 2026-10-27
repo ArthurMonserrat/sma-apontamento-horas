@@ -13,6 +13,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 vi.mock('./routes/AppRoutes', () => ({ AppRoutes: () => <div data-routes="app" /> }))
 vi.mock('./providers/OnboardingTour', () => ({ OnboardingTour: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('../features/offline/useOfflineSync', () => ({ OfflineSyncProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
+vi.mock('../features/announcements/notifications/AnnouncementNotificationsProvider', () => ({ AnnouncementNotificationsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 vi.mock('../features/auth/AuthSync', () => ({ AuthSync: ({ children }: { children: React.ReactNode }) => <>{children}</> }))
 
 import { App } from './App'
