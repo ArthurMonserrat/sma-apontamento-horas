@@ -32,7 +32,7 @@ export function createFakeSupabase(): FakeSupabase {
     const filters: Filter[] = []
     const orders: Array<{ column: string; ascending: boolean }> = []
     let range: [number, number] | null = null
-    let op: 'select' | 'insert' | 'update' = 'select'
+    let op: 'select' | 'insert' | 'update' | 'delete' = 'select'
     let payload: Row | Row[] | null = null
     let wantCount = false
     let single = false
@@ -53,6 +53,12 @@ export function createFakeSupabase(): FakeSupabase {
         return { data: inserted, error: null, count: null }
       }
       let matched = all.filter((row) => filters.every((filter) => filter(row)))
+      if (op === 'delete') {
+        const removed = new Set(matched)
+        tables.set(table, all.filter((row) => !removed.has(row)))
+        calls.push({ table, op: 'delete' })
+        return { data: matched.map((row) => ({ ...row })), error: null, count: null }
+      }
       if (op === 'update') {
         matched = matched.filter((row) => row.status !== 'APPROVED' && row.status !== 'CANCELLED')
         matched.forEach((row) => {
@@ -79,6 +85,7 @@ export function createFakeSupabase(): FakeSupabase {
       select(_columns?: string, options?: { count?: string }) { if (options?.count) wantCount = true; return api },
       insert(rows: Row | Row[]) { op = 'insert'; payload = rows; return api },
       update(values: Row) { op = 'update'; payload = values; return api },
+      delete() { op = 'delete'; return api },
       eq(column: string, value: unknown) { filters.push((row) => row[column] === value); return api },
       neq(column: string, value: unknown) { filters.push((row) => row[column] !== value); return api },
       gte(column: string, value: string) { filters.push((row) => String(row[column]) >= value); return api },

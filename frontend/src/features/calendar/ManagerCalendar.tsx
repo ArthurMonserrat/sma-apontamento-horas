@@ -6,7 +6,8 @@ import { eachIsoDate, formatDatePtBr, getCorporateToday, getMonthKey, getMonthRa
 import { MonthlyCalendar } from './MonthlyCalendar'
 import type { CalendarVisualState, DailySummary } from './types'
 
-type Collaborator = { id: string; name: string }
+/** squadId: equipe atual da pessoa (diretoria filtra por equipe mesmo sem apontamentos). */
+type Collaborator = { id: string; name: string; squadId?: string | null }
 type ManagerCalendarRole = 'SUPERVISOR' | 'DIRECTOR_ADMIN'
 
 type ManagerCalendarProps = {
@@ -99,13 +100,17 @@ export function ManagerCalendar({ entries, collaborators, squads = [], role }: M
   const collaboratorOptions = useMemo(() => {
     const byId = new Map<string, Collaborator>()
     if (isDirector) {
+      collaborators
+        .filter((collaborator) => selectedSquadId === ALL_SQUADS
+          || (selectedSquadId === NO_SQUAD ? !collaborator.squadId : collaborator.squadId === selectedSquadId))
+        .forEach((collaborator) => byId.set(collaborator.id, { id: collaborator.id, name: collaborator.name }))
       squadScopedEntries.forEach((entry) => byId.set(entry.collaboratorId, { id: entry.collaboratorId, name: entry.collaboratorName }))
     } else {
       collaborators.forEach((collaborator) => byId.set(collaborator.id, collaborator))
       entries.forEach((entry) => byId.set(entry.collaboratorId, { id: entry.collaboratorId, name: entry.collaboratorName }))
     }
     return Array.from(byId.values()).sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'))
-  }, [collaborators, entries, isDirector, squadScopedEntries])
+  }, [collaborators, entries, isDirector, selectedSquadId, squadScopedEntries])
 
   const visibleEntries = useMemo(() => (
     squadScopedEntries.filter((entry) => (

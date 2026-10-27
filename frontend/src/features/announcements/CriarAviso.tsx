@@ -1,9 +1,17 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useSession } from '../session/useSession'
-import { ANNOUNCEMENTS_STORAGE_KEY, ANNOUNCEMENTS_UPDATED_EVENT } from './infrastructure/announcementService'
 import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
 import { demoSquads } from '../../demo/fixtures/demoData'
-import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from './types'
+import { isCorporateDataActive, listCorporatePeople } from '../corporate/corporateData'
+import { onlineTeamService } from '../teams/infrastructure/onlineTeamService'
+import { LocalAnnouncementRepository, type AnnouncementRepository } from './infrastructure/announcementRepository'
+import type { ComunicadoDestinatario, ComunicadoTipo } from './types'
+
+type Option = { value: string; label: string }
+
+const demoTeamOptions = (): Option[] => (Array.isArray(demoSquads) ? demoSquads : []).map((squad) => ({ value: squad.id, label: squad.name }))
+const demoPeopleOptions = (): Option[] => (getAllColaboradores() ?? []).map((name) => ({ value: name, label: name }))
+const fallbackRepository = new LocalAnnouncementRepository()
 
 const urgencyOptions: Array<{ value: ComunicadoTipo, label: string }> = [
   { value: 'info', label: 'Normal' },
@@ -17,8 +25,12 @@ const recipientOptions: Array<{ value: ComunicadoDestinatario, label: string }> 
   { value: 'individual', label: 'Colaborador Específico' },
 ]
 
-export function CriarAviso() {
+export function CriarAviso({ repository = fallbackRepository }: { repository?: AnnouncementRepository }) {
   const { session } = useSession()
+  const corporate = isCorporateDataActive()
+  const [teamOptions, setTeamOptions] = useState<Option[]>(() => corporate ? [] : demoTeamOptions())
+  const [peopleOptions, setPeopleOptions] = useState<Option[]>(() => corporate ? [] : demoPeopleOptions())
+  const [isSending, setSending] = useState(false)
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [type, setType] = useState<ComunicadoTipo>('info')
@@ -28,42 +40,45 @@ export function CriarAviso() {
 
   const sessionRole = session?.role ?? null
   const canCreate = sessionRole === 'SUPERVISOR' || sessionRole === 'DIRECTOR_ADMIN'
-  const squads = Array.isArray(demoSquads) ? demoSquads : []
-  const collaborators = getAllColaboradores()
-  const collaboratorOptions = Array.isArray(collaborators) ? collaborators : []
+
+  // Login Microsoft: equipes e pessoas reais (a diretoria vê todas; o supervisor, a própria equipe).
+  useEffect(() => {
+    if (!corporate || !canCreate) return
+    let active = true
+    void Promise.all([onlineTeamService.listTeams(), listCorporatePeople()])
+      .then(([teams, people]) => {
+        if (!active) return
+        const visibleTeams = sessionRole === 'SUPERVISOR' ? teams.filter((team) => team.supervisorId === session?.id) : teams
+        setTeamOptions(visibleTeams.map((team) => ({ value: team.id, label: team.name })))
+        const visiblePeople = people.filter((person) => person.id !== session?.id && (sessionRole !== 'SUPERVISOR' || person.supervisorId === session?.id))
+        setPeopleOptions(visiblePeople.map((person) => ({ value: person.id, label: person.name })))
+      })
+      .catch(() => { if (active) { setTeamOptions([]); setPeopleOptions([]) } })
+    return () => { active = false }
+  }, [canCreate, corporate, session?.id, sessionRole])
+
   if (!canCreate) return null
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSending) return
+    const titulo = title?.trim() ?? ''
+    const mensagem = message?.trim() ?? ''
+    if (!titulo || !mensagem || !session || (recipientType !== 'all' && !recipientReference)) {
+      setFeedback('Preencha o título e a mensagem para enviar o aviso.')
+      return
+    }
+    setSending(true)
     try {
-      const titulo = title?.trim() ?? ''
-      const mensagem = message?.trim() ?? ''
-      if (!titulo || !mensagem || !session || (recipientType !== 'all' && !recipientReference)) {
-        setFeedback('Preencha o título e a mensagem para enviar o aviso.')
-        return
-      }
-
-      const raw = window.localStorage.getItem(ANNOUNCEMENTS_STORAGE_KEY) || '[]'
-      const parsed: unknown = JSON.parse(raw)
-      const avisosAtuais: Comunicado[] = Array.isArray(parsed) ? parsed : []
-      const timestamp = new Date().toISOString()
-      const novoAviso: Comunicado = {
-        id: crypto.randomUUID(),
+      await repository.create({
         titulo,
         mensagem,
-        dataPublicacao: timestamp,
-        timestamp,
-        autor: session?.role === 'SUPERVISOR' ? 'Supervisor (Modo Offline)' : 'Gestão (Modo Offline)',
-        autorId: session?.id,
-        oculto_por: [],
-        tipo: type,
         urgencia: type,
-        tipo_destinatario: recipientType,
-        alvo_referencia: recipientType === 'all' ? 'geral' : (recipientReference || session?.id || 'geral'),
-      }
-      const novaLista = [novoAviso, ...(Array.isArray(avisosAtuais) ? avisosAtuais : [])]
-      window.localStorage.setItem(ANNOUNCEMENTS_STORAGE_KEY, JSON.stringify(novaLista))
-      window.dispatchEvent(new CustomEvent(ANNOUNCEMENTS_UPDATED_EVENT))
+        tipoDestinatario: recipientType,
+        alvoReferencia: recipientType === 'all' ? null : recipientReference,
+        autor: session.role === 'SUPERVISOR' ? 'Supervisor (Modo Offline)' : 'Gestão (Modo Offline)',
+        autorId: session.id,
+      })
       setTitle('')
       setMessage('')
       setType('info')
@@ -71,8 +86,9 @@ export function CriarAviso() {
       setRecipientReference('')
       setFeedback('Aviso enviado com sucesso.')
     } catch (error) {
-      console.error('Erro ao salvar aviso:', error)
-      setFeedback('Não foi possível enviar o aviso. Tente novamente.')
+      setFeedback(error instanceof Error ? error.message : 'Não foi possível enviar o aviso. Tente novamente.')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -83,7 +99,7 @@ export function CriarAviso() {
         <h2 id="create-announcement-title" className="mt-1 text-xl font-extrabold ui-text">Criar Novo Aviso</h2>
         <p className="mt-1 text-sm ui-text-muted">Publique uma orientação para os colaboradores da operação.</p>
       </div>
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
         <label className="block text-sm font-bold ui-text">
           Título
           <input value={title} onChange={(event) => setTitle(event.target.value)} className="mt-2 block w-full ui-field rounded-xl px-3 py-2.5 ui-text outline-none focus:ring-2" />
@@ -105,14 +121,14 @@ export function CriarAviso() {
               {recipientOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
-          <button type="submit" className="ui-button-primary">Enviar Aviso</button>
+          <button type="submit" className="ui-button-primary" disabled={isSending}>{isSending ? 'Enviando…' : 'Enviar Aviso'}</button>
         </div>
         {recipientType === 'team' && (
           <label className="block text-sm font-bold ui-text">
             Equipe destinatária
             <select value={recipientReference} onChange={(event) => setRecipientReference(event.target.value)} className="mt-2 block w-full ui-field rounded-xl px-3 py-2.5 ui-text outline-none focus:ring-2">
               <option value="">Selecione uma equipe</option>
-              {squads.map((squad) => <option key={squad.id} value={squad.id}>{squad.name}</option>)}
+              {teamOptions.map((team) => <option key={team.value} value={team.value}>{team.label}</option>)}
             </select>
           </label>
         )}
@@ -121,7 +137,7 @@ export function CriarAviso() {
             Colaborador destinatário
             <select value={recipientReference} onChange={(event) => setRecipientReference(event.target.value)} className="mt-2 block w-full ui-field rounded-xl px-3 py-2.5 ui-text outline-none focus:ring-2">
               <option value="">Selecione um colaborador</option>
-              {collaboratorOptions.map((collaborator) => <option key={collaborator} value={collaborator}>{collaborator}</option>)}
+              {peopleOptions.map((person) => <option key={person.value} value={person.value}>{person.label}</option>)}
             </select>
           </label>
         )}
