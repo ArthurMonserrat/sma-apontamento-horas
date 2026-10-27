@@ -128,6 +128,7 @@ export function DiretoriaPage() {
   const [escalatedEntries, setEscalatedEntries] = useState<SupervisorPendingEntry[]>([])
   const [managerEntries, setManagerEntries] = useState<SupervisorPendingEntry[]>([])
   const [managerSquads, setManagerSquads] = useState<Array<Pick<Squad, 'id' | 'name'>>>([])
+  const [managerCollaborators, setManagerCollaborators] = useState<Array<{ id: string; name: string; squadId: string | null }>>([])
   const currentMonth = getMonthKey(new Date().toISOString().slice(0, 10))
   const corporate = isCorporateDataActive()
 
@@ -153,19 +154,24 @@ export function DiretoriaPage() {
 
   useEffect(() => {
     let active = true
-    const loadSquads = isCorporateDataActive()
-      ? onlineTeamService.listTeams().then((teams) => teams.map(({ id, name }) => ({ id, name })))
-      : squadService.listActive()
-    void Promise.all([supervisorService.listEntries(), loadSquads])
-      .then(([loadedEntries, loadedSquads]) => {
+    const loadTeams = isCorporateDataActive()
+      ? onlineTeamService.listTeams().then((teams) => ({
+          squads: teams.map(({ id, name }) => ({ id, name })),
+          collaborators: teams.flatMap((team) => team.members.map((member) => ({ id: member.id, name: member.name, squadId: team.id }))),
+        }))
+      : squadService.listActive().then((squads) => ({ squads: squads.map(({ id, name }) => ({ id, name })), collaborators: [] }))
+    void Promise.all([supervisorService.listEntries(), loadTeams])
+      .then(([loadedEntries, loadedTeams]) => {
         if (!active) return
         setManagerEntries(loadedEntries)
-        setManagerSquads(loadedSquads.map(({ id, name }) => ({ id, name })))
+        setManagerSquads(loadedTeams.squads)
+        setManagerCollaborators(loadedTeams.collaborators)
       })
       .catch(() => {
         if (!active) return
         setManagerEntries([])
         setManagerSquads([])
+        setManagerCollaborators([])
       })
     return () => { active = false }
   }, [])
@@ -258,7 +264,7 @@ export function DiretoriaPage() {
 
             <ManagerCalendar
               entries={managerEntries}
-              collaborators={[]}
+              collaborators={managerCollaborators}
               squads={managerSquads}
               role="DIRECTOR_ADMIN"
             />

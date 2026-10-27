@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageContainer } from '../../shared/ui/PageContainer'
 import { useSession } from '../../features/session/useSession'
 import { CriarAviso } from '../../features/announcements/CriarAviso'
 import type { Comunicado, ComunicadoDestinatario, ComunicadoTipo } from '../../features/announcements/types'
-import { ANNOUNCEMENTS_UPDATED_EVENT, canDeleteAnnouncement, deleteAnnouncement, hideAnnouncementForUser, isAnnouncementHiddenForUser, readAnnouncements } from '../../features/announcements/infrastructure/announcementService'
+import { ANNOUNCEMENTS_UPDATED_EVENT, canDeleteAnnouncement, isAnnouncementHiddenForUser } from '../../features/announcements/infrastructure/announcementService'
+import { LocalAnnouncementRepository, SupabaseAnnouncementRepository, type AnnouncementRepository } from '../../features/announcements/infrastructure/announcementRepository'
+import { isCorporateDataActive } from '../../features/corporate/corporateData'
 
 const comunicadosMock: Comunicado[] = [
   {
@@ -84,35 +86,61 @@ function formatPublicationDate(date: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeZone: 'UTC' }).format(parsedDate)
 }
 
-export function AvisosPage({ embedded = false }: { embedded?: boolean }) {
+const corporateRepository = new SupabaseAnnouncementRepository()
+const demoRepository = new LocalAnnouncementRepository(comunicadosMock)
+
+export function AvisosPage({ embedded = false, repository: injectedRepository }: { embedded?: boolean, repository?: AnnouncementRepository }) {
   const { profile, session } = useSession()
-  const [comunicados, setComunicados] = useState<Comunicado[]>(() => readAnnouncements(comunicadosMock))
+  // Login Microsoft: avisos no banco de dados (cada pessoa recebe só os destinados a ela).
+  const corporate = isCorporateDataActive()
+  const repository = useMemo(() => injectedRepository ?? (corporate ? corporateRepository : demoRepository), [corporate, injectedRepository])
+  const [comunicados, setComunicados] = useState<Comunicado[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const safeAnnouncements = Array.isArray(comunicados) ? comunicados : []
   const visibleAnnouncements = safeAnnouncements
     .filter((comunicado) => !isAnnouncementHiddenForUser(comunicado, session?.id))
-    .filter((comunicado) => session?.role !== 'COLLABORATOR' || isVisibleToCollaborator(comunicado, profile?.id, profile?.email, profile?.activeSquadId))
+    .filter((comunicado) => corporate || session?.role !== 'COLLABORATOR' || isVisibleToCollaborator(comunicado, profile?.id, profile?.email, profile?.activeSquadId))
 
-  function handleDelete(comunicado: Comunicado) {
+  const reload = useCallback(async () => {
+    try {
+      setComunicados(await repository.list())
+      setLoadError(null)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar os avisos.')
+    }
+  }, [repository])
+
+  async function handleDelete(comunicado: Comunicado) {
     if (!canDeleteAnnouncement(comunicado, session?.role, session?.id)) return
     if (!window.confirm(`Excluir o aviso "${comunicado.titulo}"?`)) return
-    if (deleteAnnouncement(comunicado.id)) setComunicados(readAnnouncements(comunicadosMock))
+    try {
+      if (await repository.remove(comunicado.id)) await reload()
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível excluir o aviso.')
+    }
   }
 
-  function handleHide(comunicado: Comunicado) {
+  async function handleHide(comunicado: Comunicado) {
     if (!session?.id || !window.confirm('Apagar este aviso somente para você?')) return
-    if (hideAnnouncementForUser(comunicado.id, session.id)) setComunicados((current) => current.filter((item) => item.id !== comunicado.id))
+    try {
+      if (await repository.hide(comunicado.id, session.id)) setComunicados((current) => current.filter((item) => item.id !== comunicado.id))
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível ocultar o aviso.')
+    }
   }
 
   useEffect(() => {
-    const reload = () => setComunicados(readAnnouncements(comunicadosMock))
-    window.addEventListener(ANNOUNCEMENTS_UPDATED_EVENT, reload)
-    return () => window.removeEventListener(ANNOUNCEMENTS_UPDATED_EVENT, reload)
-  }, [])
+    void reload()
+    const onChanged = () => { void reload() }
+    window.addEventListener(ANNOUNCEMENTS_UPDATED_EVENT, onChanged)
+    return () => window.removeEventListener(ANNOUNCEMENTS_UPDATED_EVENT, onChanged)
+  }, [reload])
 
   const content = (
     <>
-      <CriarAviso />
+      <CriarAviso repository={repository} />
+      {loadError && <p role="alert" className="rounded-2xl border border-[var(--color-danger)] p-4 text-sm font-semibold text-[var(--color-danger)]">{loadError}</p>}
       <section className="space-y-4" aria-labelledby="announcements-title">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -137,8 +165,8 @@ export function AvisosPage({ embedded = false }: { embedded?: boolean }) {
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold ${presentation.badge}`}>{presentation.label}</span>
                     <span className="w-fit rounded-full border border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-3 py-1 text-xs font-bold text-[var(--color-text-muted)]">{recipientPresentation[comunicado.tipo_destinatario]}</span>
-                    {canDeleteAnnouncement(comunicado, session?.role, session?.id) && <button type="button" onClick={() => handleDelete(comunicado)} className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-text-muted)] transition hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]" aria-label={`Excluir aviso ${comunicado.titulo}`}><span aria-hidden="true">&#128465;</span><span className="sr-only">Excluir</span></button>}
-                    <button type="button" onClick={() => handleHide(comunicado)} className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]" aria-label={`Apagar aviso ${comunicado.titulo} para mim`}><span aria-hidden="true">×</span><span className="sr-only">Apagar para mim</span></button>
+                    {canDeleteAnnouncement(comunicado, session?.role, session?.id) && <button type="button" onClick={() => void handleDelete(comunicado)} className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-text-muted)] transition hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]" aria-label={`Excluir aviso ${comunicado.titulo}`}><span aria-hidden="true">&#128465;</span><span className="sr-only">Excluir</span></button>}
+                    <button type="button" onClick={() => void handleHide(comunicado)} className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-bold text-[var(--color-text-muted)] transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]" aria-label={`Apagar aviso ${comunicado.titulo} para mim`}><span aria-hidden="true">×</span><span className="sr-only">Apagar para mim</span></button>
                   </div>
                 </header>
                 <p className="mt-4 max-w-4xl text-sm leading-7 ui-text-muted">{comunicado.mensagem}</p>
