@@ -2,15 +2,33 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { corporateDataError, getCorporateUserId, listCorporatePeople, type CorporatePerson } from '../../corporate/corporateData'
 import { BANCO1_TIME_ENTRIES_TABLE, type Banco1TimeEntryRow } from '../../time-entries/infrastructure/supabaseTimeEntryService'
 import { getDaysUntilMonthClosing } from '../../../shared/lib/date'
-import type { SupervisorDashboardSummary, SupervisorPendingEntry } from '../types'
+import type { SupervisorDashboardSummary, SupervisorPendingEntry, SupervisorRequestSummary, SupervisorTimeOffRequest } from '../types'
+import type { TimeOffRequest } from '../../time-off/types'
+import type { SupabaseTimeOffService } from '../../time-off/infrastructure/supabaseTimeOffService'
+
+function toSupervisorTimeOff(request: TimeOffRequest): SupervisorTimeOffRequest {
+  return {
+    id: request.id,
+    collaboratorId: request.collaboratorId,
+    collaboratorName: request.collaboratorName ?? 'Colaborador',
+    absenceType: request.absenceType ?? 'Folga',
+    startDate: request.startDate ?? request.date,
+    endDate: request.endDate ?? request.date,
+    date: request.date,
+    reason: request.reason,
+    status: request.status,
+    rejectionReason: request.rejectionReason ?? request.cancellationReason,
+    decidedAt: request.decidedAt,
+  }
+}
 import type { SupervisorService } from './supervisorService'
 
-type TimeOffDelegate = Pick<SupervisorService, 'listTimeOffRequests' | 'approveTimeOffRequest' | 'rejectTimeOffRequest' | 'getRequestSummary'>
+type TimeOffSource = Pick<SupabaseTimeOffService, 'listVisible' | 'decide'>
 
 type Dependencies = {
   getClient: () => SupabaseClient | null
-  /** Folgas ainda ficam no armazenamento local nesta etapa. */
-  timeOff: TimeOffDelegate
+  /** Ausências no banco de dados (banco1_time_off_requests). */
+  timeOff: TimeOffSource
   listPeople?: () => Promise<CorporatePerson[]>
   getUserId?: () => string | null
   daysUntilClosing?: () => number
@@ -29,7 +47,7 @@ function approvalStatus(row: Banco1TimeEntryRow): SupervisorPendingEntry['status
  */
 export class SupabaseSupervisorService implements SupervisorService {
   private readonly getClient: () => SupabaseClient | null
-  private readonly timeOff: TimeOffDelegate
+  private readonly timeOff: TimeOffSource
   private readonly listPeople: () => Promise<CorporatePerson[]>
   private readonly getUserId: () => string | null
   private readonly daysUntilClosing: () => number
@@ -145,16 +163,27 @@ export class SupabaseSupervisorService implements SupervisorService {
     return this.decide(entryIds, 'REJECTED', rejectionReason)
   }
 
-  listTimeOffRequests(supervisorId: string) {
-    return this.timeOff.listTimeOffRequests(supervisorId)
+  async listTimeOffRequests(_supervisorId: string) {
+    const requests = await this.timeOff.listVisible({ excludeOwn: true })
+    return requests
+      .map(toSupervisorTimeOff)
+      .sort((left, right) => right.startDate.localeCompare(left.startDate) || left.collaboratorName.localeCompare(right.collaboratorName))
   }
 
-  approveTimeOffRequest(requestId: string, supervisorId: string) {
-    return this.timeOff.approveTimeOffRequest(requestId, supervisorId)
+  private async decideTimeOff(requestId: string, decision: 'APPROVED' | 'REJECTED', reason?: string) {
+    const decided = await this.timeOff.decide(requestId, decision, reason)
+    const names = new Map((await this.listPeople().catch(() => [] as CorporatePerson[])).map((person) => [person.id, person.name]))
+    return toSupervisorTimeOff({ ...decided, collaboratorName: names.get(decided.collaboratorId) ?? 'Colaborador' })
   }
 
-  rejectTimeOffRequest(requestId: string, supervisorId: string, reason: string) {
-    return this.timeOff.rejectTimeOffRequest(requestId, supervisorId, reason)
+  approveTimeOffRequest(requestId: string, _supervisorId: string) {
+    return this.decideTimeOff(requestId, 'APPROVED')
+  }
+
+  rejectTimeOffRequest(requestId: string, _supervisorId: string, reason: string) {
+    const rejectionReason = reason.trim()
+    if (!rejectionReason) return Promise.reject(new Error('Informe o motivo da rejeição da folga.'))
+    return this.decideTimeOff(requestId, 'REJECTED', rejectionReason)
   }
 
   async getSummary() {
@@ -169,7 +198,15 @@ export class SupabaseSupervisorService implements SupervisorService {
     )
   }
 
-  getRequestSummary(supervisorId: string) {
-    return this.timeOff.getRequestSummary(supervisorId)
+  async getRequestSummary(supervisorId: string) {
+    const requests = await this.listTimeOffRequests(supervisorId)
+    return requests.reduce<SupervisorRequestSummary>(
+      (summary, request) => ({
+        pending: summary.pending + (request.status === 'PENDING' ? 1 : 0),
+        approved: summary.approved + (request.status === 'APPROVED' ? 1 : 0),
+        rejected: summary.rejected + (request.status === 'REJECTED' ? 1 : 0),
+      }),
+      { pending: 0, approved: 0, rejected: 0 },
+    )
   }
 }

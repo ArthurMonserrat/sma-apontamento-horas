@@ -44,7 +44,7 @@ export function createFakeSupabase(): FakeSupabase {
       if (op === 'insert') {
         const now = new Date().toISOString()
         const inserted = (Array.isArray(payload) ? payload : [payload!]).map((row) => ({
-          id: nextId(), version: 1, created_at: now, updated_at: now, cancelled_at: null, cancel_reason: null,
+          id: nextId(), version: 1, status: 'PENDING', created_at: now, updated_at: now, cancelled_at: null, cancel_reason: null,
           rejection_reason: null, decided_at: null, decided_by: null, last_edit_reason: null, source_entry_id: null,
           contractor_number: null, ld_document: null, team_id: null, ...row,
         }))
@@ -60,7 +60,8 @@ export function createFakeSupabase(): FakeSupabase {
         return { data: matched.map((row) => ({ ...row })), error: null, count: null }
       }
       if (op === 'update') {
-        matched = matched.filter((row) => row.status !== 'APPROVED' && row.status !== 'CANCELLED')
+        // Regra da tabela de apontamentos: aprovado ou cancelado não muda.
+        if (table === 'banco1_time_entries') matched = matched.filter((row) => row.status !== 'APPROVED' && row.status !== 'CANCELLED')
         matched.forEach((row) => {
           Object.assign(row, payload, { version: Number(row.version) + 1, updated_at: new Date().toISOString() })
           if (row.status === 'CANCELLED') row.cancelled_at = new Date().toISOString()

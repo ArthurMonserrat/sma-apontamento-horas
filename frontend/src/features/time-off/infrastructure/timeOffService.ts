@@ -8,6 +8,8 @@ import { notificationService } from '../../announcements/infrastructure/notifica
 import { profileService } from '../../profile/infrastructure/profileService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from '../../../services/postCommit'
+import { getCorporateDataClient, isCorporateDataActive } from '../../corporate/corporateData'
+import { SupabaseTimeOffService } from './supabaseTimeOffService'
 
 export const TIME_OFF_STORAGE_KEY = 'ausencias_sma'
 
@@ -333,9 +335,38 @@ export class LocalTimeOffService {
   }
 }
 
-export const timeOffService = new LocalTimeOffService({
+export type TimeOffService = Pick<LocalTimeOffService, 'listByRange' | 'listApprovedByRange' | 'create' | 'approve' | 'reject' | 'removePending' | 'cancelApproved'>
+
+export const localTimeOffService = new LocalTimeOffService({
   storage: createBrowserStorage(),
   resolveAssignment: (collaboratorId) => profileService.resolveAssignment(collaboratorId),
   audit: auditService,
   notifications: notificationService,
 })
+
+export const corporateTimeOffService = new SupabaseTimeOffService({ getClient: getCorporateDataClient })
+
+/** Login Microsoft: ausências no banco de dados. Demonstração e testes: navegador. */
+export class RuntimeTimeOffService implements TimeOffService {
+  private readonly local: TimeOffService
+  private readonly remote: TimeOffService
+  private readonly useRemote: () => boolean
+
+  constructor(local: TimeOffService, remote: TimeOffService, useRemote: () => boolean = isCorporateDataActive) {
+    this.local = local
+    this.remote = remote
+    this.useRemote = useRemote
+  }
+
+  private active() { return this.useRemote() ? this.remote : this.local }
+
+  listByRange(collaboratorId: string, startDate: string, endDate: string) { return this.active().listByRange(collaboratorId, startDate, endDate) }
+  listApprovedByRange(collaboratorId: string, startDate: string, endDate: string) { return this.active().listApprovedByRange(collaboratorId, startDate, endDate) }
+  create(collaboratorId: string, input: Parameters<TimeOffService['create']>[1]) { return this.active().create(collaboratorId, input) }
+  approve(supervisorId: string, id: string) { return this.active().approve(supervisorId, id) }
+  reject(supervisorId: string, id: string, reason: string) { return this.active().reject(supervisorId, id, reason) }
+  removePending(collaboratorId: string, id: string) { return this.active().removePending(collaboratorId, id) }
+  cancelApproved(collaboratorId: string, id: string, reason: string) { return this.active().cancelApproved(collaboratorId, id, reason) }
+}
+
+export const timeOffService: TimeOffService = new RuntimeTimeOffService(localTimeOffService, corporateTimeOffService)

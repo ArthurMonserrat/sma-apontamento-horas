@@ -9,7 +9,7 @@ import type {
 import { demoAssignmentSnapshot, demoCollaborator } from '../../../demo/fixtures/demoData'
 import { TIME_ENTRY_STORAGE_KEY } from '../../time-entries'
 import { normalizeTimeEntry, type TimeEntryStorageV4 } from '../../time-entries'
-import { TIME_OFF_STORAGE_KEY, timeOffService, type TimeOffStorage } from '../../time-off/infrastructure/timeOffService'
+import { TIME_OFF_STORAGE_KEY, corporateTimeOffService, timeOffService, type TimeOffStorage } from '../../time-off/infrastructure/timeOffService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { getDaysUntilMonthClosing } from '../../../shared/lib/date'
 import { getCorporateDataClient, isCorporateDataActive } from '../../corporate/corporateData'
@@ -449,7 +449,7 @@ export const localSupervisorService = new LocalStorageSupervisorService(createBr
 
 const corporateSupervisorService = new SupabaseSupervisorService({
   getClient: getCorporateDataClient,
-  timeOff: localSupervisorService,
+  timeOff: corporateTimeOffService,
 })
 
 /** Login Microsoft: aprovações no banco de dados. Demonstração e testes: armazenamento local. */
