@@ -5,7 +5,7 @@ import { BrandMark } from '../../shared/ui/BrandMark'
 import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { useSession } from '../../features/session/useSession'
-import { TIME_OFF_STORAGE_KEY } from '../../features/time-off/infrastructure/timeOffService'
+import { TIME_OFF_STORAGE_KEY, corporateTimeOffService } from '../../features/time-off/infrastructure/timeOffService'
 import { listVisibleTimeEntries } from '../../features/time-entries/infrastructure/visibleTimeEntries'
 import { isCorporateDataActive } from '../../features/corporate/corporateData'
 import { getMonthKey } from '../../shared/lib/date'
@@ -147,7 +147,14 @@ export function DiretoriaPage() {
       const normalized = normalizeAbsence(absence)
       return normalized ? [normalized] : []
     })
-    setAbsences(storedAbsences)
+    if (isCorporateDataActive()) {
+      // Login Microsoft: ausências do banco de dados (diretoria vê todas).
+      void corporateTimeOffService.listVisible()
+        .then((requests) => { if (active) setAbsences(requests.map((request) => ({ id: request.id, status: request.status }))) })
+        .catch(() => { if (active) setAbsences([]) })
+    } else {
+      setAbsences(storedAbsences)
+    }
     void diretoriaService.listEscalatedEntries().then((loaded) => { if (active) setEscalatedEntries(loaded) }).catch(() => { if (active) setEscalatedEntries([]) })
     return () => { active = false }
   }, [])

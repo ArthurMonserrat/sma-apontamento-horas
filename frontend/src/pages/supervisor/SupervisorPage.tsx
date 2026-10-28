@@ -110,7 +110,8 @@ function SummaryCard({ label, value, helper }: { label: string, value: number, h
   )
 }
 
-function SupervisorSidebar({ activeView, profile, onChange, onSignOut }: {
+function SupervisorSidebar({ activeView, profile, onChange, onSignOut, pendingRequests = 0 }: {
+  pendingRequests?: number
   activeView: ActiveView
   profile: SupervisorProfile
   onChange: (view: ActiveView) => void
@@ -153,6 +154,11 @@ function SupervisorSidebar({ activeView, profile, onChange, onSignOut }: {
               <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${isActive ? 'bg-[var(--color-navigation-active-detail)] text-[var(--color-primary)]' : 'bg-[var(--color-sidebar-surface)]'}`}><NavigationIcon name={item.icon} /></span>
               <span className="flex-1">{item.label}</span>
               {item.id === 'announcements' && <AnnouncementBadge />}
+              {item.id === 'requests' && pendingRequests > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-white" aria-label={`${pendingRequests} ausência(s) aguardando decisão`}>
+                  {pendingRequests > 9 ? '9+' : pendingRequests}
+                </span>
+              )}
               {isActive && <span className="text-[10px] font-extrabold uppercase" aria-label="Página atual">Atual</span>}
             </button>
           )
@@ -516,7 +522,7 @@ export function SupervisorPage() {
       </header>
 
       <div data-layout-body className="flex min-w-0">
-        <SupervisorSidebar activeView={activeView} profile={displayedProfile} onChange={changeActiveView} onSignOut={exitDemo} />
+        <SupervisorSidebar activeView={activeView} profile={displayedProfile} onChange={changeActiveView} onSignOut={exitDemo} pendingRequests={dashboard.requestSummary.pending} />
 
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
