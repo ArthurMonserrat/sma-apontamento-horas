@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DemoSessionProvider } from './DemoSessionProvider'
 import { SessionContext } from './sessionContext'
-import { useContext } from 'react'
+import { useContext, useEffect, useState } from 'react'
 
 const { demoServiceMock, profileServiceMock, authMock, corporateAuthMock } = vi.hoisted(() => ({
   demoServiceMock: {
@@ -251,6 +251,48 @@ describe('DemoSessionProvider', () => {
 
     expect(container.querySelector('[data-testid="session"]')?.textContent).toContain('none|authenticated_unauthorized|')
     expect(container.querySelector('[data-testid="session"]')?.textContent).toContain('perfil corporativo')
+  })
+
+  it('não reinicia as telas quando o token do mesmo usuário é renovado ao voltar para a aba', async () => {
+    demoServiceMock.restore.mockReturnValue(null)
+    let emit: ((event: 'SIGNED_IN' | 'TOKEN_REFRESHED', session: ReturnType<typeof createSupabaseSession>) => void) | undefined
+    authMock.subscribe.mockImplementation((listener: typeof emit) => {
+      emit = listener
+      return { unsubscribe: vi.fn() }
+    })
+    corporateAuthMock.getCorporateProfile.mockResolvedValue(createProfile('user-1'))
+    const mounts = vi.fn()
+    function Draft() {
+      const [text, setText] = useState('')
+      useEffect(() => { mounts() }, [])
+      return <input data-testid="draft" value={text} onChange={(event) => setText(event.target.value)} />
+    }
+    function Gate() {
+      const { session } = useContext(SessionContext)!
+      return session ? <Draft /> : <p>carregando</p>
+    }
+
+    await act(async () => root.render(<DemoSessionProvider><Consumer /><Gate /></DemoSessionProvider>))
+    await act(async () => emit?.('SIGNED_IN', createSupabaseSession('user-1')))
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('corporate|authorized|')
+    const draft = container.querySelector<HTMLInputElement>('[data-testid="draft"]')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(draft, 'meu texto')
+      draft.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    await act(async () => emit?.('TOKEN_REFRESHED', createSupabaseSession('user-1', 'novo-token')))
+    await act(async () => emit?.('SIGNED_IN', createSupabaseSession('user-1', 'novo-token-2')))
+
+    expect(container.querySelector('[data-testid="session"]')?.textContent).toBe('corporate|authorized|')
+    expect(container.querySelector<HTMLInputElement>('[data-testid="draft"]')?.value).toBe('meu texto')
+    expect(mounts).toHaveBeenCalledTimes(1)
+    expect(corporateAuthMock.getCorporateProfile).toHaveBeenCalledTimes(1)
+
+    // Outro usuário entrando no mesmo navegador continua sendo validado.
+    corporateAuthMock.getCorporateProfile.mockResolvedValue(createProfile('user-2'))
+    await act(async () => emit?.('SIGNED_IN', createSupabaseSession('user-2')))
+    expect(corporateAuthMock.getCorporateProfile).toHaveBeenCalledTimes(2)
   })
 
   it('mantém sessão não autorizada quando a consulta do perfil falha', async () => {

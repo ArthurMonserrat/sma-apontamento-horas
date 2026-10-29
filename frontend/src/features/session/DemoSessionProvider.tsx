@@ -47,6 +47,8 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
   const corporateProfileRequestsRef = useRef(new Map<string, Promise<CorporateProfile>>())
   const failedCorporateProfileUsersRef = useRef(new Set<string>())
   const signOutInFlightRef = useRef<Promise<void> | null>(null)
+  /** Usuário corporativo já validado: renovações de token dele não reiniciam as telas. */
+  const authorizedUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -57,6 +59,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     const clearSession = (state: AuthState = 'unauthenticated', error: string | null = null) => {
       corporateRequestRef.current += 1
       modeRef.current = 'none'
+      authorizedUserIdRef.current = null
       setCorporateDataSession(null)
       setSession(null)
       setProfile(null)
@@ -103,6 +106,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
         modeRef.current = 'corporate'
         // Antes de liberar as telas: os serviços passam a ler e gravar no banco de dados.
         setCorporateDataSession(corporateSession.id)
+        authorizedUserIdRef.current = user.id
         setSession(corporateSession)
         setCorporateProfile(validatedProfile)
         setAuthError(null)
@@ -132,6 +136,9 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
 
       sessionEventVersion += 1
       if (supabaseSession) {
+        // Ao voltar para a aba o Supabase renova o token (TOKEN_REFRESHED/SIGNED_IN) do mesmo usuário.
+        // Revalidar aqui desmontava as telas e perdia o que estava sendo preenchido.
+        if (modeRef.current === 'corporate' && authorizedUserIdRef.current === supabaseSession.user.id) return
         void resolveSession(supabaseSession)
         return
       }
@@ -257,6 +264,7 @@ export function DemoSessionProvider({ children }: { children: ReactNode }) {
     modeRef.current = 'none'
     corporateRequestRef.current += 1
     failedCorporateProfileUsersRef.current.clear()
+    authorizedUserIdRef.current = null
     demoSessionService.signOut()
     setCorporateDataSession(null)
     setSession(null)
