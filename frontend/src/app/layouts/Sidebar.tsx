@@ -6,6 +6,7 @@ import { useSession } from '../../features/session/useSession'
 import { SwitchSystemButton } from '../../features/session/SwitchSystemButton'
 import { profileService } from '../../features/profile/infrastructure/profileService'
 import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
+import { assignmentFromPerson, useCorporatePerson } from '../../features/corporate/useCorporatePerson'
 import { InstallAppButton } from '../../shared/ui/InstallAppButton'
 import { NavigationIcon } from '../../shared/ui/NavigationIcon'
 
@@ -28,7 +29,9 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
   const { profile, signOut } = useSession()
   const corporateIdentity = useCorporateIdentity()
   const navigate = useNavigate()
-  const assignment = profile ? profileService.resolveAssignment(profile.id) : null
+  // Login Microsoft: equipe do banco de dados (definida pela diretoria em Equipes).
+  const { corporate, person } = useCorporatePerson()
+  const assignment = corporate ? assignmentFromPerson(person) : profile ? profileService.resolveAssignment(profile.id) : null
 
   const handleSignOut = () => {
     signOut()
@@ -60,7 +63,7 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
           </div>
           <div className="mt-4 flex items-center gap-2 rounded-xl bg-[var(--color-sidebar-surface)] p-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-sidebar-text-muted)]">Squad ativa</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-sidebar-text-muted)]">{corporate ? 'Equipe' : 'Squad ativa'}</p>
               <p className="text-xs font-bold leading-tight">{assignment?.squadName ?? 'Não definida'}</p>
             </div>
           </div>
