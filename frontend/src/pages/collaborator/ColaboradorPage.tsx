@@ -8,11 +8,12 @@ import { MonthlyCalendar } from '../../features/calendar/MonthlyCalendar'
 import { DayDetails } from '../../features/calendar/DayDetails'
 import { BalancePeriodFilter } from '../../features/calendar/BalancePeriodFilter'
 import { useSession } from '../../features/session/useSession'
-import { formatMinutes } from '../../features/time-entries/domain'
+import { useCorporatePerson } from '../../features/corporate/useCorporatePerson'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
 
 export function ColaboradorPage() {
   const { profile } = useSession()
+  const { corporate, person } = useCorporatePerson()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedDate = searchParams.get('date') ?? getCorporateToday()
@@ -59,9 +60,11 @@ export function ColaboradorPage() {
       </PageContainer>
     )
   }
+  // Login Microsoft: cargo e supervisão definidos pela diretoria (banco de dados).
+  const jobTitle = (corporate ? person?.jobTitle : profile.jobTitle) || 'Cargo não definido'
   const contextDescription = dashboard.data
-    ? `${profile.jobTitle} · ${dashboard.data.assignment?.squadName ?? 'Squad não definida'} · Supervisão: ${dashboard.data.assignment?.supervisorName ?? 'não definida'}. Carga vigente ${dashboard.data.currentWorkload ? formatMinutes(dashboard.data.currentWorkload.dailyMinutes) : 'não cadastrada'}.`
-    : `${profile.jobTitle} · Carregando contexto profissional.`
+    ? `${jobTitle} · ${dashboard.data.assignment?.squadName ?? (corporate ? 'Equipe não definida' : 'Squad não definida')} · Supervisão: ${dashboard.data.assignment?.supervisorName || 'não definida'}.`
+    : `${jobTitle} · Carregando contexto profissional.`
 
   return (
     <PageContainer

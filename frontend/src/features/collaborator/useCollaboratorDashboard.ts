@@ -17,6 +17,7 @@ import type { AssignmentSnapshot } from '../squads/types'
 import type { WorkloadVersion } from '../workloads/types'
 import { eachIsoDate, getCorporateToday, getMonthRange } from '../../shared/lib/date'
 import { profileService } from '../profile/infrastructure/profileService'
+import { resolveCurrentAssignment } from '../profile/currentAssignment'
 import { workloadService } from '../workloads/infrastructure/workloadService'
 import { useSession } from '../session/useSession'
 
@@ -109,7 +110,7 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
       const todaySummary = monthKey === today.slice(0, 7)
         ? monthSummary.days.find((day) => day.date === today) ?? selectedSummary
         : calculateDaySummary({ date: today, today, collaboratorId: profile.id, entries: totalEntries, events: totalAllEvents, timeOffRequests: totalTimeOff, workloadVersions })
-      const currentAssignment = profileService.resolveAssignment(profile.id)
+      const currentAssignment = await resolveCurrentAssignment(profile.id)
       const calendarDates = eachIsoDate(monthRange.startDate, monthRange.endDate)
       const approvals = (await Promise.all(calendarDates.flatMap((date) => {
         const summary = monthSummary.days.find((day) => day.date === date)

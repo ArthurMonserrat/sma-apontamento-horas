@@ -3,6 +3,7 @@ import type { CollaboratorProfile } from '../profile/types'
 import type { AssignmentSnapshot, Squad } from '../squads/types'
 import type { WorkloadChangeRequest, WorkloadVersion } from '../workloads/types'
 import { profileService } from '../profile/infrastructure/profileService'
+import { resolveCurrentAssignment } from '../profile/currentAssignment'
 import { squadService } from '../squads/infrastructure/squadService'
 import { workloadService } from '../workloads/infrastructure/workloadService'
 import { getCorporateToday } from '../../shared/lib/date'
@@ -41,7 +42,7 @@ export function useProfile() {
       setState({
         data: {
           profile,
-          assignment: profileService.resolveAssignment(profile.id),
+          assignment: await resolveCurrentAssignment(profile.id),
           squads,
           workloadVersions,
           workloadRequests,
