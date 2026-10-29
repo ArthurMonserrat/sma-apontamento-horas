@@ -13,6 +13,9 @@ export type OnlineTeam = {
   name: string
   supervisorId: string | null
   supervisorName: string
+  /** Supervisores adicionais (também veem e aprovam a equipe). */
+  coSupervisorIds: string[]
+  coSupervisorNames: string[]
   members: CorporatePerson[]
 }
 
@@ -21,6 +24,7 @@ export type SaveOnlineTeamInput = {
   name: string
   supervisorId: string
   memberIds: string[]
+  coSupervisorIds?: string[]
 }
 
 type TeamRow = { id: string; name: string; supervisor_id: string | null }
@@ -55,17 +59,23 @@ export class OnlineTeamService {
   }
 
   async listTeams(people?: CorporatePerson[]): Promise<OnlineTeam[]> {
-    const [{ data, error }, loadedPeople] = await Promise.all([
+    const [{ data, error }, coSupervisors, loadedPeople] = await Promise.all([
       this.client().from('teams').select('id,name,supervisor_id').eq('module', 'BANCO_1').eq('active', true).order('name', { ascending: true }),
+      this.client().from('team_supervisors').select('team_id,profile_id').eq('module', 'BANCO_1'),
       people ? Promise.resolve(people) : this.listPeopleForTeams(),
     ])
     if (error) throw corporateDataError(error, 'Não foi possível carregar as supervisões.')
     const byId = new Map(loadedPeople.map((person) => [person.id, person]))
+    // Sem a tabela de supervisores adicionais (migration ainda não aplicada), cada equipe fica só com o principal.
+    const coRows = coSupervisors.error ? [] : (coSupervisors.data ?? []) as Array<{ team_id: string; profile_id: string }>
     return ((data ?? []) as TeamRow[]).map((row) => ({
       id: row.id,
       name: row.name,
       supervisorId: row.supervisor_id,
       supervisorName: (row.supervisor_id && byId.get(row.supervisor_id)?.name) || 'Sem supervisor',
+      coSupervisorIds: coRows.filter((item) => item.team_id === row.id).map((item) => item.profile_id),
+      coSupervisorNames: coRows.filter((item) => item.team_id === row.id).map((item) => byId.get(item.profile_id)?.name ?? 'Supervisor')
+        .sort((left, right) => left.localeCompare(right, 'pt-BR')),
       members: loadedPeople
         .filter((person) => person.teamId === row.id)
         .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR')),
@@ -76,12 +86,14 @@ export class OnlineTeamService {
     const name = input.name.trim()
     if (!name) throw new Error('Informe o nome da supervisão.')
     if (!input.supervisorId) throw new Error('Escolha o supervisor.')
-    const memberIds = Array.from(new Set(input.memberIds.filter((id) => id && id !== input.supervisorId)))
+    const coSupervisorIds = Array.from(new Set((input.coSupervisorIds ?? []).filter((id) => id && id !== input.supervisorId)))
+    const memberIds = Array.from(new Set(input.memberIds.filter((id) => id && id !== input.supervisorId && !coSupervisorIds.includes(id))))
     const { data, error } = await this.client().rpc('banco1_save_team', {
       team_id: input.id ?? null,
       team_name: name,
       supervisor: input.supervisorId,
       member_ids: memberIds,
+      co_supervisor_ids: coSupervisorIds,
     })
     if (error) throw corporateDataError(error, 'Não foi possível salvar a supervisão.')
     this.onChanged()

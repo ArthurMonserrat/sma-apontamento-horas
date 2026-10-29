@@ -29,12 +29,12 @@ beforeEach(() => {
 describe('OnlineTeamService', () => {
   it('lista só as supervisões ativas do Banco 1 com supervisor e colaboradores', async () => {
     const teams = await service.listTeams()
-    expect(teams).toEqual([{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', members: [people[2], people[1]] }])
+    expect(teams).toEqual([{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', coSupervisorIds: [], coSupervisorNames: [], members: [people[2], people[1]] }])
   })
 
   it('salva pela função do banco sem repetir pessoas nem incluir o supervisor como membro', async () => {
     await expect(service.saveTeam({ name: 'S12 - RENATO', supervisorId: 'renato', memberIds: ['hugo', 'hamilton', 'hugo', 'renato'] })).resolves.toBe('t1')
-    expect(fake.calls.at(-1)).toMatchObject({ rpc: 'banco1_save_team', payload: { team_id: null, team_name: 'S12 - RENATO', supervisor: 'renato', member_ids: ['hugo', 'hamilton'] } })
+    expect(fake.calls.at(-1)).toMatchObject({ rpc: 'banco1_save_team', payload: { team_id: null, team_name: 'S12 - RENATO', supervisor: 'renato', member_ids: ['hugo', 'hamilton'], co_supervisor_ids: [] } })
     expect(onChanged).toHaveBeenCalled()
   })
 
@@ -66,5 +66,15 @@ describe('OnlineTeamService.setJobTitle', () => {
     expect(fake.calls.at(-1)).toMatchObject({ payload: { target: 'hugo', job_title: null } })
     fake.failNext({ code: '42501', message: 'Somente a diretoria pode alterar o cargo.' })
     await expect(service.setJobTitle('hugo', 'X')).rejects.toThrow('Somente a diretoria pode alterar o cargo.')
+  })
+})
+
+describe('OnlineTeamService - supervisores adicionais', () => {
+  it('lista e salva os supervisores adicionais (sem repetir e fora dos colaboradores)', async () => {
+    fake.tables.set('team_supervisors', [{ team_id: 't1', profile_id: 'hamilton', module: 'BANCO_1' }])
+    const [team] = await service.listTeams()
+    expect(team).toMatchObject({ coSupervisorIds: ['hamilton'], coSupervisorNames: ['Hamilton Junior'] })
+    await service.saveTeam({ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', coSupervisorIds: ['hamilton', 'hamilton', 'renato'], memberIds: ['hugo', 'hamilton'] })
+    expect(fake.calls.at(-1)).toMatchObject({ payload: { team_id: 't1', member_ids: ['hugo'], co_supervisor_ids: ['hamilton'] } })
   })
 })

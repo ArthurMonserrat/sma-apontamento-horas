@@ -6,10 +6,11 @@ type FormState = {
   id?: string
   name: string
   supervisorId: string
+  coSupervisorIds: string[]
   memberIds: string[]
 }
 
-const emptyForm: FormState = { name: '', supervisorId: '', memberIds: [] }
+const emptyForm: FormState = { name: '', supervisorId: '', coSupervisorIds: [], memberIds: [] }
 
 const roleLabel: Record<CorporatePerson['role'], string> = {
   colaborador: 'Colaborador',
@@ -86,7 +87,18 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
   function startEdit(team: OnlineTeam) {
     setMessage(null)
     setError(null)
-    setForm({ id: team.id, name: team.name, supervisorId: team.supervisorId ?? '', memberIds: team.members.map((member) => member.id) })
+    setForm({ id: team.id, name: team.name, supervisorId: team.supervisorId ?? '', coSupervisorIds: team.coSupervisorIds, memberIds: team.members.map((member) => member.id) })
+  }
+
+  function toggleCoSupervisor(personId: string) {
+    setForm((current) => current && ({
+      ...current,
+      coSupervisorIds: current.coSupervisorIds.includes(personId)
+        ? current.coSupervisorIds.filter((id) => id !== personId)
+        : [...current.coSupervisorIds, personId],
+      // Quem vira supervisor sai da lista de colaboradores.
+      memberIds: current.memberIds.filter((id) => id !== personId),
+    }))
   }
 
   function toggleMember(personId: string) {
@@ -145,10 +157,12 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
     }
   }
 
-  const supervisorIds = new Set(teams.map((team) => team.supervisorId))
+  const supervisorIds = new Set(teams.flatMap((team) => [team.supervisorId, ...team.coSupervisorIds]))
   const withoutTeam = sortedPeople.filter((person) => !person.teamId && !supervisorIds.has(person.id) && person.role !== 'diretor')
   const supervisor = form ? people.find((person) => person.id === form.supervisorId) : undefined
-  const candidates = form ? sortedPeople.filter((person) => person.id !== form.supervisorId) : []
+  const candidates = form ? sortedPeople.filter((person) => person.id !== form.supervisorId && !form.coSupervisorIds.includes(person.id)) : []
+  const coSupervisorCandidates = form ? sortedPeople.filter((person) => person.id !== form.supervisorId) : []
+  const coSupervisorsAsCollaborators = form ? people.filter((person) => form.coSupervisorIds.includes(person.id) && person.role === 'colaborador') : []
 
   return (
     <section className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm" aria-labelledby="online-teams-title">
@@ -177,7 +191,7 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
             </label>
             <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
               Supervisor
-              <select value={form.supervisorId} onChange={(event) => setForm({ ...form, supervisorId: event.target.value, memberIds: form.memberIds.filter((id) => id !== event.target.value) })} className={inputClassName}>
+              <select value={form.supervisorId} onChange={(event) => setForm({ ...form, supervisorId: event.target.value, coSupervisorIds: form.coSupervisorIds.filter((id) => id !== event.target.value), memberIds: form.memberIds.filter((id) => id !== event.target.value) })} className={inputClassName}>
                 <option value="">Escolha o supervisor</option>
                 {sortedPeople.map((person) => <option key={person.id} value={person.id}>{person.name} ({roleLabel[person.role]})</option>)}
               </select>
@@ -186,6 +200,24 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
           {supervisor?.role === 'colaborador' && (
             <p className="mt-2 text-xs font-semibold text-[var(--color-text-muted)]">{supervisor.name} está como colaborador no Banco 1 e passará a supervisor ao salvar.</p>
           )}
+          <fieldset className="mt-4">
+            <legend className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">Supervisores adicionais ({form.coSupervisorIds.length})</legend>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">Também veem e aprovam os apontamentos e ausências desta supervisão.</p>
+            <div className="mt-2 grid max-h-48 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3">
+              {coSupervisorCandidates.map((person) => {
+                const checked = form.coSupervisorIds.includes(person.id)
+                return (
+                  <label key={person.id} className={`flex cursor-pointer items-center gap-2 rounded-xl border p-2 text-sm ${checked ? 'border-[var(--color-primary)] bg-[var(--color-surface-subtle)]' : 'border-[var(--color-border)]'}`}>
+                    <input type="checkbox" aria-label={`Supervisor adicional: ${person.name}`} checked={checked} onChange={() => toggleCoSupervisor(person.id)} className="accent-[var(--color-primary)]" />
+                    <span className="font-bold text-[var(--color-text)]">{person.name}</span>
+                  </label>
+                )
+              })}
+            </div>
+            {coSupervisorsAsCollaborators.length > 0 && (
+              <p className="mt-2 text-xs font-semibold text-[var(--color-text-muted)]">{coSupervisorsAsCollaborators.map((person) => person.name).join(', ')} passará(ão) a supervisor ao salvar.</p>
+            )}
+          </fieldset>
           <fieldset className="mt-4">
             <legend className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">Colaboradores ({form.memberIds.length})</legend>
             {candidates.length === 0 ? (
@@ -230,7 +262,7 @@ export function OnlineTeamsPanel({ service = onlineTeamService, onExportTeam, is
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h3 className="text-base font-extrabold text-[var(--color-text)]">{team.name}</h3>
-                  <p className="text-sm font-bold text-[var(--color-primary)]">Supervisor: {team.supervisorName}</p>
+                  <p className="text-sm font-bold text-[var(--color-primary)]">{team.coSupervisorNames.length > 0 ? 'Supervisores' : 'Supervisor'}: {[team.supervisorName, ...team.coSupervisorNames].join(', ')}</p>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button type="button" onClick={() => startEdit(team)} disabled={isSaving} className="rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs font-bold text-[var(--color-primary)]">Editar</button>
