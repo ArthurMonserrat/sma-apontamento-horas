@@ -18,8 +18,8 @@ describe('rota raiz do ecossistema', () => {
       </MemoryRouter>,
     )
 
-    expect(markup).toContain('Banco de Horas 1')
-    expect(markup).toContain('Banco de Horas 2 (Campo e Estudos)')
+    expect(markup).toContain('Apontamento 1')
+    expect(markup).toContain('Apontamento 2')
   })
 
   it('preserva o contrato completo de paths, perfis e fallback', () => {

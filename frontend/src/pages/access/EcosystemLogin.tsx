@@ -13,8 +13,8 @@ import { hasModuleAccess } from '../../features/session/moduleAccess'
 const loginLogo = `${import.meta.env.BASE_URL}logo.png`
 
 const NO_ACCESS_MESSAGE: Record<EcosystemModule, string> = {
-  BANCO_1: 'Seu usuário não tem acesso ao Banco de Horas 1. Contate a Administração.',
-  BANCO_2: 'Seu usuário não tem acesso ao Banco de Horas 2. Contate a Administração.',
+  BANCO_1: 'Seu usuário não tem acesso ao Apontamento 1. Contate a Administração.',
+  BANCO_2: 'Seu usuário não tem acesso ao Apontamento 2. Contate a Administração.',
 }
 
 type EcosystemLoginProps = {
@@ -76,7 +76,7 @@ export function EcosystemLogin({ banco2Url = getBanco2Url(), openExternal = (url
     }
 
     if (module === 'BANCO_2' && !banco2Url) {
-      setError('O Banco de Horas 2 ainda não está configurado neste ambiente.')
+      setError('O Apontamento 2 ainda não está configurado neste ambiente.')
       return
     }
 
@@ -108,7 +108,7 @@ export function EcosystemLogin({ banco2Url = getBanco2Url(), openExternal = (url
   if (isLoading || shouldOpenBanco2) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 text-[var(--color-text)]" aria-busy="true">
-        <p className="font-semibold text-[var(--color-primary)]">{shouldOpenBanco2 ? 'Abrindo o Banco de Horas 2...' : 'Validando sessão corporativa...'}</p>
+        <p className="font-semibold text-[var(--color-primary)]">{shouldOpenBanco2 ? 'Abrindo o Apontamento 2...' : 'Validando sessão corporativa...'}</p>
       </main>
     )
   }
@@ -116,7 +116,7 @@ export function EcosystemLogin({ banco2Url = getBanco2Url(), openExternal = (url
   const busyLabel = 'Processando autenticação...'
   const banco1Blocked = isSignedIn && !banco1Home
   const banco2Blocked = !banco2Url || (isSignedIn && !canOpenBanco2)
-  const banco2Label = !banco2Url ? 'Banco 2 indisponível' : isSignedIn && !canOpenBanco2 ? 'Sem acesso ao Banco 2' : 'Acessar Banco 2'
+  const banco2Label = !banco2Url ? 'Apontamento 2 indisponível' : isSignedIn && !canOpenBanco2 ? 'Sem acesso ao Apontamento 2' : 'Acessar Apontamento 2'
   const message = error || returnAccessError || authError || callbackError
 
   return (
@@ -133,16 +133,18 @@ export function EcosystemLogin({ banco2Url = getBanco2Url(), openExternal = (url
         <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
           <article className="ui-card flex flex-col rounded-2xl p-6 text-left">
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary)] text-2xl text-white" aria-hidden="true">◷</div>
-            <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 1</h2>
+            <h2 className="text-xl font-extrabold text-[var(--color-text)]">Apontamento 1</h2>
+            <p className="mt-1 text-sm font-bold text-[var(--color-primary)]">3º e 7º andar</p>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Gestão consolidada de horas e registros da base principal.</p>
             <button type="button" disabled={isAuthenticating || banco1Blocked} onClick={() => void handleAccess('BANCO_1')} className="ui-button-primary mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60">
-              {isAuthenticating ? busyLabel : banco1Blocked ? 'Sem acesso ao Banco 1' : 'Acessar Banco 1'}
+              {isAuthenticating ? busyLabel : banco1Blocked ? 'Sem acesso ao Apontamento 1' : 'Acessar Apontamento 1'}
             </button>
           </article>
 
           <article className="ui-card flex flex-col rounded-2xl p-6 text-left">
             <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-secondary)] text-2xl text-white" aria-hidden="true">◈</div>
-            <h2 className="text-xl font-extrabold text-[var(--color-text)]">Banco de Horas 2 (Campo e Estudos)</h2>
+            <h2 className="text-xl font-extrabold text-[var(--color-text)]">Apontamento 2</h2>
+            <p className="mt-1 text-sm font-bold text-[var(--color-secondary)]">1º e 8º andar</p>
             <p className="mt-3 flex-1 text-sm leading-6 text-[var(--color-text-muted)]">Apontamento rápido para equipes externas, modo offline e sincronização.</p>
             <button type="button" disabled={isAuthenticating || banco2Blocked} onClick={() => void handleAccess('BANCO_2')} className={`${banco2Blocked ? 'ui-button-secondary' : 'ui-button-primary'} mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60`}>
               {isAuthenticating ? busyLabel : banco2Label}
