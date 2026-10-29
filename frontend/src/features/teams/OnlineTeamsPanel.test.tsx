@@ -25,7 +25,7 @@ beforeEach(() => {
     listPeopleForTeams: vi.fn(async () => [renato, hugo, hamilton]),
     listTeams: vi.fn(async () => teams),
     saveTeam: vi.fn(async () => {
-      teams = [{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', members: [hamilton, hugo] }]
+      teams = [{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', coSupervisorIds: [], coSupervisorNames: [], members: [hamilton, hugo] }]
       return 't1'
     }),
     deactivateTeam: vi.fn(),
@@ -57,20 +57,20 @@ describe('OnlineTeamsPanel', () => {
     expect(container.textContent).toContain('passará a supervisor ao salvar')
     expect(container.textContent).toContain('Hoje em Antiga')
 
-    const boxes = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+    const boxes = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')).filter((box) => !box.getAttribute('aria-label')?.startsWith('Supervisor adicional'))
     expect(boxes).toHaveLength(2)
     await act(async () => { boxes.forEach((box) => box.click()) })
     expect(container.textContent).toContain('será movido')
 
     await act(async () => { button('Salvar no banco').click() })
-    expect(service.saveTeam).toHaveBeenCalledWith({ name: 'S12 - RENATO', supervisorId: 'renato', memberIds: ['hamilton', 'hugo'] })
+    expect(service.saveTeam).toHaveBeenCalledWith({ name: 'S12 - RENATO', supervisorId: 'renato', coSupervisorIds: [], memberIds: ['hamilton', 'hugo'] })
     expect(container.textContent).toContain('Supervisão criada no banco de dados.')
     expect(container.textContent).toContain('Supervisor: Renato Resende')
     expect(container.textContent).toContain('2 colaborador(es)')
   })
 
   it('a diretoria define o cargo de quem está na supervisão e de quem está sem supervisão', async () => {
-    teams = [{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', members: [hamilton] }]
+    teams = [{ id: 't1', name: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende', coSupervisorIds: [], coSupervisorNames: [], members: [hamilton] }]
     await act(async () => { root.render(<OnlineTeamsPanel service={service} />) })
     expect(container.textContent).toContain('Sem supervisão (1)')
     expect(container.querySelector('select[aria-label="Cargo de Hugo Barbosa"]')).toBeTruthy()
@@ -78,6 +78,22 @@ describe('OnlineTeamsPanel', () => {
     await act(async () => { setValue(select, 'Projetista') })
     expect(service.setJobTitle).toHaveBeenCalledWith('hamilton', 'Projetista')
     expect(container.textContent).toContain('Cargo de Hamilton Junior: Projetista.')
+  })
+
+  it('adiciona um segundo supervisor, que sai da lista de colaboradores', async () => {
+    await act(async () => { root.render(<OnlineTeamsPanel service={service} />) })
+    await act(async () => { button('Nova supervisão').click() })
+    await act(async () => { setValue(container.querySelector('input[type="text"]')!, 'Estudos') })
+    await act(async () => { setValue(container.querySelector('select')!, 'renato') })
+    const hugoMember = () => container.querySelector('input[type="checkbox"]:not([aria-label])') as HTMLInputElement | null
+    const memberNames = () => Array.from(container.querySelectorAll('input[type="checkbox"]:not([aria-label])')).map((box) => box.closest('label')?.textContent ?? '')
+    expect(memberNames().some((name) => name.includes('Hugo Barbosa'))).toBe(true)
+    await act(async () => { (container.querySelector('input[aria-label="Supervisor adicional: Hugo Barbosa"]') as HTMLInputElement).click() })
+    expect(memberNames().some((name) => name.includes('Hugo Barbosa'))).toBe(false)
+    expect(container.textContent).toContain('Hugo Barbosa passará(ão) a supervisor ao salvar.')
+    expect(hugoMember()).toBeTruthy()
+    await act(async () => { button('Salvar no banco').click() })
+    expect(service.saveTeam).toHaveBeenCalledWith(expect.objectContaining({ name: 'Estudos', supervisorId: 'renato', coSupervisorIds: ['hugo'], memberIds: [] }))
   })
 
   it('mostra o erro do banco sem fechar o formulário', async () => {

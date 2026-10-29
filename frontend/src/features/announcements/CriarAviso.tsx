@@ -48,9 +48,10 @@ export function CriarAviso({ repository = fallbackRepository }: { repository?: A
     void Promise.all([onlineTeamService.listTeams(), listCorporatePeople()])
       .then(([teams, people]) => {
         if (!active) return
-        const visibleTeams = sessionRole === 'SUPERVISOR' ? teams.filter((team) => team.supervisorId === session?.id) : teams
+        const visibleTeams = sessionRole === 'SUPERVISOR' ? teams.filter((team) => team.supervisorId === session?.id || team.coSupervisorIds.includes(session?.id ?? '')) : teams
         setTeamOptions(visibleTeams.map((team) => ({ value: team.id, label: team.name })))
-        const visiblePeople = people.filter((person) => person.id !== session?.id && (sessionRole !== 'SUPERVISOR' || person.supervisorId === session?.id))
+        // O banco já entrega ao supervisor só as pessoas das equipes que ele supervisiona.
+        const visiblePeople = people.filter((person) => person.id !== session?.id && (sessionRole !== 'SUPERVISOR' || Boolean(person.teamId)))
         setPeopleOptions(visiblePeople.map((person) => ({ value: person.id, label: person.name })))
       })
       .catch(() => { if (active) { setTeamOptions([]); setPeopleOptions([]) } })
