@@ -29,11 +29,14 @@ describe('EcosystemLogin', () => {
     expect(markup).toContain('Ecossistema SM&amp;A')
     expect(markup).toContain('Selecione o sistema que deseja acessar')
     expect(markup).toContain('flex flex-col items-center justify-center gap-3')
-    expect(markup).toContain('Banco de Horas 1')
-    expect(markup).toContain('Banco de Horas 2 (Campo e Estudos)')
+    expect(markup).toContain('Apontamento 1')
+    expect(markup).toContain('3º e 7º andar')
+    expect(markup).toContain('Apontamento 2')
+    expect(markup).toContain('1º e 8º andar')
+    expect(markup).toContain('Apontamento 2')
     expect(markup).not.toContain('Escolha seu perfil')
-    expect(markup).toContain('Acessar Banco 1')
-    expect(markup).toContain('Banco 2 indisponível')
+    expect(markup).toContain('Acessar Apontamento 1')
+    expect(markup).toContain('Apontamento 2 indisponível')
   })
 
   it('não aponta módulos para a seleção manual de cargos', () => {

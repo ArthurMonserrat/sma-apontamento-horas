@@ -67,7 +67,7 @@ function renderLogin(path = '/', session: DemoSession | null = null, isLoading =
 describe('acesso ao ecossistema', () => {
   it('inicia o OAuth Supabase e guarda o destino do Banco 1', async () => {
     await act(async () => renderLogin())
-    const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Banco 1')
+    const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Apontamento 1')
 
     await act(async () => button?.click())
 
@@ -77,12 +77,12 @@ describe('acesso ao ecossistema', () => {
 
   it('não inicia autenticação nem inventa fallback para Banco 2 sem URL configurada', async () => {
     await act(async () => renderLogin())
-    const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Banco 2')
+    const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Apontamento 2')
 
     await act(async () => button?.click())
 
     expect(startCorporateOAuth).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('Banco 2 indisponível')
+    expect(container.textContent).toContain('Apontamento 2 indisponível')
   })
 
   it('exibe erro seguro quando o callback retorna não autorizado', async () => {
@@ -111,14 +111,14 @@ describe('acesso ao ecossistema', () => {
   it('não redireciona sessão inconsistente (cargo diferente do perfil corporativo)', async () => {
     await act(async () => renderLogin('/?modulo=banco1', corporateSession('DIRECTOR_ADMIN', 'colaborador')))
 
-    expect(container.textContent).toContain('Banco de Horas 1')
+    expect(container.textContent).toContain('Apontamento 1')
     expect(container.textContent).not.toContain('Area diretoria')
   })
 
-  it('com sessão válida, Acessar Banco 1 entra direto sem novo OAuth', async () => {
+  it('com sessão válida, Acessar Apontamento 1 entra direto sem novo OAuth', async () => {
     await act(async () => renderLogin('/', corporateSession('SUPERVISOR', 'supervisor')))
-    expect(container.textContent).toContain('Banco de Horas 1')
-    const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Banco 1')
+    expect(container.textContent).toContain('Apontamento 1')
+    const button = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Acessar Apontamento 1')
 
     await act(async () => button?.click())
 
@@ -132,8 +132,8 @@ describe('acesso ao ecossistema', () => {
   it('bloqueia o Banco 1 para quem não tem acesso liberado e explica o motivo', async () => {
     await act(async () => renderLogin('/?modulo=banco1', corporateSession('COLLABORATOR', 'colaborador', [])))
 
-    expect(container.textContent).toContain('não tem acesso ao Banco de Horas 1')
-    expect(findButton('Sem acesso ao Banco 1')?.disabled).toBe(true)
+    expect(container.textContent).toContain('não tem acesso ao Apontamento 1')
+    expect(findButton('Sem acesso ao Apontamento 1')?.disabled).toBe(true)
     expect(container.textContent).not.toContain('Area colaborador')
   })
 
@@ -149,7 +149,7 @@ describe('acesso ao ecossistema', () => {
 
     expect(openExternal).toHaveBeenCalledTimes(1)
     expect(openExternal).toHaveBeenCalledWith(BANCO2)
-    expect(container.textContent).toContain('Abrindo o Banco de Horas 2')
+    expect(container.textContent).toContain('Abrindo o Apontamento 2')
   })
 
   it('não abre o Banco 2 sem acesso liberado', async () => {
@@ -157,14 +157,14 @@ describe('acesso ao ecossistema', () => {
     await act(async () => renderLogin('/?modulo=banco2', corporateSession('COLLABORATOR', 'colaborador', [{ module: 'BANCO_1', role: 'colaborador' }]), false, { banco2Url: BANCO2, openExternal }))
 
     expect(openExternal).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('não tem acesso ao Banco de Horas 2')
-    expect(findButton('Sem acesso ao Banco 2')?.disabled).toBe(true)
+    expect(container.textContent).toContain('não tem acesso ao Apontamento 2')
+    expect(findButton('Sem acesso ao Apontamento 2')?.disabled).toBe(true)
   })
 
-  it('sem login, Acessar Banco 2 inicia o OAuth com destino do Banco 2', async () => {
+  it('sem login, Acessar Apontamento 2 inicia o OAuth com destino do Banco 2', async () => {
     await act(async () => renderLogin('/', null, false, { banco2Url: BANCO2 }))
 
-    await act(async () => findButton('Acessar Banco 2')?.click())
+    await act(async () => findButton('Acessar Apontamento 2')?.click())
 
     expect(sessionStorage.getItem('sma:oauth-destination')).toBe('/?modulo=banco2')
     expect(startCorporateOAuth).toHaveBeenCalledTimes(1)
@@ -175,8 +175,8 @@ describe('acesso ao ecossistema', () => {
     const both: ModuleAccess[] = [{ module: 'BANCO_1', role: 'colaborador' }, { module: 'BANCO_2', role: 'colaborador' }]
     await act(async () => renderLogin('/', corporateSession('COLLABORATOR', 'colaborador', both), false, { banco2Url: BANCO2, openExternal }))
 
-    expect(findButton('Acessar Banco 1')?.disabled).toBe(false)
-    await act(async () => findButton('Acessar Banco 2')?.click())
+    expect(findButton('Acessar Apontamento 1')?.disabled).toBe(false)
+    await act(async () => findButton('Acessar Apontamento 2')?.click())
     expect(openExternal).toHaveBeenCalledWith(BANCO2)
   })
 })
