@@ -10,6 +10,7 @@ import { getCorporateToday } from '../../shared/lib/date'
 import { useTour } from '../../app/providers/tourContext'
 import { useCorporateIdentity } from '../../features/profile/useCorporateIdentity'
 import { CorporateIdentityPanel } from '../../features/profile/CorporateIdentityPanel'
+import { assignmentFromPerson, useCorporatePerson } from '../../features/corporate/useCorporatePerson'
 
 type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; justification: string }
 type ProfileForm = { name: string; email: string; jobTitle: string; activeSquadId: string }
@@ -36,6 +37,8 @@ export function PerfilPage() {
   // (assinatura, carga horária) só aparecem quando existirem para este usuário.
   const corporateIdentity = useCorporateIdentity()
   const showLocalProfileError = Boolean(profileState.error) && !corporateIdentity
+  // Login Microsoft: equipe, supervisor e cargo do banco de dados (definidos pela diretoria).
+  const { corporate, person } = useCorporatePerson()
   const [form, setForm] = useState<WorkloadForm>(initialForm)
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
   const [isEditing, setEditing] = useState(false)
@@ -155,7 +158,7 @@ export function PerfilPage() {
           <section className="space-y-4" aria-labelledby="profile-edit-title">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 id="profile-edit-title" className="text-lg font-extrabold ui-heading">Dados profissionais</h2>
-              {!isEditing && <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><button type="button" onClick={() => { startTour(); navigate('/colaborador') }} className="ui-button-secondary">Ver Tutorial do Sistema</button><button type="button" onClick={() => setEditing(true)} className="ui-button-secondary">Editar Perfil</button></div>}
+              {!isEditing && <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><button type="button" onClick={() => { startTour(); navigate('/colaborador') }} className="ui-button-secondary">Ver Tutorial do Sistema</button>{!corporate && <button type="button" onClick={() => setEditing(true)} className="ui-button-secondary">Editar Perfil</button>}</div>}
             </div>
             {isEditing ? (
               <div className="rounded-2xl border ui-border ui-surface p-5">
@@ -173,7 +176,12 @@ export function PerfilPage() {
                 </div>
               </div>
             ) : (
-              <ProfileSummary profile={profileState.data.profile} assignment={profileState.data.assignment} currentWorkload={profileState.data.currentWorkload} />
+              <ProfileSummary
+                profile={profileState.data.profile}
+                assignment={corporate ? assignmentFromPerson(person) : profileState.data.assignment}
+                jobTitle={corporate ? person?.jobTitle ?? null : undefined}
+                managedByCompany={corporate}
+              />
             )}
           </section>
           <section className="space-y-4" aria-labelledby="signature-title">

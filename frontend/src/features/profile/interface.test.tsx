@@ -7,11 +7,26 @@ import { WorkloadHistory } from '../workloads/WorkloadHistory'
 import { WorkloadRequestForm } from '../workloads/WorkloadRequestForm'
 
 describe('interface de perfil profissional', () => {
-  it('exibe status, localização controlada, squad, supervisor e carga vigente', () => {
-    const markup = renderToStaticMarkup(<ProfileSummary profile={demoCollaborator} assignment={demoAssignmentSnapshot} currentWorkload={demoWorkloadVersions[0]} />)
-    for (const text of ['Ativo', 'São Paulo', 'Engenharia de Automação', 'Jeen Carlos E. Azevedo', '08:00']) expect(markup).toContain(text)
+  it('exibe status, squad e supervisor, sem localização nem carga vigente', () => {
+    const markup = renderToStaticMarkup(<ProfileSummary profile={demoCollaborator} assignment={demoAssignmentSnapshot} />)
+    for (const text of ['Ativo', 'Engenharia de Automação', 'Jeen Carlos E. Azevedo']) expect(markup).toContain(text)
+    for (const text of ['Localização', 'São Paulo', 'Carga diária vigente']) expect(markup).not.toContain(text)
     expect(markup).toContain('Use &quot;Editar Perfil&quot;')
-    expect(markup).toContain('Localização e status seguem controlados pela empresa')
+  })
+
+  it('com login Microsoft mostra equipe, supervisor e cargo definidos pela diretoria', () => {
+    const markup = renderToStaticMarkup(<ProfileSummary profile={demoCollaborator} managedByCompany jobTitle="Engenheiro"
+      assignment={{ squadId: 't1', squadName: 'S12 - RENATO', supervisorId: 'renato', supervisorName: 'Renato Resende' }} />)
+    for (const text of ['Equipe atual', 'S12 - RENATO', 'Renato Resende', 'Engenheiro', 'definidos pela diretoria']) expect(markup).toContain(text)
+    expect(markup).not.toContain('Jeen Carlos')
+    expect(markup).not.toContain('Editar Perfil')
+  })
+
+  it('com login Microsoft e sem equipe mostra não definido', () => {
+    const markup = renderToStaticMarkup(<ProfileSummary profile={demoCollaborator} managedByCompany jobTitle={null} assignment={null} />)
+    expect(markup).toContain('Não definida')
+    expect(markup).toContain('Não definido')
+    expect(markup).not.toContain(demoCollaborator.jobTitle)
   })
 
   it('permite escolher somente squad e informa que o supervisor é automático', () => {
