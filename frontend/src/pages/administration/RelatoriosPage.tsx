@@ -11,6 +11,7 @@ import type { ReportEntry, ReportStatus, ReportSupervisor } from '../../features
 import { eachIsoDate, getCorporateToday, getMonthKey, getMonthRange, isWeekend } from '../../shared/lib/date'
 import { listVisibleTimeEntries } from '../../features/time-entries/infrastructure/visibleTimeEntries'
 import { isCorporateDataActive } from '../../features/corporate/corporateData'
+import { onlineTeamService, type OnlineTeam } from '../../features/teams/infrastructure/onlineTeamService'
 import { exportDirectorateReport, type DirectorateReportRow } from '../../features/reports/infrastructure/excelExportService'
 
 const statusOptions: Array<{ value: '' | ReportStatus, label: string }> = [
@@ -73,18 +74,40 @@ export function RelatoriosPage() {
     return () => { active = false }
   }, [])
   // Com login Microsoft o organograma de demonstração não entra no relatório: só equipes reais.
-  const organograma = isCorporateDataActive() ? NO_ORGANOGRAM : organogramaDEP
+  const corporate = isCorporateDataActive()
+  const organograma = corporate ? NO_ORGANOGRAM : organogramaDEP
+  // Supervisões do banco de dados: todos os supervisores aparecem, mesmo sem apontamentos no período.
+  const [onlineTeams, setOnlineTeams] = useState<OnlineTeam[]>([])
+  useEffect(() => {
+    if (!corporate) return
+    let active = true
+    void onlineTeamService.listTeams()
+      .then((teams) => { if (active) setOnlineTeams(teams) })
+      .catch(() => { if (active) setOnlineTeams([]) })
+    return () => { active = false }
+  }, [corporate])
+  const teamGroups = useMemo(() => onlineTeams.map((team) => ({
+    label: [team.supervisorName, ...team.coSupervisorNames].join(', '),
+    members: team.members,
+  })), [onlineTeams])
+  // Cada apontamento conta para a supervisão atual da pessoa (não a do dia em que foi lançado).
+  const groupedEntries = useMemo(() => {
+    if (!corporate) return entries
+    const labelByMember = new Map(teamGroups.flatMap((group) => group.members.map((member) => [member.id, group.label] as const)))
+    return entries.map((entry) => ({ ...entry, supervisorName: labelByMember.get(entry.collaboratorId) ?? 'Sem supervisão' }))
+  }, [corporate, entries, teamGroups])
 
-  const filteredEntries = useMemo(() => entries.filter((entry) => entry.entryDate >= startDate && entry.entryDate <= endDate && (!supervisorFilter || entry.supervisorName === supervisorFilter) && (!statusFilter || entry.status === statusFilter)), [endDate, entries, startDate, statusFilter, supervisorFilter])
-  const supervisorNames = useMemo(() => Array.from(new Set([...organograma.flatMap((item) => item.squads.map((squad) => squad.supervisor)), ...entries.map((entry) => entry.supervisorName).filter((name): name is string => Boolean(name))])).sort((a, b) => a.localeCompare(b)), [entries, organograma])
+  const filteredEntries = useMemo(() => groupedEntries.filter((entry) => entry.entryDate >= startDate && entry.entryDate <= endDate && (!supervisorFilter || entry.supervisorName === supervisorFilter) && (!statusFilter || entry.status === statusFilter)), [endDate, groupedEntries, startDate, statusFilter, supervisorFilter])
+  const supervisorNames = useMemo(() => Array.from(new Set([...organograma.flatMap((item) => item.squads.map((squad) => squad.supervisor)), ...teamGroups.map((group) => group.label), ...groupedEntries.map((entry) => entry.supervisorName).filter((name): name is string => Boolean(name))])).sort((a, b) => a.localeCompare(b)), [groupedEntries, organograma, teamGroups])
   const supervisors = useMemo<ReportSupervisor[]>(() => {
     const groups = new Map<string, ReportEntry[]>()
     filteredEntries.forEach((entry) => { const key = entry.supervisorName ?? 'Não atribuído'; groups.set(key, [...(groups.get(key) ?? []), entry]) })
-    const names = Array.from(new Set([...organograma.flatMap((item) => item.squads.map((squad) => squad.supervisor)), ...groups.keys()]))
+    const names = Array.from(new Set([...organograma.flatMap((item) => item.squads.map((squad) => squad.supervisor)), ...teamGroups.map((group) => group.label), ...groups.keys()]))
     return names.map((name) => {
       const supervisorEntries = groups.get(name) ?? []
       const collaboratorMap = new Map<string, { name: string, jobTitle?: string, entries: ReportEntry[] }>()
       organograma.flatMap((item) => item.squads.filter((squad) => squad.supervisor === name).flatMap((squad) => squad.colaboradores)).forEach((collaborator) => collaboratorMap.set(slug(collaborator.nome), { name: collaborator.nome, jobTitle: collaborator.cargo, entries: [] }))
+      teamGroups.filter((group) => group.label === name).flatMap((group) => group.members).forEach((member) => collaboratorMap.set(member.id, { name: member.name, jobTitle: member.jobTitle ?? undefined, entries: [] }))
       supervisorEntries.forEach((entry) => {
         const current = collaboratorMap.get(entry.collaboratorId) ?? { name: entry.collaboratorName ?? (entry.collaboratorId === 'demo-collaborator-001' ? 'Colaborador' : entry.collaboratorId), jobTitle: entry.collaboratorJobTitle, entries: [] }
         collaboratorMap.set(entry.collaboratorId, { ...current, entries: [...current.entries, entry] })
@@ -93,7 +116,7 @@ export function RelatoriosPage() {
       const workedMinutes = sumMinutes(supervisorEntries, (entry) => entry.status === 'CANCELLED' ? 0 : entry.durationMinutes)
       return { id: slug(name), name, workedMinutes, extraMinutes: sumMinutes(supervisorEntries, (entry) => entry.extraMinutes), nightMinutes: sumMinutes(supervisorEntries, (entry) => entry.nightMinutes), bankMinutes: workedMinutes - expectedMinutes(startDate, endDate), collaborators }
     }).sort((a, b) => a.name.localeCompare(b.name))
-  }, [endDate, filteredEntries, organograma, startDate])
+  }, [endDate, filteredEntries, organograma, startDate, teamGroups])
   const activeEntries = filteredEntries.filter((entry) => entry.status !== 'CANCELLED')
   const totalMinutes = sumMinutes(activeEntries, (entry) => entry.durationMinutes)
   const extraMinutes = sumMinutes(activeEntries, (entry) => entry.extraMinutes)
