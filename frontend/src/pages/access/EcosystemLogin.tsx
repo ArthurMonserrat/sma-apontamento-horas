@@ -9,6 +9,9 @@ import { hasAuthenticatedSession } from '../../features/session/authGuard'
 import { getDemoHomePath } from '../../features/session/routePolicy'
 import { hasModuleAccess } from '../../features/session/moduleAccess'
 
+/** Mesmo logotipo da tela de entrada do Banco 2. */
+const loginLogo = `${import.meta.env.BASE_URL}logo.png`
+
 const NO_ACCESS_MESSAGE: Record<EcosystemModule, string> = {
   BANCO_1: 'Seu usuário não tem acesso ao Banco de Horas 1. Contate a Administração.',
   BANCO_2: 'Seu usuário não tem acesso ao Banco de Horas 2. Contate a Administração.',
@@ -121,7 +124,7 @@ export function EcosystemLogin({ banco2Url = getBanco2Url(), openExternal = (url
       <div className="absolute right-4 top-4"><ThemeToggle /></div>
       <section className="w-full max-w-5xl text-center" aria-labelledby="ecosystem-login-title">
         <div className="flex flex-col items-center justify-center gap-3">
-          <BrandMark variant="full" transparent className="mx-auto" />
+          <BrandMark variant="full" src={loginLogo} transparent className="mx-auto" />
           <p className="ui-badge-secondary">Ambiente corporativo</p>
         </div>
         <h1 id="ecosystem-login-title" className="mt-5 text-3xl font-extrabold text-[var(--color-primary)] sm:text-4xl">Ecossistema SM&amp;A</h1>
