@@ -57,6 +57,7 @@ export function GestorLayout() {
               <span className="flex-1">{isDirector ? 'Painel Diretor' : 'Gestão da Equipe'}</span>
             </NavLink>
             {isDirector && <NavLink to="/administracao/equipes" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-sidebar-surface)]"><NavigationIcon name="users" /></span><span className="flex-1">Equipes</span></NavLink>}
+            {isDirector && <NavLink to="/administracao/projetos" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-sidebar-surface)]"><NavigationIcon name="folder" /></span><span className="flex-1">Projetos</span></NavLink>}
             {isDirector && <NavLink to="/administracao/relatorios" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-sidebar-surface)]"><NavigationIcon name="bar-chart" /></span><span className="flex-1">Relatórios</span></NavLink>}
             <NavLink to="/avisos" onClick={() => setMenuOpen(false)} className={linkClass}><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-navigation-active-detail)] text-[var(--color-primary)]"><NavigationIcon name="bell" /></span><span className="flex-1">Avisos</span><AnnouncementBadge /></NavLink>
           </nav>

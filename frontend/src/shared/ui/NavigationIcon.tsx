@@ -6,6 +6,7 @@ export type NavigationIconName =
   | 'calendar-off'
   | 'dashboard'
   | 'file-plus'
+  | 'folder'
   | 'history'
   | 'inbox'
   | 'user'
@@ -21,6 +22,8 @@ function iconContent(name: NavigationIconName): ReactNode {
       return <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>
     case 'file-plus':
       return <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M12 18v-6m-3 3h6" /></>
+    case 'folder':
+      return <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>
     case 'history':
       return <><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5m4-4v7l4 2" /></>
     case 'calendar-off':

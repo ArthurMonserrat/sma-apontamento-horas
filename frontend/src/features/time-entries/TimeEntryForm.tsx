@@ -5,10 +5,14 @@ import { FieldError, fieldClassName, TimeEntryFields } from './TimeEntryFields'
 import { useTimeEntryForm } from './useTimeEntryForm'
 import { LdSection } from '../document-list/LdSection'
 import { CreateRdoButton } from '../rdo/CreateRdoButton'
+import { ProjectEntryFields } from '../projects/ProjectEntryFields'
+import { isCorporateDataActive } from '../corporate/corporateData'
+import { useSession } from '../session/useSession'
 
 export function TimeEntryForm({ entryId }: { entryId?: string }) {
   const [searchParams] = useSearchParams()
   const formRef = useRef<HTMLFormElement>(null)
+  const { profile } = useSession()
   const controller = useTimeEntryForm({
     initialDate: searchParams.get('date') ?? getCorporateToday(),
     entryId,
@@ -52,6 +56,16 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         </section>
       )}
 
+      {isCorporateDataActive() && profile && (
+        <ProjectEntryFields
+          personId={profile.id}
+          projectId={controller.values.projectId ?? ''}
+          projectActivityId={controller.values.projectActivityId ?? ''}
+          error={controller.errors.projectActivityId}
+          onSelectProject={controller.selectProject}
+          onSelectActivity={(activityId) => controller.setField('projectActivityId', activityId)}
+        />
+      )}
       <LdSection selected={controller.values.ldDocument} onSelect={controller.selectLdDocument} onClear={controller.clearLdDocument} />
       <FieldError id="ld-document-error" message={controller.errors.ldDocument} />
       <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} onChange={controller.setField} />

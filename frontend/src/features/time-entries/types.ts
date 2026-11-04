@@ -39,6 +39,9 @@ export interface TimeEntry {
   clientName: string
   projectCode: string
   contractorNumber?: string
+  /** Projeto/atividade cadastrados pela diretoria (null = apontamento sem projeto). */
+  projectId?: string | null
+  projectActivityId?: string | null
   ldDocument?: LdDocumentSnapshot
   activityId: string
   disciplineCode: DisciplineCode
@@ -62,6 +65,8 @@ export type CreateTimeEntryData = Pick<
   | 'clientName'
   | 'projectCode'
   | 'contractorNumber'
+  | 'projectId'
+  | 'projectActivityId'
   | 'ldDocument'
   | 'activityId'
   | 'disciplineCode'
