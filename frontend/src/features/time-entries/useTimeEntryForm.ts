@@ -11,6 +11,7 @@ import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } fr
 import { applyLdDocument, type LdDocument } from '../document-list/ldImport'
 import { isManualDocumentType } from './documentCatalog'
 import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
+import type { Project } from '../projects/types'
 
 export type TimeEntryFormValues = {
   startDate: string
@@ -18,6 +19,11 @@ export type TimeEntryFormValues = {
   weekdaysOnly: boolean
   clientName: string
   contractorNumber?: string
+  /** Projeto escolhido na lista da diretoria ('' = sem projeto). */
+  projectId?: string
+  projectActivityId?: string
+  /** O projeto tem atividades para a pessoa: escolher uma é obrigatório. */
+  projectActivityRequired?: boolean
   ldDocument?: CreateTimeEntryData['ldDocument']
   activityId: string
   disciplineCode: CreateTimeEntryData['disciplineCode'] | ''
@@ -34,6 +40,9 @@ const emptyValues = (entryDate: string): TimeEntryFormValues => ({
   weekdaysOnly: true,
   clientName: '',
   contractorNumber: '',
+  projectId: '',
+  projectActivityId: '',
+  projectActivityRequired: false,
   activityId: '',
   disciplineCode: '',
   documentTypeCode: '',
@@ -50,6 +59,9 @@ function valuesFromEntry(entry: TimeEntry): TimeEntryFormValues {
     weekdaysOnly: true,
     clientName: entry.clientName,
     contractorNumber: entry.contractorNumber ?? '',
+    projectId: entry.projectId ?? '',
+    projectActivityId: entry.projectActivityId ?? '',
+    projectActivityRequired: Boolean(entry.projectActivityId),
     ldDocument: entry.ldDocument,
     activityId: entry.activityId,
     disciplineCode: entry.disciplineCode,
@@ -128,6 +140,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
         ...current,
         clientName: lastEntry.clientName,
         contractorNumber: lastEntry.contractorNumber ?? lastEntry.projectCode,
+        projectId: lastEntry.projectId ?? '',
+        projectActivityId: lastEntry.projectActivityId ?? '',
+        projectActivityRequired: Boolean(lastEntry.projectActivityId),
         ldDocument: lastEntry.ldDocument,
         activityId: lastEntry.activityId,
         disciplineCode: lastEntry.disciplineCode,
@@ -162,6 +177,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       clientName: values.clientName,
       projectCode: values.contractorNumber?.trim() ?? '',
       contractorNumber: values.contractorNumber,
+      // Sem projeto: só envia null se o apontamento de origem tinha projeto (limpa); senão não mexe.
+      projectId: values.projectId || (source?.projectId ? null : undefined),
+      projectActivityId: values.projectActivityId || (source?.projectActivityId ? null : undefined),
       ldDocument: values.ldDocument,
       activityId: values.activityId,
       disciplineCode: values.disciplineCode as CreateTimeEntryData['disciplineCode'],
@@ -193,6 +211,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       delete validationErrors.projectCode
     }
     if (dateBlock.blocked) validationErrors.entryDate = dateBlock.message
+    if (values.projectId && values.projectActivityRequired && !values.projectActivityId) {
+      validationErrors.projectActivityId = 'Escolha a atividade do projeto.'
+    }
     if (!areValidDurationParts(durationHours, durationRemainderMinutes)) {
       validationErrors.durationMinutes = 'Informe horas inteiras entre 0 e 24 e minutos inteiros entre 0 e 59, com total máximo de 24 horas.'
     }
@@ -267,6 +288,12 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     setField,
     reuseLastEntry,
     selectLdDocument: (document: LdDocument) => { setValues((current) => applyLdDocument(current, document)); setErrors({}) },
+    selectProject: (project: Project | null, hasActivities: boolean) => {
+      setValues((current) => project
+        ? { ...current, projectId: project.id, projectActivityId: '', projectActivityRequired: hasActivities, clientName: current.ldDocument ? current.clientName : project.client, contractorNumber: project.code }
+        : { ...current, projectId: '', projectActivityId: '', projectActivityRequired: false })
+      setErrors((current) => ({ ...current, projectActivityId: undefined, clientName: undefined, contractorNumber: undefined }))
+    },
     clearLdDocument: () => setValues((current) => ({ ...current, clientName: '', ldDocument: undefined, documentTypeCode: isManualDocumentType(current.documentTypeCode) ? current.documentTypeCode : '' })),
     submit,
   }

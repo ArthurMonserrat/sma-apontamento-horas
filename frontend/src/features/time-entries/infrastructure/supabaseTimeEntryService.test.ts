@@ -48,6 +48,17 @@ describe('SupabaseTimeEntryService', () => {
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ type: 'TIME_ENTRY_CREATED', entityId: created.id }))
   })
 
+  it('grava projeto e atividade do projeto e só envia as colunas quando informadas', async () => {
+    const created = await service.create(ME, { ...baseData, projectId: 'proj-1', projectActivityId: 'act-1' })
+    expect(rows()[0]).toMatchObject({ project_id: 'proj-1', project_activity_id: 'act-1' })
+    expect(created).toMatchObject({ projectId: 'proj-1', projectActivityId: 'act-1' })
+    await service.create(ME, { ...baseData, entryDate: '2026-10-27' })
+    expect(rows()[1]).not.toHaveProperty('project_id')
+    const updated = await service.update(ME, created.id, created.version, { ...baseData, projectId: null, projectActivityId: null }, 'Sem projeto')
+    expect(rows()[0]).toMatchObject({ project_id: null, project_activity_id: null })
+    expect(updated.projectId).toBeUndefined()
+  })
+
   it('lança um período de dias úteis em uma única gravação', async () => {
     await service.create(ME, { ...baseData, entryDate: '2026-10-23', endDate: '2026-10-26', weekdaysOnly: true })
     expect(rows().map((row) => row.entry_date)).toEqual(['2026-10-23', '2026-10-26'])

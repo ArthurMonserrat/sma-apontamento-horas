@@ -10,6 +10,7 @@ import { ProtectedRoute } from '../../features/session/ProtectedRoute'
 import { SupervisorPage } from '../../pages/supervisor/SupervisorPage'
 import { DiretoriaPage } from '../../pages/administration/DiretoriaPage'
 import { EquipesPage } from '../../pages/administration/EquipesPage'
+import { ProjetosPage } from '../../pages/administration/ProjetosPage'
 import { RelatoriosPage } from '../../pages/administration/RelatoriosPage'
 import { AvisosPage } from '../../pages/administration/AvisosPage'
 import { DiretorPerfilPage } from '../../pages/administration/DiretorPerfilPage'
@@ -35,6 +36,7 @@ export function AppRoutes() {
       <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['SUPERVISOR']}><SupervisorPage /></ProtectedRoute>} />
       <Route path="/administracao" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><DiretoriaPage /></ProtectedRoute>} />
       <Route path="/administracao/equipes" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><EquipesPage /></ProtectedRoute>} />
+      <Route path="/administracao/projetos" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><ProjetosPage /></ProtectedRoute>} />
       <Route path="/administracao/relatorios" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><RelatoriosPage /></ProtectedRoute>} />
       <Route path="/administracao/perfil" element={<ProtectedRoute allowedRoles={['DIRECTOR_ADMIN']}><DiretorPerfilPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

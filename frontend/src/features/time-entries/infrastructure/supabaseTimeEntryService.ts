@@ -28,6 +28,8 @@ export type Banco1TimeEntryRow = {
   client_name: string
   project_code: string
   contractor_number: string | null
+  project_id?: string | null
+  project_activity_id?: string | null
   ld_document: LdDocumentSnapshot | null
   activity_id: string
   discipline_code: string
@@ -59,6 +61,8 @@ export function timeEntryFromRow(row: Banco1TimeEntryRow): TimeEntry {
     clientName: row.client_name,
     projectCode: row.project_code,
     contractorNumber: row.contractor_number ?? undefined,
+    projectId: row.project_id ?? undefined,
+    projectActivityId: row.project_activity_id ?? undefined,
     ldDocument: row.ld_document ?? undefined,
     activityId: row.activity_id,
     disciplineCode: row.discipline_code as DisciplineCode,
@@ -89,6 +93,9 @@ function contentColumns(data: CreateTimeEntryData) {
     document_type_code: data.documentTypeCode,
     duration_minutes: data.durationMinutes,
     details: data.details,
+    // Colunas de projeto só vão quando informadas (undefined = não mexe).
+    ...(data.projectId !== undefined ? { project_id: data.projectId } : {}),
+    ...(data.projectActivityId !== undefined ? { project_activity_id: data.projectActivityId } : {}),
   }
 }
 
@@ -313,6 +320,8 @@ export class SupabaseTimeEntryService implements TimeEntryService {
       clientName: overrides.clientName ?? entry.clientName,
       projectCode: overrides.projectCode ?? entry.projectCode,
       contractorNumber: overrides.contractorNumber ?? entry.contractorNumber,
+      projectId: Object.hasOwn(overrides, 'projectId') ? overrides.projectId : entry.projectId,
+      projectActivityId: Object.hasOwn(overrides, 'projectActivityId') ? overrides.projectActivityId : entry.projectActivityId,
       ldDocument: Object.hasOwn(overrides, 'ldDocument') ? overrides.ldDocument : entry.ldDocument,
       activityId: overrides.activityId ?? entry.activityId,
       disciplineCode: overrides.disciplineCode ?? entry.disciplineCode,
