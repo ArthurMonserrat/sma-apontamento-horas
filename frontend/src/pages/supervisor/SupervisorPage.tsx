@@ -26,8 +26,9 @@ import { useTour } from '../../app/providers/tourContext'
 import { AvisosPage } from '../administration/AvisosPage'
 import { AnnouncementBadge } from '../../features/announcements/notifications/AnnouncementBadge'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
+import { HoursReportsPanel } from '../../features/reports/hours/HoursReportsPanel'
 
-type ActiveView = 'entries' | 'requests' | 'history' | 'profile' | 'announcements'
+type ActiveView = 'entries' | 'requests' | 'history' | 'reports' | 'profile' | 'announcements'
 type EntryStatusFilter = 'ALL' | SupervisorPendingEntry['status']
 type RejectionTarget =
   | { type: 'entry', item: SupervisorPendingEntry }
@@ -59,6 +60,7 @@ const supervisorNavigation: Array<{ id: ActiveView, label: string, icon: Navigat
   { id: 'entries', label: 'Gestão da Equipe', icon: 'users' },
   { id: 'requests', label: 'Solicitações', icon: 'inbox' },
   { id: 'history', label: 'Histórico', icon: 'history' },
+  { id: 'reports', label: 'Relatórios', icon: 'bar-chart' },
   { id: 'announcements', label: 'Avisos', icon: 'bell' },
   { id: 'profile', label: 'Meu Perfil', icon: 'user' },
 ]
@@ -66,6 +68,7 @@ const supervisorNavigation: Array<{ id: ActiveView, label: string, icon: Navigat
 const activeViewBySearchParam: Record<string, ActiveView> = {
   solicitacoes: 'requests',
   historico: 'history',
+  relatorios: 'reports',
   avisos: 'announcements',
   perfil: 'profile',
 }
@@ -74,6 +77,7 @@ const supervisorPathByView: Record<ActiveView, string> = {
   entries: '/supervisor',
   requests: '/supervisor?view=solicitacoes',
   history: '/supervisor?view=historico',
+  reports: '/supervisor?view=relatorios',
   announcements: '/supervisor?view=avisos',
   profile: '/supervisor?view=perfil',
 }
@@ -684,6 +688,9 @@ export function SupervisorPage() {
             )}
 
             {activeView === 'history' && <HistoryView entries={dashboard.entries} />}
+            {activeView === 'reports' && (isCorporateDataActive() ? <HoursReportsPanel scope="equipe" /> : (
+              <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm font-semibold text-[var(--color-text-muted)]">Os relatórios de projetos usam o banco de dados. Entre com a conta Microsoft.</div>
+            ))}
             {activeView === 'profile' && (corporateIdentity ? (
               <div className="space-y-4">
                 <div className="flex justify-end"><button type="button" onClick={() => { changeActiveView('entries'); startTour() }} className="ui-button-secondary">Ver Tutorial do Sistema</button></div>
