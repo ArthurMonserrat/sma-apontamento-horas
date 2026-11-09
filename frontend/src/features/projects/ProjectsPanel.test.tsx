@@ -45,6 +45,35 @@ afterEach(() => {
 })
 
 describe('ProjectsPanel', () => {
+  it('importa do banco SQLite escolhendo as situações', async () => {
+    const readSqlite = vi.fn(async () => ({
+      statuses: [{ status: 'Concluído', count: 1 }, { status: 'Em andamento', count: 1 }],
+      projects: [
+        { code: '26A079S', status: 'Em andamento', client: 'AP', active: true, activities: [{ name: 'Fluxo', complement: null, executorName: 'Giuliano' }] },
+        { code: '24A001E', status: 'Concluído', client: 'VALE', active: false, activities: [] },
+      ],
+    }))
+    act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => []} readSqlite={readSqlite} />))
+    await flush()
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="Banco SQLite de projetos"]')!
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'ESTUDOS.sqlite')], configurable: true })
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })) })
+    await flush()
+    expect(container.textContent).toContain('Prévia da importação (banco SQLite)')
+    expect(container.textContent).toContain('26A079S')
+    expect(container.textContent).not.toContain('24A001E')
+    const concluded = Array.from(container.querySelectorAll('label')).find((label) => label.textContent?.startsWith('Concluído'))!.querySelector('input')!
+    act(() => concluded.click())
+    expect(container.textContent).toContain('24A001E(inativo)')
+    await act(async () => button('Confirmar importação').click())
+    await flush()
+    expect(service.save).toHaveBeenCalledWith([
+      { code: '26A079S', client: 'AP', active: true, activities: [{ name: 'Fluxo', complement: null, executorName: 'Giuliano' }] },
+      { code: '24A001E', client: 'VALE', active: false, activities: [] },
+    ], { replaceActivities: false })
+    expect(container.textContent).toContain('Importação concluída')
+  })
+
   it('lista projetos e mostra executor não encontrado', async () => {
     act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => [sabrina]} />))
     await flush()
