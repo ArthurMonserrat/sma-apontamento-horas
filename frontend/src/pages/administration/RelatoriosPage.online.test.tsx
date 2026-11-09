@@ -24,6 +24,7 @@ vi.mock('../../features/teams/infrastructure/onlineTeamService', () => ({
 }))
 
 vi.mock('../../app/layouts/ThemeToggle', () => ({ ThemeToggle: () => null }))
+vi.mock('../../features/reports/hours/HoursReportsPanel', () => ({ HoursReportsPanel: ({ scope }: { scope: string }) => <p>painel de projetos {scope}</p> }))
 
 import { RelatoriosPage } from './RelatoriosPage'
 
@@ -51,6 +52,10 @@ describe('Relatórios com supervisões do banco de dados', () => {
       </SessionContext.Provider>)
     })
     await act(async () => { await Promise.resolve() })
+    // Com login Microsoft abre em "Projetos e horas"; a visão por equipes fica na outra aba.
+    expect(container.textContent).toContain('painel de projetos diretoria')
+    const equipes = Array.from(container.querySelectorAll('button')).find((item) => item.textContent === 'Equipes e banco de horas')!
+    await act(async () => { equipes.click() })
     const text = container.textContent ?? ''
     expect(text).toContain('Renato Assis de Resende')
     expect(text).toContain('Henrique Calenzani, Bruna Alvarenga')

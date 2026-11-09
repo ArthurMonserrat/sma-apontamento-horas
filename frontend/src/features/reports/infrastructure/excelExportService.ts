@@ -420,3 +420,36 @@ export async function exportDirectorateReport(
   const safePeriod = `${period.startDate}_${period.endDate}`
   await writeWorkbook(workbook, `Relatorio_Gerencial_${safePeriod}.xlsx`)
 }
+
+export type HoursReportSheet = {
+  name: string
+  title: string
+  headers: string[]
+  rows: Array<Array<string | number>>
+  /** Colunas (1 = primeira) centralizadas. */
+  centered?: number[]
+}
+
+/** Relatório de horas (projetos, atividades, colaboradores, supervisões): uma aba por visão. */
+export async function exportHoursReport(sheets: HoursReportSheet[], period: { startDate: string, endDate: string }, scopeLabel: string) {
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'SM&A Apontamento de Horas'
+  workbook.created = new Date()
+  for (const sheet of sheets) {
+    const worksheet = workbook.addWorksheet(sheet.name.slice(0, 31))
+    worksheet.columns = sheet.headers.map(() => ({ width: 16 }))
+    applyCorporateHeader(workbook, worksheet, `${sheet.title} — ${period.startDate} a ${period.endDate}`, sheet.headers.length)
+    worksheet.getRow(2).values = sheet.headers
+    worksheet.getRow(2).height = 26
+    sheet.rows.forEach((row, index) => {
+      const addedRow = worksheet.addRow(row)
+      if (index % 2 === 1) addedRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } } })
+    })
+    applyHeaderStyle(worksheet, 2)
+    applyBodyStyle(worksheet, sheet.centered ?? [], 3)
+    autoFitColumns(worksheet)
+    worksheet.views = [{ state: 'frozen', ySplit: 2 }]
+  }
+  const safeScope = scopeLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '_')
+  await writeWorkbook(workbook, `Relatorio_Projetos_${safeScope}_${period.startDate}_${period.endDate}.xlsx`)
+}
