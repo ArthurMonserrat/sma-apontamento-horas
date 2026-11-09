@@ -12,9 +12,9 @@ export function syncText(run: ProjectSyncRun | null) {
 }
 
 export function connectionText(connection: OneDriveConnection | null) {
-  if (!connection) return 'OneDrive não conectado. O dono do arquivo (Paulo) precisa clicar em “Conectar OneDrive” e entrar com a conta Microsoft dele.'
+  if (!connection) return 'OneDrive não conectado. Clique em “Conectar OneDrive” e entre com a conta Microsoft que tem acesso à pasta BD ESTUDOS (a do Paulo, ou uma com o atalho da pasta em “Meus arquivos”).'
   const who = connection.accountName ? `${connection.accountName} (${connection.accountEmail})` : connection.accountEmail
-  if (connection.status === 'expirada') return `A conexão com o OneDrive de ${who} expirou. Ele precisa clicar em “Conectar OneDrive” de novo.`
+  if (connection.status === 'expirada') return `A conexão com o OneDrive de ${who} expirou. Clique em “Conectar OneDrive” de novo.`
   return `Conectado ao OneDrive de ${who} desde ${dateTime(connection.connectedAt)}.`
 }
 
