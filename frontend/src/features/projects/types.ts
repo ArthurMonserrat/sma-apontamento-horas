@@ -52,3 +52,22 @@ export function projectActivityLabel(activity: Pick<ProjectActivity, 'name' | 'c
 export function activitiesForPerson(project: Project, personId: string) {
   return project.activities.filter((activity) => activity.active && (!activity.executorId || activity.executorId === personId))
 }
+
+/** Última sincronização com o ESTUDOS.sqlite do OneDrive. */
+export type ProjectSyncRun = {
+  startedAt: string
+  trigger: 'agendado' | 'manual'
+  status: 'ok' | 'sem_mudancas' | 'erro'
+  fileModifiedAt: string | null
+  error: string | null
+  summary: Record<string, unknown> | null
+}
+
+/** Conexão com o OneDrive do dono do ESTUDOS.sqlite. */
+export type OneDriveConnection = {
+  accountEmail: string
+  accountName: string | null
+  connectedAt: string
+  status: 'ativa' | 'expirada'
+  lastError: string | null
+}

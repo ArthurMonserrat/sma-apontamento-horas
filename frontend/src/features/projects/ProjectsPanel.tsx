@@ -3,7 +3,8 @@ import { listCorporatePeople, type CorporatePerson } from '../corporate/corporat
 import { projectService, type ProjectService } from './infrastructure/projectService'
 import { readProjectWorkbook, type ProjectImportPreview } from './projectExcelImport'
 import { DEFAULT_SQLITE_STATUSES, readProjectSqlite, sqlitePreview, type SqliteProjectData } from './projectSqliteImport'
-import { projectActivityLabel, type Project } from './types'
+import { projectActivityLabel, type OneDriveConnection, type Project, type ProjectSyncRun } from './types'
+import { connectionText, oneDriveReturnMessage, syncText } from './projectSyncText'
 
 type ActivityForm = { key: string; name: string; complement: string; executorId: string; executorName: string }
 type FormState = {
@@ -54,10 +55,13 @@ function executorText(activity: Project['activities'][number]) {
  * Projetos do Banco 1 (diretoria): cadastro manual e importação da planilha
  * "Projeto | Supervisão | Executor | Cliente | Cliente Final | Local | Seg. Mercado | Descrição | Atividades | Complemento".
  */
-export function ProjectsPanel({ service = projectService, loadPeople = listCorporatePeople, readSqlite = readProjectSqlite }: {
+export function ProjectsPanel({ service = projectService, loadPeople = listCorporatePeople, readSqlite = readProjectSqlite, returnParams, openUrl = (url) => window.location.assign(url) }: {
   service?: ProjectService
   loadPeople?: () => Promise<CorporatePerson[]>
   readSqlite?: (file: File) => Promise<SqliteProjectData>
+  /** Parâmetros da volta do login da Microsoft (?onedrive=…). */
+  returnParams?: URLSearchParams
+  openUrl?: (url: string) => void
 }) {
   const [projects, setProjects] = useState<Project[]>([])
   const [people, setPeople] = useState<CorporatePerson[]>([])
@@ -70,6 +74,10 @@ export function ProjectsPanel({ service = projectService, loadPeople = listCorpo
   const [sqliteData, setSqliteData] = useState<SqliteProjectData | null>(null)
   const [sqliteStatuses, setSqliteStatuses] = useState<string[]>(DEFAULT_SQLITE_STATUSES)
   const [isReading, setReading] = useState(false)
+  const [lastSync, setLastSync] = useState<ProjectSyncRun | null>(null)
+  const [isSyncing, setSyncing] = useState(false)
+  const [connection, setConnection] = useState<OneDriveConnection | null>(null)
+  const returned = useMemo(() => returnParams ? oneDriveReturnMessage(returnParams) : null, [returnParams])
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -80,8 +88,15 @@ export function ProjectsPanel({ service = projectService, loadPeople = listCorpo
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [loadedProjects, loadedPeople] = await Promise.all([service.list({ includeInactive: true }), loadPeople()])
+      const [loadedProjects, loadedPeople, loadedSync, loadedConnection] = await Promise.all([
+        service.list({ includeInactive: true }),
+        loadPeople(),
+        service.lastSync().catch(() => null),
+        service.oneDriveStatus().catch(() => null),
+      ])
       setProjects(loadedProjects)
+      setLastSync(loadedSync)
+      setConnection(loadedConnection)
       setPeople([...loadedPeople].sort((left, right) => left.name.localeCompare(right.name, 'pt-BR')))
       setError(null)
     } catch (cause) {
@@ -191,6 +206,41 @@ export function ProjectsPanel({ service = projectService, loadPeople = listCorpo
     }
   }
 
+  async function syncNow() {
+    setSyncing(true)
+    setError(null)
+    setMessage(null)
+    setWarnings([])
+    try {
+      const result = await service.syncNow()
+      if (result.status === 'sem_mudancas') {
+        setMessage('O arquivo do OneDrive não mudou desde a última sincronização.')
+      } else {
+        const summary = result.summary ?? {}
+        const unmatched = Array.isArray(summary.unmatched_executors) ? summary.unmatched_executors as string[] : []
+        setMessage(`Sincronizado com o OneDrive: ${Number(summary.projects_created ?? 0)} projeto(s) novo(s), ${Number(summary.projects_updated ?? 0)} atualizado(s), ${Number(summary.projects_deactivated ?? 0)} desativado(s), ${Number(summary.activities_removed ?? 0)} atividade(s) removida(s).`)
+        setWarnings(unmatched)
+      }
+      await load()
+    } catch (cause) {
+      await load()
+      setError(cause instanceof Error ? cause.message : 'Não foi possível sincronizar.')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  async function connectOneDrive() {
+    setSyncing(true)
+    setError(null)
+    try {
+      openUrl(await service.oneDriveConnectUrl())
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível abrir o login da Microsoft.')
+      setSyncing(false)
+    }
+  }
+
   async function toggleActive(project: Project) {
     setSaving(true)
     setError(null)
@@ -226,6 +276,24 @@ export function ProjectsPanel({ service = projectService, loadPeople = listCorpo
           <button type="button" className={primaryButton} disabled={isSaving} onClick={() => { setForm(emptyForm()); setMessage(null); setWarnings([]) }}>Novo projeto</button>
         </div>
       </div>
+
+      <section aria-label="Sincronização com o OneDrive" className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-extrabold">Sincronização automática (ESTUDOS.sqlite no OneDrive)</p>
+          <p className={`mt-1 text-xs ${connection?.status === 'ativa' ? 'text-[var(--color-text-muted)]' : 'font-semibold text-[var(--color-danger)]'}`}>{connectionText(connection)}</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{syncText(lastSync)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={secondaryButton} disabled={isSyncing || isSaving} onClick={() => void connectOneDrive()}>{connection?.status === 'ativa' ? 'Reconectar OneDrive' : 'Conectar OneDrive'}</button>
+          <button type="button" className={connection?.status === 'ativa' ? primaryButton : secondaryButton} disabled={isSyncing || isSaving || !connection} onClick={() => void syncNow()}>{isSyncing ? 'Aguarde…' : 'Sincronizar agora'}</button>
+        </div>
+      </section>
+
+      {returned && (
+        <div role={returned.kind === 'ok' ? 'status' : 'alert'} className={`rounded-2xl border bg-[var(--color-surface)] p-4 text-sm font-semibold ${returned.kind === 'ok' ? 'border-[var(--color-primary)] text-[var(--color-text)]' : returned.kind === 'aviso' ? 'border-amber-500 text-[var(--color-text)]' : 'border-[var(--color-danger)] text-[var(--color-danger)]'}`}>
+          {returned.text}
+        </div>
+      )}
 
       {error && <div role="alert" className="rounded-2xl border border-[var(--color-danger)] bg-[var(--color-surface)] p-4 text-sm font-semibold text-[var(--color-danger)]">{error}</div>}
       {message && <div role="status" className="rounded-2xl border border-[var(--color-primary)] bg-[var(--color-surface)] p-4 text-sm font-semibold text-[var(--color-text)]">{message}</div>}

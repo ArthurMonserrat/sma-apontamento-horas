@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CorporatePerson } from '../corporate/corporateData'
 import { ProjectsPanel } from './ProjectsPanel'
+import { connectionText, oneDriveReturnMessage, syncText } from './projectSyncText'
 import type { ProjectService } from './infrastructure/projectService'
 import type { Project } from './types'
 
@@ -36,6 +37,10 @@ beforeEach(() => {
     list: vi.fn(async () => projects),
     save: vi.fn(async () => ({ projectIds: ['p2'], projectsCreated: 1, projectsUpdated: 0, activitiesSaved: 1, activitiesRemoved: 0, unmatchedExecutors: [] })),
     setActive: vi.fn(async () => undefined),
+    lastSync: vi.fn(async () => null),
+    oneDriveStatus: vi.fn(async () => ({ accountEmail: 'paulo.porto@sma-eng.com.br', accountName: 'Paulo Porto', connectedAt: '2026-11-10T12:00:00Z', status: 'ativa' })),
+    oneDriveConnectUrl: vi.fn(async () => 'https://login.microsoftonline.com/x/authorize'),
+    syncNow: vi.fn(async () => ({ status: 'ok', summary: { projects_created: 3, projects_updated: 1, projects_deactivated: 2, activities_removed: 0, unmatched_executors: ['Alan Franklin'] } })),
   } as unknown as ProjectService
 })
 
@@ -45,12 +50,70 @@ afterEach(() => {
 })
 
 describe('ProjectsPanel', () => {
+  it('sincroniza com o OneDrive na hora e mostra o resultado', async () => {
+    act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => []} />))
+    await flush()
+    expect(container.textContent).toContain('Ainda não sincronizado')
+    expect(container.textContent).toContain('Conectado ao OneDrive de Paulo Porto')
+    await act(async () => button('Sincronizar agora').click())
+    await flush()
+    expect(service.syncNow).toHaveBeenCalled()
+    expect(container.textContent).toContain('Sincronizado com o OneDrive: 3 projeto(s) novo(s), 1 atualizado(s), 2 desativado(s)')
+    expect(container.textContent).toContain('Alan Franklin')
+  })
+
+  it('mostra erro da sincronização', async () => {
+    service.syncNow = vi.fn(async () => { throw new Error('Sincronização com o OneDrive ainda não configurada (faltam: PROJECTS_SYNC_SITE_URL).') })
+    act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => []} />))
+    await flush()
+    await act(async () => button('Sincronizar agora').click())
+    await flush()
+    expect(container.textContent).toContain('ainda não configurada')
+  })
+
+  it('conectar OneDrive abre o login da Microsoft', async () => {
+    service.oneDriveStatus = vi.fn(async () => null)
+    const openUrl = vi.fn()
+    act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => []} openUrl={openUrl} />))
+    await flush()
+    expect(container.textContent).toContain('OneDrive não conectado')
+    expect(button('Sincronizar agora').disabled).toBe(true)
+    await act(async () => button('Conectar OneDrive').click())
+    await flush()
+    expect(openUrl).toHaveBeenCalledWith('https://login.microsoftonline.com/x/authorize')
+  })
+
+  it('mostra o resultado da volta do login', async () => {
+    act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => []} returnParams={new URLSearchParams('onedrive=erro&motivo=admin')} />))
+    await flush()
+    expect(container.textContent).toContain('aprovação de um administrador')
+    expect(container.textContent).toContain('Conectado ao OneDrive de Paulo Porto (paulo.porto@sma-eng.com.br)')
+    expect(button('Reconectar OneDrive')).toBeTruthy()
+  })
+
+  it('textos da conexão e da volta do login', () => {
+    expect(connectionText({ accountEmail: 'p@x', accountName: null, connectedAt: '2026-11-10T12:00:00Z', status: 'expirada', lastError: null })).toContain('expirou')
+    expect(oneDriveReturnMessage(new URLSearchParams('onedrive=conectado&conta=p%40x&arquivo=nao-encontrado'))).toMatchObject({ kind: 'aviso' })
+    expect(oneDriveReturnMessage(new URLSearchParams('onedrive=conectado&conta=p%40x&arquivo=ok'))?.text).toContain('OneDrive conectado com p@x')
+    expect(oneDriveReturnMessage(new URLSearchParams('onedrive=erro&motivo=xyz'))?.text).toContain('Tente de novo')
+    expect(oneDriveReturnMessage(new URLSearchParams(''))).toBeNull()
+  })
+
+  it('descreve a última sincronização', () => {
+    expect(syncText({ startedAt: '2026-11-10T10:00:00Z', trigger: 'agendado', status: 'ok', fileModifiedAt: '2026-11-09T21:30:00Z', error: null, summary: null }))
+      .toBe('Última sincronização em 10/11/2026, 07:00 (automática) · arquivo salvo em 09/11/2026, 18:30.')
+    expect(syncText({ startedAt: '2026-11-10T16:00:00Z', trigger: 'manual', status: 'erro', fileModifiedAt: null, error: 'Arquivo não encontrado', summary: null }))
+      .toBe('Última tentativa em 10/11/2026, 13:00 (manual) falhou: Arquivo não encontrado')
+    expect(syncText({ startedAt: '2026-11-10T16:00:00Z', trigger: 'agendado', status: 'sem_mudancas', fileModifiedAt: null, error: null, summary: null }))
+      .toContain('sem mudanças no arquivo')
+  })
+
   it('importa do banco SQLite escolhendo as situações', async () => {
     const readSqlite = vi.fn(async () => ({
       statuses: [{ status: 'Concluído', count: 1 }, { status: 'Em andamento', count: 1 }],
       projects: [
-        { code: '26A079S', status: 'Em andamento', client: 'AP', active: true, activities: [{ name: 'Fluxo', complement: null, executorName: 'Giuliano' }] },
-        { code: '24A001E', status: 'Concluído', client: 'VALE', active: false, activities: [] },
+        { code: '26A079S', status: 'Em andamento', client: 'AP', supervisionCode: null, finalClient: null, location: null, marketSegment: null, description: '', active: true, activities: [{ name: 'Fluxo', complement: null, executorName: 'Giuliano' }] },
+        { code: '24A001E', status: 'Concluído', client: 'VALE', supervisionCode: null, finalClient: null, location: null, marketSegment: null, description: '', active: false, activities: [] },
       ],
     }))
     act(() => root.render(<ProjectsPanel service={service} loadPeople={async () => []} readSqlite={readSqlite} />))
@@ -68,8 +131,8 @@ describe('ProjectsPanel', () => {
     await act(async () => button('Confirmar importação').click())
     await flush()
     expect(service.save).toHaveBeenCalledWith([
-      { code: '26A079S', client: 'AP', active: true, activities: [{ name: 'Fluxo', complement: null, executorName: 'Giuliano' }] },
-      { code: '24A001E', client: 'VALE', active: false, activities: [] },
+      { code: '26A079S', client: 'AP', supervisionCode: null, finalClient: null, location: null, marketSegment: null, description: '', active: true, activities: [{ name: 'Fluxo', complement: null, executorName: 'Giuliano' }] },
+      { code: '24A001E', client: 'VALE', supervisionCode: null, finalClient: null, location: null, marketSegment: null, description: '', active: false, activities: [] },
     ], { replaceActivities: false })
     expect(container.textContent).toContain('Importação concluída')
   })

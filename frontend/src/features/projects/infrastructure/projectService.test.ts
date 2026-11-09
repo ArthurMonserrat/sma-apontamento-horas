@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createFakeSupabase } from '../../corporate/testing/fakeSupabaseClient'
 import { ProjectService } from './projectService'
 import { activitiesForPerson } from '../types'
@@ -53,5 +53,27 @@ describe('ProjectService', () => {
     fake.rpcs.set('banco1_set_project_active', () => ({ data: null, error: null }))
     await service.setActive('p1', false)
     expect(fake.calls.at(-1)).toMatchObject({ rpc: 'banco1_set_project_active', payload: { project_id: 'p1', active: false } })
+  })
+
+  it('lê a última sincronização e pede a sincronização ao servidor com a sessão', async () => {
+    const { fake, service } = setup()
+    expect(await service.lastSync()).toBeNull()
+    fake.tables.set('banco1_project_sync_runs', [
+      { started_at: '2026-11-10T10:00:00Z', trigger: 'agendado', status: 'ok', file_modified_at: null, error: null, summary: { projects_created: 1 } },
+    ])
+    expect(await service.lastSync()).toMatchObject({ trigger: 'agendado', status: 'ok', summary: { projects_created: 1 } })
+
+    const client = { auth: { getSession: async () => ({ data: { session: { access_token: 'jwt' } } }) } }
+    const withSession = new ProjectService(() => client as never)
+    const doFetch = vi.fn(async () => new Response(JSON.stringify({ status: 'ok', summary: { projects_created: 2 } }), { status: 200 }))
+    expect(await withSession.syncNow(doFetch as unknown as typeof fetch)).toEqual({ status: 'ok', summary: { projects_created: 2 } })
+    expect(doFetch).toHaveBeenCalledWith('/api/projects-sync', { method: 'POST', headers: { Authorization: 'Bearer jwt' } })
+    const failing = vi.fn(async () => new Response(JSON.stringify({ error: 'Somente a diretoria pode sincronizar os projetos.' }), { status: 403 }))
+    await expect(withSession.syncNow(failing as unknown as typeof fetch)).rejects.toThrow('Somente a diretoria')
+    const connect = vi.fn(async () => new Response(JSON.stringify({ url: 'https://login.microsoftonline.com/x' }), { status: 200 }))
+    expect(await withSession.oneDriveConnectUrl(connect as unknown as typeof fetch)).toBe('https://login.microsoftonline.com/x')
+    expect(connect).toHaveBeenCalledWith('/api/projects-sync?action=connect', expect.objectContaining({ method: 'POST' }))
+    fake.rpcs.set('banco1_onedrive_status', () => ({ data: [{ account_email: 'p@x', account_name: 'Paulo', connected_at: '2026-11-10T12:00:00Z', status: 'ativa', last_error: null }], error: null }))
+    expect(await service.oneDriveStatus()).toMatchObject({ accountEmail: 'p@x', status: 'ativa' })
   })
 })
