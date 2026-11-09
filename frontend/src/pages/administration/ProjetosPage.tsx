@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
@@ -10,6 +11,12 @@ export function ProjetosPage() {
   const { session, signOut } = useSession()
   const navigate = useNavigate()
   const corporate = isCorporateDataActive()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Volta do login da Microsoft (?onedrive=…): guarda a mensagem e limpa o endereço.
+  const [returnParams] = useState(() => searchParams.has('onedrive') ? new URLSearchParams(searchParams) : undefined)
+  useEffect(() => {
+    if (searchParams.has('onedrive')) setSearchParams({}, { replace: true })
+  }, [searchParams, setSearchParams])
 
   function exit() {
     signOut()
@@ -35,7 +42,7 @@ export function ProjetosPage() {
         <DirectorSidebar onSignOut={exit} />
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            {corporate ? <ProjectsPanel /> : (
+            {corporate ? <ProjectsPanel returnParams={returnParams} /> : (
               <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm font-semibold text-[var(--color-text-muted)]">
                 Os projetos ficam no banco de dados. Entre com a conta Microsoft para cadastrar.
               </div>

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { corporateDataError, getCorporateDataClient } from '../../corporate/corporateData'
-import type { Project, ProjectInput, SaveProjectsResult } from '../types'
+import type { OneDriveConnection, Project, ProjectInput, ProjectSyncRun, SaveProjectsResult } from '../types'
 
 type ActivityRow = {
   id: string
@@ -117,6 +117,56 @@ export class ProjectService {
       activitiesRemoved: Number(result.activities_removed ?? 0),
       unmatchedExecutors: Array.isArray(result.unmatched_executors) ? result.unmatched_executors as string[] : [],
     }
+  }
+
+  /** Última sincronização com o OneDrive (null se ainda não houve ou a tabela não existe). */
+  async lastSync(): Promise<ProjectSyncRun | null> {
+    const { data, error } = await this.client()
+      .from('banco1_project_sync_runs')
+      .select('started_at,trigger,status,file_modified_at,error,summary')
+      .order('started_at', { ascending: false })
+      .range(0, 0)
+    if (error) return null
+    const row = (data ?? [])[0] as { started_at: string; trigger: ProjectSyncRun['trigger']; status: ProjectSyncRun['status']; file_modified_at: string | null; error: string | null; summary: Record<string, unknown> | null } | undefined
+    if (!row) return null
+    return { startedAt: row.started_at, trigger: row.trigger, status: row.status, fileModifiedAt: row.file_modified_at, error: row.error, summary: row.summary }
+  }
+
+  private async callSyncApi(path: string, doFetch: typeof fetch) {
+    const { data } = await this.client().auth.getSession()
+    const token = data.session?.access_token
+    if (!token) throw new Error('Sessão expirada. Entre novamente.')
+    let response: Response
+    try {
+      response = await doFetch(path, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+    } catch {
+      throw new Error('Sem conexão com o servidor. Tente de novo.')
+    }
+    const payload = await response.json().catch(() => null) as Record<string, unknown> | null
+    if (!response.ok) throw new Error(typeof payload?.error === 'string' ? payload.error : `A operação falhou (erro ${response.status}).`)
+    return payload ?? {}
+  }
+
+  /** "Sincronizar agora": o servidor baixa o ESTUDOS.sqlite do OneDrive e atualiza os projetos. */
+  async syncNow(doFetch: typeof fetch = fetch): Promise<{ status: string; summary?: Record<string, unknown> }> {
+    const payload = await this.callSyncApi('/api/projects-sync', doFetch)
+    return { status: typeof payload.status === 'string' ? payload.status : 'ok', summary: payload.summary as Record<string, unknown> | undefined }
+  }
+
+  /** "Conectar OneDrive": devolve o link de login da Microsoft (quem entra deve ser o dono do arquivo). */
+  async oneDriveConnectUrl(doFetch: typeof fetch = fetch): Promise<string> {
+    const payload = await this.callSyncApi('/api/projects-sync?action=connect', doFetch)
+    if (typeof payload.url !== 'string') throw new Error('O servidor não devolveu o link de login da Microsoft.')
+    return payload.url
+  }
+
+  /** Com qual conta o OneDrive está conectado (só diretoria). */
+  async oneDriveStatus(): Promise<OneDriveConnection | null> {
+    const { data, error } = await this.client().rpc('banco1_onedrive_status')
+    if (error) return null
+    const row = (Array.isArray(data) ? data[0] : data) as { account_email: string; account_name: string | null; connected_at: string; status: OneDriveConnection['status']; last_error: string | null } | undefined
+    if (!row) return null
+    return { accountEmail: row.account_email, accountName: row.account_name, connectedAt: row.connected_at, status: row.status, lastError: row.last_error }
   }
 
   async setActive(projectId: string, active: boolean) {

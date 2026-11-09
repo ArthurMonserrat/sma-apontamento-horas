@@ -5,6 +5,7 @@ const expectedApiRoutes = [
   'login.ts',
   'logout.ts',
   'me.ts',
+  'projects-sync.ts',
   'provision.ts',
   'redirect.ts',
   'supabase-session.ts',
@@ -17,6 +18,6 @@ describe('limite de funções da Vercel', () => {
       .sort()
 
     expect(apiFiles).toEqual(expectedApiRoutes)
-    expect(apiFiles).toHaveLength(6)
+    expect(apiFiles).toHaveLength(7)
   })
 })

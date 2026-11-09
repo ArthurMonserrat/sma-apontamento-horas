@@ -14,11 +14,13 @@
     "@supabase/supabase-js": "^2.117.3",
     "cookie": "^1.0.2",
     "dotenv": "^16.4.7",
-    "jose": "^6.2.12"
+    "jose": "^6.2.12",
+    "sql.js": "^1.14.2"
   },
   "devDependencies": {
     "@types/cookie": "^0.6.0",
     "@types/node": "^24.0.0",
+    "@types/sql.js": "^1.4.11",
     "typescript": "^6.0.0",
     "vitest": "^4.0.0"
   }
