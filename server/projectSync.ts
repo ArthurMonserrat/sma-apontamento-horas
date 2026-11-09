@@ -5,8 +5,9 @@ import initSqlJs from 'sql.js'
 import { projectsFromDatabase, type EstudosProject } from '../frontend/src/features/projects/estudosSqlite.js'
 
 /**
- * Sincronização dos projetos do Banco 1 com o ESTUDOS.sqlite do OneDrive do Paulo.
- * Sem a TI: o próprio Paulo conecta o OneDrive dele uma vez (botão "Conectar OneDrive"),
+ * Sincronização dos projetos do Banco 1 com o ESTUDOS.sqlite (pasta BD ESTUDOS do Paulo).
+ * Sem a TI: uma conta com acesso à pasta (dona dela, ou com o atalho da pasta compartilhada
+ * em "Meus arquivos") conecta o OneDrive uma vez (botão "Conectar OneDrive"),
  * autorizando o app de login da SM&A a ler os arquivos dele (Files.Read, delegado).
  * O servidor guarda o refresh token CRIPTOGRAFADO no Supabase e, a cada sincronização,
  * troca por um token de acesso, baixa o arquivo e manda tudo para banco1_sync_projects.
@@ -37,7 +38,11 @@ export type ProjectSyncResult =
   | { status: 'ok'; summary: Record<string, unknown>; fileModifiedAt: string | null }
   | { status: 'sem_mudancas'; fileModifiedAt: string | null }
 
-export const ONEDRIVE_SCOPES = 'offline_access User.Read Files.Read'
+/**
+ * Files.Read.All (delegado): lê os arquivos que a pessoa conectada consegue abrir, inclusive
+ * pastas compartilhadas com ela e adicionadas como atalho no OneDrive dela. Não exige administrador.
+ */
+export const ONEDRIVE_SCOPES = 'offline_access User.Read Files.Read.All'
 const GRAPH = 'https://graph.microsoft.com/v1.0'
 const MAX_FILE_BYTES = 100 * 1024 * 1024
 const SQLITE_HEADER = 'SQLite format 3\u0000'
@@ -142,7 +147,7 @@ async function tokenRequest(config: ProjectSyncConfig, doFetch: typeof fetch, pa
   return { ok: response.ok && Boolean(payload?.access_token), payload: payload ?? {} }
 }
 
-/** Troca o código do login do Paulo pelos tokens e descobre quem conectou. */
+/** Troca o código do login da Microsoft pelos tokens e descobre quem conectou. */
 export async function connectOneDrive(
   config: ProjectSyncConfig,
   input: { code: string; redirectUri: string; connectedBy: string },
@@ -157,7 +162,7 @@ export async function connectOneDrive(
   const meResponse = await deps.fetch(`${GRAPH}/me?$select=displayName,mail,userPrincipalName`, { headers: auth })
   const me = await meResponse.json().catch(() => null) as { displayName?: string; mail?: string; userPrincipalName?: string } | null
   const accountEmail = me?.mail || me?.userPrincipalName || 'conta Microsoft'
-  const fileResponse = await deps.fetch(`${GRAPH}/me/drive/root:/${encodePath(config.filePath)}?$select=id`, { headers: auth })
+  const file = await resolveDriveFile(config.filePath, auth, deps.fetch)
 
   const { error } = await deps.rpc('banco1_onedrive_save_connection', {
     account_email: accountEmail,
@@ -166,7 +171,7 @@ export async function connectOneDrive(
     connected_by: input.connectedBy,
   })
   if (error) throw new ProjectSyncError('salvar')
-  return { accountEmail, fileFound: fileResponse.ok }
+  return { accountEmail, fileFound: file.ok }
 }
 
 /** Token de acesso a partir do refresh token guardado (e guarda o novo refresh token). */
@@ -174,20 +179,20 @@ async function accessTokenFromConnection(config: ProjectSyncConfig, deps: Projec
   const { data, error } = await deps.rpc('banco1_onedrive_get_connection')
   const row = (Array.isArray(data) ? data[0] : data) as { account_email?: string; refresh_token_enc?: string } | null
   if (error || !row?.refresh_token_enc) {
-    throw new ProjectSyncError('OneDrive ainda não conectado. O Paulo precisa entrar em Projetos e clicar em “Conectar OneDrive”.', 409)
+    throw new ProjectSyncError('OneDrive ainda não conectado. Na tela Projetos, clique em “Conectar OneDrive” e entre com a conta que tem acesso à pasta BD ESTUDOS.', 409)
   }
   let refreshToken: string
   try {
     refreshToken = decryptSecret(row.refresh_token_enc, config.serverSecret)
   } catch {
     await deps.rpc('banco1_onedrive_mark_expired', { error_message: 'O segredo do servidor mudou.' })
-    throw new ProjectSyncError('A conexão com o OneDrive precisa ser refeita (o segredo do servidor mudou). O Paulo precisa clicar em “Conectar OneDrive”.', 409)
+    throw new ProjectSyncError('A conexão com o OneDrive precisa ser refeita (o segredo do servidor mudou). Clique em “Conectar OneDrive” de novo.', 409)
   }
   const { ok, payload } = await tokenRequest(config, deps.fetch, { grant_type: 'refresh_token', refresh_token: refreshToken })
   if (!ok) {
     if (payload.error === 'invalid_grant' || payload.error === 'interaction_required') {
       await deps.rpc('banco1_onedrive_mark_expired', { error_message: 'A Microsoft pediu um novo login.' })
-      throw new ProjectSyncError(`A conexão com o OneDrive de ${row.account_email ?? 'Paulo'} expirou (troca de senha ou acesso removido). Ele precisa clicar em “Conectar OneDrive” de novo.`, 409)
+      throw new ProjectSyncError(`A conexão com o OneDrive de ${row.account_email ?? 'conta conectada'} expirou (troca de senha ou acesso removido). Clique em “Conectar OneDrive” de novo.`, 409)
     }
     throw new ProjectSyncError('Não foi possível entrar na Microsoft. Confira PROJECTS_SYNC_CLIENT_ID, PROJECTS_SYNC_TENANT_ID e o segredo do app (pode ter vencido).')
   }
@@ -198,12 +203,72 @@ async function accessTokenFromConnection(config: ProjectSyncConfig, deps: Projec
 }
 
 function graphError(status: number, what: string): ProjectSyncError {
-  if (status === 401 || status === 403) return new ProjectSyncError(`Sem permissão para ${what} no OneDrive. Reconecte o OneDrive em Projetos.`)
-  if (status === 404) return new ProjectSyncError(`Não encontrei ${what} no OneDrive conectado. Confira PROJECTS_SYNC_FILE_PATH.`)
+  if (status === 401 || status === 403) return new ProjectSyncError(`Sem permissão para ${what} no OneDrive. Confira se a pasta continua compartilhada com a conta conectada e reconecte o OneDrive em Projetos.`)
+  if (status === 404) return new ProjectSyncError(`Não encontrei ${what} no OneDrive conectado. Confira PROJECTS_SYNC_FILE_PATH e se o atalho da pasta está em "Meus arquivos".`)
   return new ProjectSyncError(`O OneDrive respondeu com erro ${status} ao ${what}.`)
 }
 
 const encodePath = (path: string) => path.split('/').filter(Boolean).map(encodeURIComponent).join('/')
+
+type DriveItem = {
+  id?: string
+  eTag?: string
+  lastModifiedDateTime?: string
+  size?: number
+  file?: unknown
+  remoteItem?: { id?: string; parentReference?: { driveId?: string } }
+  parentReference?: { driveId?: string }
+}
+const ITEM_FIELDS = 'id,eTag,lastModifiedDateTime,size,file,folder,remoteItem,parentReference'
+
+export type ResolvedDriveFile = { ok: true; meta: DriveItem; itemUrl: string } | { ok: false; status: number; isFolder?: boolean }
+
+/**
+ * Acha o arquivo pelo caminho em "Meus arquivos" da conta conectada, seguindo atalhos
+ * ("Adicionar atalho a Meus arquivos" de uma pasta compartilhada): o atalho aponta para
+ * o item no OneDrive do dono (remoteItem) e o resto do caminho continua lá.
+ */
+export async function resolveDriveFile(path: string, auth: Record<string, string>, doFetch: typeof fetch): Promise<ResolvedDriveFile> {
+  const get = async (url: string) => {
+    const response = await doFetch(`${url}?$select=${ITEM_FIELDS}`, { headers: auth })
+    const item = await response.json().catch(() => null) as DriveItem | null
+    return { status: response.status, item: response.ok && item?.id ? item : null }
+  }
+  // Segue o atalho até o item verdadeiro (no OneDrive de quem compartilhou).
+  const follow = async (item: DriveItem) => {
+    const driveId = item.remoteItem?.parentReference?.driveId
+    if (!item.remoteItem?.id || !driveId) return { status: 200, item, driveId: item.parentReference?.driveId ?? null }
+    const remote = await get(`${GRAPH}/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(item.remoteItem.id)}`)
+    return { status: remote.status, item: remote.item, driveId: remote.item?.parentReference?.driveId ?? driveId }
+  }
+  const itemUrl = (item: DriveItem, driveId: string | null) => driveId
+    ? `${GRAPH}/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(item.id!)}`
+    : `${GRAPH}/me/drive/items/${encodeURIComponent(item.id!)}`
+
+  const segments = path.split('/').filter(Boolean)
+  // Caminho direto (arquivo no próprio OneDrive).
+  const direct = await get(`${GRAPH}/me/drive/root:/${encodePath(path)}`)
+  if (direct.item) {
+    const resolved = await follow(direct.item)
+    if (!resolved.item) return { ok: false, status: resolved.status }
+    if (!resolved.item.file) return { ok: false, status: 400, isFolder: true }
+    return { ok: true, meta: resolved.item, itemUrl: itemUrl(resolved.item, resolved.driveId) }
+  }
+  // Pasta por pasta, entrando nos atalhos.
+  let parent = `${GRAPH}/me/drive/root`
+  let current: { item: DriveItem; driveId: string | null } | null = null
+  for (const segment of segments) {
+    const found = await get(`${parent}:/${encodeURIComponent(segment)}`)
+    if (!found.item) return { ok: false, status: found.status }
+    const resolved = await follow(found.item)
+    if (!resolved.item) return { ok: false, status: resolved.status }
+    current = { item: resolved.item, driveId: resolved.driveId }
+    parent = itemUrl(resolved.item, resolved.driveId)
+  }
+  if (!current) return { ok: false, status: 404 }
+  if (!current.item.file) return { ok: false, status: 400, isFolder: true }
+  return { ok: true, meta: current.item, itemUrl: parent }
+}
 
 export async function loadSqlJsWasm(): Promise<ArrayBuffer> {
   const require = createRequire(import.meta.url)
@@ -240,12 +305,12 @@ export async function runProjectSync(
   try {
     const token = await accessTokenFromConnection(config, deps)
     const auth = { Authorization: `Bearer ${token}` }
-    const base = `${GRAPH}/me/drive`
-
-    const metaResponse = await deps.fetch(`${base}/root:/${encodePath(config.filePath)}?$select=id,eTag,lastModifiedDateTime,size,file`, { headers: auth })
-    const meta = await metaResponse.json().catch(() => null) as { id?: string; eTag?: string; lastModifiedDateTime?: string; size?: number; file?: unknown } | null
-    if (!metaResponse.ok || !meta?.id) throw graphError(metaResponse.status, 'o arquivo ESTUDOS.sqlite')
-    if (!meta.file) throw new ProjectSyncError('O caminho configurado é uma pasta, não o arquivo ESTUDOS.sqlite.')
+    const file = await resolveDriveFile(config.filePath, auth, deps.fetch)
+    if (!file.ok) {
+      if (file.isFolder) throw new ProjectSyncError('O caminho configurado é uma pasta, não o arquivo ESTUDOS.sqlite. Inclua o nome do arquivo em PROJECTS_SYNC_FILE_PATH.')
+      throw graphError(file.status, 'o arquivo ESTUDOS.sqlite')
+    }
+    const meta = file.meta
     if ((meta.size ?? 0) > MAX_FILE_BYTES) throw new ProjectSyncError('O arquivo de projetos passou de 100 MB.')
     fileEtag = meta.eTag ?? null
     fileModifiedAt = meta.lastModifiedDateTime ?? null
@@ -260,7 +325,7 @@ export async function runProjectSync(
       }
     }
 
-    const contentResponse = await deps.fetch(`${base}/items/${encodeURIComponent(meta.id)}/content`, { headers: auth })
+    const contentResponse = await deps.fetch(`${file.itemUrl}/content`, { headers: auth })
     if (!contentResponse.ok) throw graphError(contentResponse.status, 'baixar o arquivo ESTUDOS.sqlite')
     const bytes = new Uint8Array(await contentResponse.arrayBuffer())
     if (new TextDecoder('latin1').decode(bytes.slice(0, 16)) !== SQLITE_HEADER) {

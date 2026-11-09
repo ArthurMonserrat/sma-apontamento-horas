@@ -15,7 +15,7 @@ import {
 import type { VercelRequest, VercelResponse } from '../server/types.js'
 
 /**
- * /api/projects-sync — projetos do Banco 1 x ESTUDOS.sqlite no OneDrive do Paulo.
+ * /api/projects-sync — projetos do Banco 1 x ESTUDOS.sqlite no OneDrive (pasta BD ESTUDOS).
  * - POST                     sincroniza (agendamento com x-sync-token, ou diretoria com Bearer).
  * - POST ?action=connect     diretoria pede o link de login da Microsoft ("Conectar OneDrive").
  * - GET  ?code=…&state=…     volta do login da Microsoft (redirect URI do app).

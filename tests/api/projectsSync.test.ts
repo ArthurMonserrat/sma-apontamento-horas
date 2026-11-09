@@ -77,7 +77,6 @@ beforeEach(async () => {
   graph = vi.fn(async (url: string) => {
     if (url === 'https://login.microsoftonline.com/tenant/oauth2/v2.0/token') return tokenResponse()
     if (url === 'https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName') return response(200, { displayName: 'Paulo Porto', mail: 'paulo.porto@sma-eng.com.br' })
-    if (url === `${ME_DRIVE}/root:/Controle/ESTUDOS.sqlite?$select=id`) return response(200, { id: 'item-1' })
     if (url.startsWith(`${ME_DRIVE}/root:/Controle/ESTUDOS.sqlite?`)) {
       return response(200, { id: 'item-1', eTag: '"etag-2"', lastModifiedDateTime: '2026-11-10T12:00:00Z', size: file.byteLength, file: {} })
     }
@@ -142,6 +141,35 @@ describe('POST /api/projects-sync (sincronizar)', () => {
     expect(rpcCalls.some((call) => call.name === 'banco1_onedrive_mark_expired')).toBe(true)
   })
 
+  it('segue o atalho de uma pasta compartilhada (BD ESTUDOS do Paulo no OneDrive de outra pessoa)', async () => {
+    const PAULO = 'https://graph.microsoft.com/v1.0/drives/paulo-drive'
+    graph.mockImplementation(async (url: string) => {
+      if (url.includes('/oauth2/v2.0/token')) return tokenResponse()
+      if (url.startsWith(`${ME_DRIVE}/root:/BD%20ESTUDOS/ESTUDOS.sqlite?`)) return response(404, {})
+      if (url.startsWith(`${ME_DRIVE}/root:/BD%20ESTUDOS?`)) return response(200, { id: 'atalho', remoteItem: { id: 'pasta', parentReference: { driveId: 'paulo-drive' } } })
+      if (url.startsWith(`${PAULO}/items/pasta?`)) return response(200, { id: 'pasta', folder: {}, parentReference: { driveId: 'paulo-drive' } })
+      if (url.startsWith(`${PAULO}/items/pasta:/ESTUDOS.sqlite?`)) return response(200, { id: 'arq', file: {}, eTag: '"e9"', lastModifiedDateTime: '2026-11-11T10:00:00Z', size: file.byteLength, parentReference: { driveId: 'paulo-drive' } })
+      if (url === `${PAULO}/items/arq/content`) return response(200, file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength))
+      return response(404, {})
+    })
+    const { res, api } = makeRes()
+    await handler({ PROJECTS_SYNC_FILE_PATH: 'BD ESTUDOS/ESTUDOS.sqlite' })(request({ 'x-sync-token': TOKEN }), api)
+    expect(res.statusCode).toBe(200)
+    expect(res.body).toMatchObject({ status: 'ok', fileModifiedAt: '2026-11-11T10:00:00Z' })
+    expect(rpcCalls.find((call) => call.name === 'banco1_sync_projects')!.args).toMatchObject({ file_etag: '"e9"' })
+  })
+
+  it('avisa quando o caminho é a pasta e não o arquivo', async () => {
+    graph.mockImplementation(async (url: string) => {
+      if (url.includes('/oauth2/v2.0/token')) return tokenResponse()
+      if (url.startsWith(`${ME_DRIVE}/root:/BD%20ESTUDOS?`)) return response(200, { id: 'pasta', folder: {} })
+      return response(404, {})
+    })
+    const { res, api } = makeRes()
+    await handler({ PROJECTS_SYNC_FILE_PATH: 'BD ESTUDOS' })(request({ 'x-sync-token': TOKEN }), api)
+    expect((res.body as { error: string }).error).toContain('é uma pasta')
+  })
+
   it('erro claro quando o arquivo não existe', async () => {
     graph.mockImplementation(async (url: string) => url.includes('/token') ? tokenResponse() : response(404, {}))
     const { res, api } = makeRes()
@@ -181,7 +209,7 @@ describe('Conectar OneDrive', () => {
     expect(res.statusCode).toBe(200)
     const link = new URL((res.body as { url: string }).url)
     expect(link.origin + link.pathname).toBe('https://login.microsoftonline.com/tenant/oauth2/v2.0/authorize')
-    expect(link.searchParams.get('scope')).toBe('offline_access User.Read Files.Read')
+    expect(link.searchParams.get('scope')).toBe('offline_access User.Read Files.Read.All')
     expect(link.searchParams.get('redirect_uri')).toBe('https://app.example.com/api/projects-sync')
     expect(verifyState(link.searchParams.get('state')!, TOKEN)).toEqual({ userId: 'director-1' })
   })
