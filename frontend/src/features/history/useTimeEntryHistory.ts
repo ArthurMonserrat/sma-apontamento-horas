@@ -4,7 +4,7 @@ import { dayApprovalService } from '../approvals'
 import { timeEntryService } from '../time-entries'
 import type { DayApproval } from '../approvals/types'
 import { isDayApprovalApplicable } from '../approvals/domain'
-import type { DisciplineCode, DocumentTypeCode, TimeEntry } from '../time-entries/types'
+import type { TimeEntry } from '../time-entries/types'
 import { getCorporateToday, getMonthKey, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import {
@@ -17,12 +17,10 @@ import {
 import { calendarEventService } from '../calendar/infrastructure/calendarEventService'
 import { holidayProvider } from '../calendar/infrastructure/holidayProvider'
 import { profileService } from '../profile/infrastructure/profileService'
-import { timeOffService } from '../time-off/infrastructure/timeOffService'
 import { workloadService } from '../workloads/infrastructure/workloadService'
 import { calculateDaySummary, calculatePeriodSummary } from '../calendar/domain'
 import type { CalendarEvent, DailySummary, PeriodSummary } from '../calendar/types'
-import type { TimeOffRequest } from '../time-off/types'
-import { requestAppliesToDate } from '../time-off/types'
+import { localDataAccessError } from '../session/sessionActor'
 
 export type HistoryFiltersValue = {
   mode: HistoryPeriodMode
@@ -30,11 +28,10 @@ export type HistoryFiltersValue = {
   month: string
   startDate: string
   endDate: string
-  clientName: string
-  projectCode: string
+  contractorNumber: string
+  primaryCode: string
+  secondaryCode: string
   activityId: string
-  disciplineCode: DisciplineCode | ''
-  documentTypeCode: DocumentTypeCode | ''
   status: EntrySituationFilter
 }
 
@@ -43,7 +40,6 @@ export type HistoryRow = {
   approval: DayApproval | null
   summary: DailySummary
   events: CalendarEvent[]
-  timeOffRequests: TimeOffRequest[]
   canMutate: boolean
 }
 
@@ -56,11 +52,10 @@ function createInitialFilters(date = today): HistoryFiltersValue {
     month: getMonthKey(safeDate),
     startDate: `${getMonthKey(safeDate)}-01`,
     endDate: safeDate,
-    clientName: '',
-    projectCode: '',
+    contractorNumber: '',
+    primaryCode: '',
+    secondaryCode: '',
     activityId: '',
-    disciplineCode: '',
-    documentTypeCode: '',
     status: 'ACTIVE',
   }
 }
@@ -73,7 +68,7 @@ function holidaysToEvents(collaboratorId: string, holidays: Awaited<ReturnType<t
 }
 
 export function useTimeEntryHistory() {
-  const { profile } = useSession()
+  const { profile, session } = useSession()
   const [searchParams] = useSearchParams()
   const initialFilters = createInitialFilters(searchParams.get('date') ?? today)
   const [draftFilters, setDraftFilters] = useState(initialFilters)
@@ -85,12 +80,20 @@ export function useTimeEntryHistory() {
   const [total, setTotal] = useState(0)
   const [periodSummary, setPeriodSummary] = useState<PeriodSummary | null>(null)
   const [periodEvents, setPeriodEvents] = useState<CalendarEvent[]>([])
-  const [periodTimeOffRequests, setPeriodTimeOffRequests] = useState<TimeOffRequest[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    const corporateDataError = localDataAccessError(session)
+    if (corporateDataError) {
+      setRows([])
+      setPeriodSummary(null)
+      setPeriodEvents([])
+      setIsLoading(false)
+      setError(`${corporateDataError} O histórico corporativo ainda não está integrado aos serviços de jornada.`)
+      return
+    }
     if (!profile) return
     setIsLoading(true)
     setError(null)
@@ -101,36 +104,33 @@ export function useTimeEntryHistory() {
       ])
       if (!professionalProfile) throw new Error('Perfil profissional não encontrado.')
       const period = resolveHistoryPeriod({ ...filters, firstAvailableDate: workloadVersions[0]?.effectiveFrom ?? today, today })
-      const [page, periodEntries, calendarEvents, timeOffRequests, holidays] = await Promise.all([
+      const [page, periodEntries, calendarEvents, holidays] = await Promise.all([
         timeEntryService.list({
         collaboratorId: profile.id,
         ...period,
         pageSize: 10,
         cursor,
         filters: {
-          clientName: filters.clientName.trim() || undefined,
-          projectCode: filters.projectCode.trim() || undefined,
+          contractorNumber: filters.contractorNumber.trim() || undefined,
+          primaryCode: filters.primaryCode.trim() || undefined,
+          secondaryCode: filters.secondaryCode.trim() || undefined,
           activityId: filters.activityId || undefined,
-          disciplineCode: filters.disciplineCode || undefined,
-          documentTypeCode: filters.documentTypeCode || undefined,
           status: toServiceStatusFilter(filters.status),
         },
         }),
         timeEntryService.listByRange(profile.id, period.startDate, period.endDate),
         calendarEventService.listByRange(profile.id, period.startDate, period.endDate),
-        timeOffService.listByRange(profile.id, period.startDate, period.endDate),
         holidayProvider.list(professionalProfile.location, period.startDate, period.endDate),
       ])
       const allEvents = [...calendarEvents, ...holidaysToEvents(profile.id, holidays)]
       const summary = calculatePeriodSummary({
         ...period, today, collaboratorId: profile.id, entries: periodEntries, events: allEvents,
-        timeOffRequests, workloadVersions,
+        workloadVersions,
       })
       const enriched = await Promise.all(page.items.map(async (entry) => {
         const entriesOfDay = periodEntries.filter((item) => item.entryDate === entry.entryDate)
         const eventsOfDay = allEvents.filter((event) => event.startDate <= entry.entryDate && event.endDate >= entry.entryDate)
-        const timeOffOfDay = timeOffRequests.filter((request) => requestAppliesToDate(request, entry.entryDate) && request.status !== 'CANCELLED')
-        const daySummary = calculateDaySummary({ date: entry.entryDate, today, collaboratorId: profile.id, entries: entriesOfDay, events: eventsOfDay, timeOffRequests, workloadVersions })
+        const daySummary = calculateDaySummary({ date: entry.entryDate, today, collaboratorId: profile.id, entries: entriesOfDay, events: eventsOfDay, workloadVersions })
         const approval = await dayApprovalService.getForDate(
           profile.id,
           entry.entryDate,
@@ -139,7 +139,7 @@ export function useTimeEntryHistory() {
           isDayApprovalApplicable(daySummary),
         )
         return {
-          entry, approval, events: eventsOfDay, timeOffRequests: timeOffOfDay,
+          entry, approval, events: eventsOfDay,
           summary: daySummary,
           canMutate: await dayApprovalService.canMutate(profile.id, entry.entryDate),
         }
@@ -149,17 +149,15 @@ export function useTimeEntryHistory() {
       setTotal(page.total)
       setPeriodSummary(summary)
       setPeriodEvents(allEvents)
-      setPeriodTimeOffRequests(timeOffRequests)
     } catch (loadError) {
       setRows([])
       setPeriodSummary(null)
       setPeriodEvents([])
-      setPeriodTimeOffRequests([])
       setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar o histórico.')
     } finally {
       setIsLoading(false)
     }
-  }, [cursor, filters, profile])
+  }, [cursor, filters, profile, session])
 
   useEffect(() => { void load() }, [load])
 
@@ -199,7 +197,7 @@ export function useTimeEntryHistory() {
 
   return {
     draftFilters, setDraftFilters, applyFilters, rows, total, isLoading, error, feedback,
-    periodSummary, periodEvents, periodTimeOffRequests,
+    periodSummary, periodEvents,
     nextCursor, hasPreviousPage: cursorHistory.length > 0, nextPage, previousPage, cancel, completeCorrection, reload: load,
   }
 }

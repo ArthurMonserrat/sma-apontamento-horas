@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { LocalStorageSupervisorService } from './supervisorService'
 import type { StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { TIME_ENTRY_STORAGE_KEY } from '../../time-entries'
-import { TIME_OFF_STORAGE_KEY } from '../../time-off/infrastructure/timeOffService'
 
 function createMemoryStorage(): StorageLike {
   const values = new Map<string, string>()
@@ -109,33 +108,12 @@ describe('LocalStorageSupervisorService', () => {
     ]))
   })
 
-  it('lista ausencias gravadas na chave compartilhada para aprovacao do supervisor', async () => {
-    const storage = createMemoryStorage()
-    storage.setItem(TIME_OFF_STORAGE_KEY, JSON.stringify([{
-      id: 'absence-001',
-      colaborador: 'Ana Lima',
-      colaboradorId: 'demo-collaborator-001',
-      tipo: 'Atestado Medico',
-      dataInicio: '2026-08-03',
-      dataRetorno: '2026-08-04',
-      justificativa: 'Consulta e repouso.',
-      status: 'Pendente',
-      createdAt: '2026-08-01T12:00:00.000Z',
-      updatedAt: '2026-08-01T12:00:00.000Z',
-    }]))
-    const service = new LocalStorageSupervisorService(storage, () => '2026-08-01T12:00:00.000Z', [], [])
+  it('não expõe uma API de solicitações de ausência', () => {
+    const service = new LocalStorageSupervisorService(createMemoryStorage())
 
-    await expect(service.listTimeOffRequests('demo-supervisor-001')).resolves.toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: 'absence-001',
-        collaboratorName: 'Ana Lima',
-        absenceType: 'Atestado Medico',
-        startDate: '2026-08-03',
-        endDate: '2026-08-04',
-        reason: 'Consulta e repouso.',
-        status: 'PENDING',
-      }),
-    ]))
+    expect('listTimeOffRequests' in service).toBe(false)
+    expect('approveTimeOffRequest' in service).toBe(false)
+    expect('rejectTimeOffRequest' in service).toBe(false)
   })
 
   it('sincroniza a decisão do supervisor com o registro de apontamento do colaborador', async () => {

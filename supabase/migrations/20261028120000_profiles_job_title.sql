@@ -46,7 +46,7 @@ as $$
     select private.module_role('BANCO_1') as role
   ),
   people as (
-    select p.id, p.full_name, p.email, coalesce(a.role, p.role)::text as module_role, p.job_title
+    select p.id, p.full_name, p.email, coalesce(a.role, p.role::text) as module_role, p.job_title
     from public.profiles as p
     join public.profile_module_access as a on a.profile_id = p.id and a.module = 'BANCO_1' and a.active
     where p.active

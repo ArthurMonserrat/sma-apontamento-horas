@@ -1,7 +1,5 @@
 import { compareIsoDates, eachIsoDate } from '../../shared/lib/date'
 import type { TimeEntry } from '../time-entries/types'
-import type { TimeOffRequest } from '../time-off/types'
-import { requestAppliesToDate } from '../time-off/types'
 import { getBaseExpectedMinutes } from '../workloads/domain'
 import type { WorkloadVersion } from '../workloads/types'
 import { isCountableTimeEntryStatus } from '../time-entries/domain'
@@ -14,7 +12,6 @@ type DaySummaryInput = {
   collaboratorId: string
   entries: TimeEntry[]
   events: CalendarEvent[]
-  timeOffRequests: TimeOffRequest[]
   workloadVersions: WorkloadVersion[]
 }
 
@@ -39,14 +36,12 @@ function hasFullNeutralizer(events: CalendarEvent[]) {
 
 function deriveVisualState(
   events: CalendarEvent[],
-  hasApprovedTimeOff: boolean,
   expectedMinutes: number,
   workedMinutes: number,
 ): CalendarVisualState {
   if (events.some((event) => event.type === 'VACATION')) return 'VACATION'
   if (events.some((event) => event.type === 'HOLIDAY')) return 'HOLIDAY'
   if (events.some((event) => event.type.startsWith('MEDICAL_LEAVE'))) return 'MEDICAL_LEAVE'
-  if (hasApprovedTimeOff) return 'TIME_OFF'
   if (expectedMinutes === 0 && workedMinutes === 0) return 'NO_SCHEDULE'
   if (workedMinutes === 0) return 'NO_ENTRY'
   if (workedMinutes < expectedMinutes) return 'INCOMPLETE'
@@ -70,9 +65,6 @@ export function calculateDaySummary(input: DaySummaryInput): DailySummary {
   const regularMinutes = Math.min(workedMinutes, expectedMinutes)
   const extraMinutes = Math.max(workedMinutes - expectedMinutes, 0)
   const missingMinutes = Math.max(expectedMinutes - workedMinutes, 0)
-  const hasApprovedTimeOff = input.timeOffRequests.some((request) =>
-    request.collaboratorId === input.collaboratorId && requestAppliesToDate(request, input.date) && request.status === 'APPROVED')
-
   return {
     date: input.date,
     baseExpectedMinutes,
@@ -85,7 +77,7 @@ export function calculateDaySummary(input: DaySummaryInput): DailySummary {
     balanceMinutes: workedMinutes - expectedMinutes,
     isFuture,
     hasIntegralEventConflict: hasIntegralEvent && recordedWorkedMinutes > 0,
-    visualState: deriveVisualState(applicableEvents, hasApprovedTimeOff, expectedMinutes, workedMinutes),
+    visualState: deriveVisualState(applicableEvents, expectedMinutes, workedMinutes),
   }
 }
 

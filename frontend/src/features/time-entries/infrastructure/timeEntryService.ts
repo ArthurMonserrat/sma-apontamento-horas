@@ -3,7 +3,7 @@ import { calculateDaySummary } from '../../calendar/domain'
 import type { DailySummary } from '../../calendar/types'
 import type { AuditEvent } from '../../audit/types'
 import type { AssignmentSnapshot } from '../../squads/types'
-import type { CreateTimeEntryData, DisciplineCode, DocumentTypeCode, TimeEntry } from '../types'
+import type { CreateTimeEntryData, TimeEntry } from '../types'
 import { expandTimeEntryDates } from '../domain'
 import type { WorkloadVersion } from '../../workloads/types'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
@@ -32,11 +32,10 @@ export type { StorageLike } from '../../../shared/infrastructure/storage/browser
 export const TIME_ENTRY_STORAGE_KEY = 'apontamentos_sma'
 
 export type TimeEntryFilters = {
-  clientName?: string
-  projectCode?: string
+  contractorNumber?: string
+  primaryCode?: string
+  secondaryCode?: string
   activityId?: string
-  disciplineCode?: DisciplineCode
-  documentTypeCode?: DocumentTypeCode
   status?: TimeEntry['status']
 }
 
@@ -252,11 +251,10 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
     const filters = query.filters ?? {}
     const entries = (this.read().data.entriesByCollaborator[query.collaboratorId] ?? [])
       .filter((entry) => entry.entryDate >= query.startDate && entry.entryDate <= query.endDate)
-      .filter((entry) => !filters.clientName || entry.clientName.toLocaleLowerCase().includes(filters.clientName.toLocaleLowerCase()))
-      .filter((entry) => !filters.projectCode || entry.projectCode.toLocaleLowerCase().includes(filters.projectCode.toLocaleLowerCase()))
+      .filter((entry) => !filters.contractorNumber || (entry.contractorNumber ?? entry.projectCode).toLocaleLowerCase().includes(filters.contractorNumber.toLocaleLowerCase()))
+      .filter((entry) => !filters.primaryCode || (entry.primaryCode ?? '').toLocaleLowerCase().includes(filters.primaryCode.toLocaleLowerCase()))
+      .filter((entry) => !filters.secondaryCode || (entry.secondaryCode ?? '').toLocaleLowerCase().includes(filters.secondaryCode.toLocaleLowerCase()))
       .filter((entry) => !filters.activityId || entry.activityId === filters.activityId)
-      .filter((entry) => !filters.disciplineCode || entry.disciplineCode === filters.disciplineCode)
-      .filter((entry) => !filters.documentTypeCode || entry.documentTypeCode === filters.documentTypeCode)
       .filter((entry) => !filters.status || (filters.status === 'ACTIVE' ? entry.status !== 'CANCELLED' : entry.status === filters.status))
       .sort((left, right) => right.entryDate.localeCompare(left.entryDate) || right.createdAt.localeCompare(left.createdAt))
     const items = entries.slice(offset, offset + pageSize)
@@ -301,6 +299,10 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
       id: this.createId(),
       collaboratorId,
       ...normalized,
+      clientName: normalized.clientName ?? '',
+      projectCode: normalized.projectCode ?? normalized.contractorNumber ?? '',
+      disciplineCode: normalized.disciplineCode ?? '—',
+      documentTypeCode: normalized.documentTypeCode ?? '—',
       entryDate: date,
       assignmentSnapshot,
       status: 'PENDING',
@@ -348,13 +350,10 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
     this.assertVersion(entry, expectedVersion)
     const normalized = normalizeCreateData({
       entryDate: overrides.entryDate ?? entry.entryDate,
-      clientName: overrides.clientName ?? entry.clientName,
-      projectCode: overrides.projectCode ?? entry.projectCode,
       contractorNumber: overrides.contractorNumber ?? entry.contractorNumber,
-      ldDocument: Object.hasOwn(overrides, 'ldDocument') ? overrides.ldDocument : entry.ldDocument,
+      primaryCode: overrides.primaryCode ?? entry.primaryCode,
+      secondaryCode: overrides.secondaryCode ?? entry.secondaryCode,
       activityId: overrides.activityId ?? entry.activityId,
-      disciplineCode: overrides.disciplineCode ?? entry.disciplineCode,
-      documentTypeCode: overrides.documentTypeCode ?? entry.documentTypeCode,
       durationMinutes: overrides.durationMinutes ?? entry.durationMinutes,
       details: overrides.details ?? entry.details,
     })
@@ -368,6 +367,10 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
       id: this.createId(),
       collaboratorId: collaborId,
       ...normalized,
+      clientName: normalized.clientName ?? '',
+      projectCode: normalized.projectCode ?? normalized.contractorNumber ?? '',
+      disciplineCode: normalized.disciplineCode ?? '—',
+      documentTypeCode: normalized.documentTypeCode ?? '—',
       assignmentSnapshot,
       status: 'PENDING',
       version: 1,
@@ -414,7 +417,6 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
       today: date,
       entries: await this.listByDate(collaboratorId, date),
       events: [],
-      timeOffRequests: [],
       workloadVersions,
     })
   }

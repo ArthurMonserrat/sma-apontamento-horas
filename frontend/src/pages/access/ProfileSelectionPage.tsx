@@ -12,8 +12,8 @@ type AccessProfile = {
 }
 
 const ACCESS_PROFILES: readonly AccessProfile[] = [
-  { role: 'COLLABORATOR', name: 'Colaborador', description: 'Apontamentos, saldos, histórico, ausências e perfil.' },
-  { role: 'SUPERVISOR', name: 'Supervisão', description: 'Gestão de equipe, aprovações e solicitações.' },
+  { role: 'COLLABORATOR', name: 'Colaborador', description: 'Apontamentos, saldos, histórico e perfil.' },
+  { role: 'SUPERVISOR', name: 'Supervisão', description: 'Gestão de equipe e aprovações de apontamentos.' },
   { role: 'DIRECTOR_ADMIN', name: 'Direção', description: 'Visão macro, relatórios e gerenciamento de equipes.' },
 ]
 

@@ -3,9 +3,8 @@ import {
   approvalStatusPresentation,
   revisionStatusPresentation,
   timeEntryStatusPresentation,
-  timeOffStatusPresentation,
-  workloadRequestStatusPresentation,
 } from './presentation'
+import * as presentation from './presentation'
 
 describe('catálogo de apresentação dos status', () => {
   it('diferencia aprovação, pendência, correção e ausência de envio', () => {
@@ -19,19 +18,9 @@ describe('catálogo de apresentação dos status', () => {
     })
   })
 
-  it('mantém rejeição e cancelamento visualmente distintos nas solicitações', () => {
-    const expected = {
-      PENDING: { label: 'Pendente', tone: 'pending' },
-      APPROVED: { label: 'Aprovada', tone: 'success' },
-      REJECTED: { label: 'Rejeitada', tone: 'danger' },
-      CANCELLED: { label: 'Cancelada', tone: 'cancelled' },
-    } as const
-
-    expect(workloadRequestStatusPresentation).toEqual(expected)
-    expect(timeOffStatusPresentation).toEqual({
-      ...expected,
-      PENDING: { label: 'Pendente de aprovação', tone: 'pending' },
-    })
+  it('não expõe apresentação para solicitações de alteração de carga', () => {
+    expect('workloadRequestStatusPresentation' in presentation).toBe(false)
+    expect('timeOffStatusPresentation' in presentation).toBe(false)
   })
 
   it('classifica cancelamento e edição sem criar estados de domínio', () => {

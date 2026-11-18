@@ -51,7 +51,7 @@ begin
   end if;
 
   -- Supervisor: perfil ativo com acesso ativo ao Banco 1.
-  select coalesce(a.role, p.role)::text into supervisor_role
+  select coalesce(a.role, p.role::text) into supervisor_role
   from public.profiles as p
   join public.profile_module_access as a on a.profile_id = p.id and a.module = 'BANCO_1' and a.active
   where p.id = supervisor and p.active;

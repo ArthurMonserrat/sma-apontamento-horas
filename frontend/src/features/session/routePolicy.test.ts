@@ -50,6 +50,12 @@ describe('política de rotas da produção', () => {
     ['COLLABORATOR', 'https://sma.invalid/colaborador'],
     ['COLLABORATOR', '//sma.invalid/colaborador'],
     ['SUPERVISOR', '/login'],
+    ['COLLABORATOR', '/colaborador/folgas'],
+    ['COLLABORATOR', '/colaborador/avisos'],
+    ['SUPERVISOR', '/supervisor?view=solicitacoes'],
+    ['SUPERVISOR', '/supervisor?view=avisos'],
+    ['DIRECTOR_ADMIN', '/administracao?view=avisos'],
+    ['SUPERVISOR', '/avisos'],
   ])('rejeita para %s o caminho %s', (role, path) => {
     expect(canAccessDemoPath(role, path)).toBe(false)
   })

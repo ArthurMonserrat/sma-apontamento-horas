@@ -1,20 +1,19 @@
 import type { FormEvent } from 'react'
 
-export type WorkloadFormField = 'hours' | 'minutes' | 'effectiveFrom' | 'justification'
+export type InitialWorkloadFormField = 'hours' | 'minutes' | 'effectiveFrom' | 'observation'
 
-type WorkloadRequestFormProps = {
+type InitialWorkloadFormProps = {
   hours: string
   minutes: string
   effectiveFrom: string
-  justification: string
+  observation: string
   minDate: string
   isSubmitting: boolean
-  isInitial?: boolean
-  onFieldChange: (field: WorkloadFormField, value: string) => void
+  onFieldChange: (field: InitialWorkloadFormField, value: string) => void
   onSubmit: () => void
 }
 
-export function WorkloadRequestForm({ hours, minutes, effectiveFrom, justification, minDate, isSubmitting, isInitial = false, onFieldChange, onSubmit }: WorkloadRequestFormProps) {
+export function InitialWorkloadForm({ hours, minutes, effectiveFrom, observation, minDate, isSubmitting, onFieldChange, onSubmit }: InitialWorkloadFormProps) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     onSubmit()
@@ -22,9 +21,7 @@ export function WorkloadRequestForm({ hours, minutes, effectiveFrom, justificati
 
   return (
     <section className="rounded-2xl border ui-border p-5" aria-labelledby="workload-form-title">
-      <h2 id="workload-form-title" className="text-lg font-extrabold ui-heading">
-        {isInitial ? 'Cadastrar carga diária inicial' : 'Solicitar alteração de carga'}
-      </h2>
+      <h2 id="workload-form-title" className="text-lg font-extrabold ui-heading">Cadastrar carga diária inicial</h2>
       <form className="mt-4 grid gap-4 sm:grid-cols-2" onSubmit={submit}>
         <fieldset className="sm:col-span-2">
           <legend className="text-sm font-bold ui-text">Nova carga diária</legend>
@@ -40,16 +37,16 @@ export function WorkloadRequestForm({ hours, minutes, effectiveFrom, justificati
           </div>
         </fieldset>
         <label htmlFor="workload-effective-from" className="text-sm font-bold ui-text">
-          Início pretendido
+          Início de vigência
           <input id="workload-effective-from" type="date" min={minDate} value={effectiveFrom} onChange={(event) => onFieldChange('effectiveFrom', event.target.value)} className="mt-2 w-full ui-field rounded-xl px-3 py-2.5 font-normal ui-text" required />
         </label>
-        <label htmlFor="workload-justification" className="text-sm font-bold ui-text">
-          {isInitial ? 'Observação' : 'Justificativa'}
-          <textarea id="workload-justification" value={justification} onChange={(event) => onFieldChange('justification', event.target.value)} className="mt-2 min-h-24 w-full ui-field rounded-xl px-3 py-2.5 font-normal ui-text" required={!isInitial} />
+        <label htmlFor="workload-observation" className="text-sm font-bold ui-text">
+          Observação
+          <textarea id="workload-observation" value={observation} onChange={(event) => onFieldChange('observation', event.target.value)} className="mt-2 min-h-24 w-full ui-field rounded-xl px-3 py-2.5 font-normal ui-text" />
         </label>
         <div className="sm:col-span-2">
           <button type="submit" disabled={isSubmitting} className="rounded-xl ui-button-primary px-5 py-3 text-sm font-bold disabled:cursor-wait disabled:opacity-60">
-            {isSubmitting ? 'Salvando…' : isInitial ? 'Cadastrar carga' : 'Enviar solicitação'}
+            {isSubmitting ? 'Salvando…' : 'Cadastrar carga'}
           </button>
         </div>
       </form>

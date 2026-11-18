@@ -14,8 +14,6 @@ import monthlyCalendarSource from '../features/calendar/MonthlyCalendar.tsx?raw'
 import summaryCardSource from '../features/collaborator/SummaryCard.tsx?raw'
 import timeEntryHistorySource from '../features/history/TimeEntryHistory.tsx?raw'
 import entryRevisionBadgeSource from '../features/time-entries/EntryRevisionBadge.tsx?raw'
-import timeOffRequestListSource from '../features/time-off/TimeOffRequestList.tsx?raw'
-import workloadHistorySource from '../features/workloads/WorkloadHistory.tsx?raw'
 
 const hex = (value: string) => `#${value}`
 const stylesheet = readFileSync(new URL('./index.css', import.meta.url), 'utf8')
@@ -79,10 +77,6 @@ const calendarStates = {
   vacation: {
     light: [hex('F5F0FB'), hex('5B3C88'), hex('7E5BA6')],
     dark: [hex('352944'), hex('E9DDFF'), hex('A98AD0')],
-  },
-  'time-off': {
-    light: [hex('EDF8FC'), hex('225E7A'), hex('2C7DA0')],
-    dark: [hex('203A48'), hex('D9F2FF'), hex('6FB7D1')],
   },
   'medical-leave': {
     light: [hex('FAF0F8'), hex('633A61'), hex('8A5A83')],
@@ -252,7 +246,7 @@ describe('tokens institucionais e contraste', () => {
 
   it('faz todos os consumidores funcionais reutilizarem o badge semântico', () => {
     expect(statusBadgeSource).toContain('data-status-tone')
-    for (const source of [dayDetailsSource, timeEntryHistorySource, entryRevisionBadgeSource, timeOffRequestListSource, workloadHistorySource]) {
+    for (const source of [dayDetailsSource, timeEntryHistorySource, entryRevisionBadgeSource]) {
       expect(source).toContain('<StatusBadge')
     }
   })

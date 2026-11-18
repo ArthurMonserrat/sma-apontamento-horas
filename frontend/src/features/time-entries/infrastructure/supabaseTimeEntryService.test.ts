@@ -10,8 +10,9 @@ const snapshot = { squadId: 'team-1', squadName: 'Automação', supervisorId: 's
 
 const baseData: CreateTimeEntryData = {
   entryDate: '2026-10-26',
-  clientName: 'Vale',
-  projectCode: 'P-100',
+  contractorNumber: 'P-100',
+  primaryCode: 'PRIM-01',
+  secondaryCode: 'SEC-02',
   activityId: 'activity-1',
   disciplineCode: 'E',
   documentTypeCode: 'DE',
@@ -40,23 +41,19 @@ describe('SupabaseTimeEntryService', () => {
     const created = await service.create(ME, baseData)
     expect(rows()).toHaveLength(1)
     expect(rows()[0]).toMatchObject({
-      collaborator_id: ME, entry_date: '2026-10-26', client_name: 'Vale', project_code: 'P-100',
-      discipline_code: 'E', document_type_code: 'DE', duration_minutes: 480, status: 'PENDING', assignment_snapshot: snapshot,
+      collaborator_id: ME, entry_date: '2026-10-26', project_code: 'P-100', contractor_number: 'P-100',
+      primary_code: 'PRIM-01', secondary_code: 'SEC-02', duration_minutes: 480, status: 'PENDING', assignment_snapshot: snapshot,
     })
     expect(rows()[0]).not.toHaveProperty('team_id', 'team-1')
     expect(created).toMatchObject({ collaboratorId: ME, status: 'PENDING', version: 1, assignmentSnapshot: snapshot })
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ type: 'TIME_ENTRY_CREATED', entityId: created.id }))
   })
 
-  it('grava projeto e atividade do projeto e só envia as colunas quando informadas', async () => {
-    const created = await service.create(ME, { ...baseData, projectId: 'proj-1', projectActivityId: 'act-1' })
-    expect(rows()[0]).toMatchObject({ project_id: 'proj-1', project_activity_id: 'act-1' })
-    expect(created).toMatchObject({ projectId: 'proj-1', projectActivityId: 'act-1' })
-    await service.create(ME, { ...baseData, entryDate: '2026-10-27' })
-    expect(rows()[1]).not.toHaveProperty('project_id')
-    const updated = await service.update(ME, created.id, created.version, { ...baseData, projectId: null, projectActivityId: null }, 'Sem projeto')
-    expect(rows()[0]).toMatchObject({ project_id: null, project_activity_id: null })
-    expect(updated.projectId).toBeUndefined()
+  it('não envia seleção de projeto ou documento da LD para novos apontamentos', async () => {
+    await service.create(ME, baseData)
+    expect(rows()[0]).not.toHaveProperty('project_id')
+    expect(rows()[0]).not.toHaveProperty('project_activity_id')
+    expect(rows()[0]).toMatchObject({ ld_document: null, discipline_code: '—', document_type_code: '—' })
   })
 
   it('lança um período de dias úteis em uma única gravação', async () => {
@@ -66,7 +63,7 @@ describe('SupabaseTimeEntryService', () => {
   })
 
   it('aplica as mesmas validações do formulário antes de ir ao banco', async () => {
-    await expect(service.create(ME, { ...baseData, clientName: '  ' })).rejects.toThrow('Informe um cliente válido.')
+    await expect(service.create(ME, { ...baseData, contractorNumber: '  ' })).rejects.toThrow('Informe um número de contratada válido.')
     expect(rows()).toHaveLength(0)
   })
 
@@ -81,12 +78,12 @@ describe('SupabaseTimeEntryService', () => {
 
   it('pagina o histórico com filtros e total', async () => {
     for (const day of ['20', '21', '22']) await service.create(ME, { ...baseData, entryDate: `2026-10-${day}` })
-    await service.create(ME, { ...baseData, entryDate: '2026-10-23', projectCode: 'OUTRO' })
-    const first = await service.list({ collaboratorId: ME, startDate: '2026-10-01', endDate: '2026-10-31', pageSize: 2, filters: { projectCode: 'p-1' } })
+    await service.create(ME, { ...baseData, entryDate: '2026-10-23', contractorNumber: 'OUTRO' })
+    const first = await service.list({ collaboratorId: ME, startDate: '2026-10-01', endDate: '2026-10-31', pageSize: 2, filters: { contractorNumber: 'p-1' } })
     expect(first.total).toBe(3)
     expect(first.items.map((entry) => entry.entryDate)).toEqual(['2026-10-22', '2026-10-21'])
     expect(first.nextCursor).toBe('2')
-    const second = await service.list({ collaboratorId: ME, startDate: '2026-10-01', endDate: '2026-10-31', pageSize: 2, cursor: first.nextCursor!, filters: { projectCode: 'p-1' } })
+    const second = await service.list({ collaboratorId: ME, startDate: '2026-10-01', endDate: '2026-10-31', pageSize: 2, cursor: first.nextCursor!, filters: { contractorNumber: 'p-1' } })
     expect(second.items.map((entry) => entry.entryDate)).toEqual(['2026-10-20'])
     expect(second.nextCursor).toBeNull()
   })

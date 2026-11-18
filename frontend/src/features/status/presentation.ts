@@ -1,8 +1,6 @@
 import type { StatusTone } from '../../shared/ui/StatusBadge'
 import type { DayApprovalStatus } from '../approvals/types'
 import type { TimeEntryStatus } from '../time-entries/types'
-import type { TimeOffRequestStatus } from '../time-off/types'
-import type { WorkloadChangeRequestStatus } from '../workloads/types'
 
 type StatusPresentation = Readonly<{
   label: string
@@ -22,20 +20,6 @@ export const nonApplicableApprovalPresentation = {
   label: 'Aprovação não aplicável',
   tone: 'neutral',
 } as const satisfies StatusPresentation
-
-export const workloadRequestStatusPresentation = {
-  PENDING: { label: 'Pendente', tone: 'pending' },
-  APPROVED: { label: 'Aprovada', tone: 'success' },
-  REJECTED: { label: 'Rejeitada', tone: 'danger' },
-  CANCELLED: { label: 'Cancelada', tone: 'cancelled' },
-} as const satisfies Readonly<Record<WorkloadChangeRequestStatus, StatusPresentation>>
-
-export const timeOffStatusPresentation = {
-  PENDING: { label: 'Pendente de aprovação', tone: 'pending' },
-  APPROVED: { label: 'Aprovada', tone: 'success' },
-  REJECTED: { label: 'Rejeitada', tone: 'danger' },
-  CANCELLED: { label: 'Cancelada', tone: 'cancelled' },
-} as const satisfies Readonly<Record<TimeOffRequestStatus, StatusPresentation>>
 
 export const timeEntryStatusPresentation = {
   PENDING: { label: 'Pendente de aprovação', tone: 'pending' },

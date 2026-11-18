@@ -4,7 +4,7 @@ import { demoAssignmentSnapshot, demoCollaborator, demoSquads, demoWorkloadVersi
 import { ProfileSummary } from './ProfileSummary'
 import { SquadSelector } from './SquadSelector'
 import { WorkloadHistory } from '../workloads/WorkloadHistory'
-import { WorkloadRequestForm } from '../workloads/WorkloadRequestForm'
+import { InitialWorkloadForm } from '../workloads/InitialWorkloadForm'
 
 describe('interface de perfil profissional', () => {
   it('exibe status, squad e supervisor, sem localização nem carga vigente', () => {
@@ -36,16 +36,17 @@ describe('interface de perfil profissional', () => {
     expect(markup).not.toContain('Selecione o supervisor')
   })
 
-  it('oferece solicitação de carga sem controles de aprovação', () => {
-    const markup = renderToStaticMarkup(<WorkloadRequestForm hours="" minutes="" effectiveFrom="" justification="" minDate="2026-07-20" isSubmitting={false} onFieldChange={vi.fn()} onSubmit={vi.fn()} />)
+  it('permite cadastrar apenas a carga horária inicial', () => {
+    const markup = renderToStaticMarkup(<InitialWorkloadForm hours="" minutes="" effectiveFrom="" observation="" minDate="2026-07-20" isSubmitting={false} onFieldChange={vi.fn()} onSubmit={vi.fn()} />)
     expect(markup).toContain('Nova carga diária')
-    expect(markup).toContain('for="workload-justification"')
-    expect(markup).not.toContain('Aprovar solicitação')
+    expect(markup).toContain('for="workload-observation"')
+    expect(markup).not.toContain('Solicitar alteração de carga')
+    expect(markup).not.toContain('Enviar solicitação')
   })
 
-  it('mantém histórico de versões separado de solicitações', () => {
-    const markup = renderToStaticMarkup(<WorkloadHistory versions={demoWorkloadVersions} requests={[]} />)
+  it('exibe somente o histórico administrativo de carga', () => {
+    const markup = renderToStaticMarkup(<WorkloadHistory versions={demoWorkloadVersions} />)
     expect(markup).toContain('Histórico de cargas')
-    expect(markup).toContain('Solicitações de alteração')
+    expect(markup).not.toContain('Solicitações de alteração')
   })
 })

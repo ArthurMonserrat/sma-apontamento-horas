@@ -23,7 +23,7 @@ const approval: DayApproval = {
 
 const states: DailySummary['visualState'][] = [
   'NO_SCHEDULE', 'NO_ENTRY', 'INCOMPLETE', 'COMPLETE', 'EXCEEDED',
-  'VACATION', 'TIME_OFF', 'MEDICAL_LEAVE', 'HOLIDAY',
+  'VACATION', 'MEDICAL_LEAVE', 'HOLIDAY',
 ]
 
 const expectedPresentation = {
@@ -33,7 +33,6 @@ const expectedPresentation = {
   COMPLETE: { label: 'Jornada atingida', marker: '✓', tone: 'complete' },
   EXCEEDED: { label: 'Jornada excedida', marker: '+', tone: 'exceeded' },
   VACATION: { label: 'Férias', marker: '▣', tone: 'vacation' },
-  TIME_OFF: { label: 'Folga', marker: '↺', tone: 'time-off' },
   MEDICAL_LEAVE: { label: 'Afastamento', marker: '✚', tone: 'medical-leave' },
   HOLIDAY: { label: 'Feriado', marker: '◆', tone: 'holiday' },
 }

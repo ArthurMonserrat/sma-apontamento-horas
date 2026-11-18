@@ -9,14 +9,7 @@ export type AuditEventType =
   | 'CORRECTION_COMPLETED'
   | 'DAY_REOPENED'
   | 'COMPETENCY_REOPENED'
-  | 'TIME_OFF_REQUESTED'
-  | 'TIME_OFF_APPROVED'
-  | 'TIME_OFF_REJECTED'
-  | 'TIME_OFF_CANCELLED'
   | 'SQUAD_CHANGED'
-  | 'WORKLOAD_CHANGE_REQUESTED'
-  | 'WORKLOAD_CHANGE_APPROVED'
-  | 'WORKLOAD_CHANGE_REJECTED'
   | 'VACATION_RECORDED'
   | 'MEDICAL_LEAVE_RECORDED'
 
@@ -33,13 +26,4 @@ export interface AuditEvent {
   newValue?: unknown
   justification?: string
   metadata?: Record<string, string | number | boolean | null>
-}
-
-export interface SupervisorNotification {
-  id: string
-  supervisorId: string
-  type: 'TIME_OFF_REQUESTED' | 'TIME_OFF_CANCELLED' | 'WORKLOAD_CHANGE_REQUESTED'
-  relatedEntityId: string
-  createdAt: string
-  readAt?: string
 }

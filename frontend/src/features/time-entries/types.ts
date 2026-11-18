@@ -36,9 +36,12 @@ export interface TimeEntry {
   id: string
   collaboratorId: string
   entryDate: string
+  /** Dados legados, preservados para consulta de registros antigos. */
   clientName: string
   projectCode: string
   contractorNumber?: string
+  primaryCode?: string
+  secondaryCode?: string
   /** Projeto/atividade cadastrados pela diretoria (null = apontamento sem projeto). */
   projectId?: string | null
   projectActivityId?: string | null
@@ -59,21 +62,23 @@ export interface TimeEntry {
   cancelReason?: string
 }
 
-export type CreateTimeEntryData = Pick<
-  TimeEntry,
-  | 'entryDate'
-  | 'clientName'
-  | 'projectCode'
-  | 'contractorNumber'
-  | 'projectId'
-  | 'projectActivityId'
-  | 'ldDocument'
-  | 'activityId'
-  | 'disciplineCode'
-  | 'documentTypeCode'
-  | 'durationMinutes'
-  | 'details'
-> & {
+/** Dados usados para criar ou editar novos apontamentos manuais. */
+export type CreateTimeEntryData = {
+  entryDate: string
+  contractorNumber?: string
+  primaryCode?: string
+  secondaryCode?: string
+  activityId: string
+  durationMinutes: number
+  details: string
+  /** Campos legados aceitos apenas para preservar integrações antigas. Não vêm do formulário. */
+  clientName?: string
+  projectCode?: string
+  projectId?: string | null
+  projectActivityId?: string | null
+  ldDocument?: LdDocumentSnapshot
+  disciplineCode?: DisciplineCode
+  documentTypeCode?: DocumentTypeCode
   endDate?: string
   weekdaysOnly?: boolean
 }
