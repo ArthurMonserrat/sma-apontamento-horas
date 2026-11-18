@@ -30,12 +30,11 @@ beforeEach(() => {
       assignment: demoAssignmentSnapshot,
       squads: demoSquads,
       workloadVersions: demoWorkloadVersions,
-      workloadRequests: [],
       currentWorkload: demoWorkloadVersions[0],
     },
     isLoading: false, isSaving: false, error: null,
     reload: vi.fn(), updateProfile: vi.fn(), updateSignature: vi.fn(),
-    changeSquad: vi.fn(), createInitialWorkload: vi.fn(), requestWorkloadChange: vi.fn(),
+    changeSquad: vi.fn(), createInitialWorkload: vi.fn(),
   }
   useProfileMock.mockImplementation(() => state)
   useCorporateIdentityMock.mockReturnValue(null)
@@ -67,6 +66,12 @@ describe('assinatura no perfil', () => {
     expect(container.querySelector('img[alt="Assinatura atual"]')?.getAttribute('src')).toBe(signature)
     expect(container.querySelector('canvas[aria-label="Área para desenhar a assinatura"]')).not.toBeNull()
     expect([...container.querySelectorAll('button')].map((button) => button.textContent)).toContain('Salvar Assinatura')
+  })
+
+  it('não oferece solicitação de mudança de carga ao colaborador', () => {
+    expect(container.textContent).not.toContain('Solicitar alteração de carga')
+    expect(container.textContent).not.toContain('Solicitações de alteração')
+    expect(container.textContent).toContain('Carga horária administrativa')
   })
 
   it('preserva os campos profissionais em edição quando o perfil recarrega após salvar a assinatura', async () => {
