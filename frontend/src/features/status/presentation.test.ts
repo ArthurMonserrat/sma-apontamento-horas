@@ -3,9 +3,9 @@ import {
   approvalStatusPresentation,
   revisionStatusPresentation,
   timeEntryStatusPresentation,
-  timeOffStatusPresentation,
   workloadRequestStatusPresentation,
 } from './presentation'
+import * as presentation from './presentation'
 
 describe('catálogo de apresentação dos status', () => {
   it('diferencia aprovação, pendência, correção e ausência de envio', () => {
@@ -28,10 +28,7 @@ describe('catálogo de apresentação dos status', () => {
     } as const
 
     expect(workloadRequestStatusPresentation).toEqual(expected)
-    expect(timeOffStatusPresentation).toEqual({
-      ...expected,
-      PENDING: { label: 'Pendente de aprovação', tone: 'pending' },
-    })
+    expect('timeOffStatusPresentation' in presentation).toBe(false)
   })
 
   it('classifica cancelamento e edição sem criar estados de domínio', () => {

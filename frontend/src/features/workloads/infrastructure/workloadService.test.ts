@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { AuditEvent, SupervisorNotification } from '../../audit/types'
+import type { AuditEvent } from '../../audit/types'
 import type { AssignmentSnapshot } from '../../squads/types'
 import { LocalWorkloadService } from './workloadService'
 import type { StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
@@ -16,14 +16,12 @@ const assignment: AssignmentSnapshot = {
 
 function buildService(storage = new MemoryStorage()) {
   const audits: AuditEvent[] = []
-  const notifications: SupervisorNotification[] = []
   const service = new LocalWorkloadService({
     storage, createId: (() => { let id = 0; return () => `id-${++id}` })(), now: () => '2026-07-20T12:00:00.000Z',
     today: () => '2026-07-20', resolveAssignment: () => assignment,
     audit: { record: async (event) => { audits.push(event) } },
-    notifications: { record: async (notification) => { notifications.push(notification) } },
   })
-  return { service, audits, notifications }
+  return { service, audits }
 }
 
 describe('carga horária e solicitações', () => {
@@ -36,7 +34,7 @@ describe('carga horária e solicitações', () => {
   })
 
   it('cria solicitação pendente e mantém carga atual vigente', async () => {
-    const { service, audits, notifications } = buildService()
+    const { service, audits } = buildService()
     await service.createInitial('collaborator-1', 480, '2026-07-01')
     const request = await service.requestChange('collaborator-1', {
       requestedDailyMinutes: 360, requestedEffectiveFrom: '2026-08-01', justification: 'Adequação contratual',
@@ -44,7 +42,6 @@ describe('carga horária e solicitações', () => {
     expect(request).toMatchObject({ status: 'PENDING', requestedDailyMinutes: 360, assignmentSnapshot: assignment })
     expect((await service.getCurrent('collaborator-1', '2026-08-01'))?.dailyMinutes).toBe(480)
     expect(audits.map((event) => event.type)).toContain('WORKLOAD_CHANGE_REQUESTED')
-    expect(notifications.map((notification) => notification.type)).toEqual(['WORKLOAD_CHANGE_REQUESTED'])
   })
 
   it('bloqueia início pretendido no passado e justificativa vazia', async () => {
@@ -85,7 +82,6 @@ describe('carga horária e solicitações', () => {
       today: () => '2026-07-20',
       resolveAssignment: () => assignment,
       audit: { record: async () => { throw new Error('audit failure') } },
-      notifications: { record: async () => { throw new Error('notification failure') } },
       onPostCommitError,
     })
     await service.createInitial('collaborator-1', 480, '2026-07-01')
@@ -96,6 +92,12 @@ describe('carga horária e solicitações', () => {
       justification: 'Adequação',
     })).resolves.toMatchObject({ status: 'PENDING' })
     await expect(service.listRequests('collaborator-1')).resolves.toHaveLength(1)
-    expect(onPostCommitError).toHaveBeenCalledTimes(2)
+    expect(onPostCommitError).toHaveBeenCalledTimes(1)
+  })
+
+  it('não mantém dependência de notificações locais de supervisor', () => {
+    const { service } = buildService()
+
+    expect('notifications' in service).toBe(false)
   })
 })

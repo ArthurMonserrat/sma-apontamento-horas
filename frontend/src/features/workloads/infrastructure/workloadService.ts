@@ -1,11 +1,10 @@
-import type { AuditEvent, SupervisorNotification } from '../../audit/types'
+import type { AuditEvent } from '../../audit/types'
 import type { AssignmentSnapshot } from '../../squads/types'
 import type { WorkloadChangeRequest, WorkloadVersion } from '../types'
 import { getWorkloadForDate } from '../domain'
 import { demoWorkloadVersions } from '../../../demo/fixtures/demoData'
 import { getCorporateToday, isIsoDate } from '../../../shared/lib/date'
 import { auditService } from '../../audit/infrastructure/auditService'
-import { notificationService } from '../../announcements/infrastructure/notificationService'
 import { profileService } from '../../profile/infrastructure/profileService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { defaultPostCommitErrorHandler, runPostCommitEffect, type PostCommitErrorHandler } from '../../../services/postCommit'
@@ -25,7 +24,6 @@ type WorkloadDependencies = {
   today?: () => string
   resolveAssignment?: (collaboratorId: string) => AssignmentSnapshot | null
   audit?: { record(event: AuditEvent): Promise<void> }
-  notifications?: { record(notification: SupervisorNotification): Promise<void> }
   initialVersions?: WorkloadVersion[]
   onPostCommitError?: PostCommitErrorHandler
 }
@@ -41,18 +39,16 @@ export class LocalWorkloadService {
   private readonly today: () => string
   private readonly resolveAssignment: (collaboratorId: string) => AssignmentSnapshot | null
   private readonly audit?: { record(event: AuditEvent): Promise<void> }
-  private readonly notifications?: { record(notification: SupervisorNotification): Promise<void> }
   private readonly initialVersions: WorkloadVersion[]
   private readonly onPostCommitError: PostCommitErrorHandler
 
-  constructor({ storage, createId, now, today, resolveAssignment, audit, notifications, initialVersions, onPostCommitError }: WorkloadDependencies) {
+  constructor({ storage, createId, now, today, resolveAssignment, audit, initialVersions, onPostCommitError }: WorkloadDependencies) {
     this.storage = storage
     this.createId = createId ?? (() => crypto.randomUUID())
     this.now = now ?? (() => new Date().toISOString())
     this.today = today ?? getCorporateToday
     this.resolveAssignment = resolveAssignment ?? (() => null)
     this.audit = audit
-    this.notifications = notifications
     this.initialVersions = initialVersions ?? []
     this.onPostCommitError = onPostCommitError ?? defaultPostCommitErrorHandler
   }
@@ -122,7 +118,6 @@ export class LocalWorkloadService {
     storage.requests.push(request)
     this.write(storage)
     if (this.audit) await runPostCommitEffect('Não foi possível registrar a auditoria da carga confirmada.', () => this.audit!.record({ id: crypto.randomUUID(), type: 'WORKLOAD_CHANGE_REQUESTED', occurredAt: timestamp, actorId: collaboratorId, actorRole: 'COLLABORATOR', entityType: 'WorkloadChangeRequest', entityId: request.id, newValue: request, justification }), this.onPostCommitError)
-    if (this.notifications) await runPostCommitEffect('Não foi possível registrar a notificação da carga confirmada.', () => this.notifications!.record({ id: crypto.randomUUID(), supervisorId: assignmentSnapshot.supervisorId, type: 'WORKLOAD_CHANGE_REQUESTED', relatedEntityId: request.id, createdAt: timestamp }), this.onPostCommitError)
     return request
   }
 
@@ -169,5 +164,5 @@ export class LocalWorkloadService {
 export const workloadService = new LocalWorkloadService({
   storage: createBrowserStorage(), initialVersions: demoWorkloadVersions,
   resolveAssignment: (collaboratorId) => profileService.resolveAssignment(collaboratorId),
-  audit: auditService, notifications: notificationService,
+  audit: auditService,
 })
