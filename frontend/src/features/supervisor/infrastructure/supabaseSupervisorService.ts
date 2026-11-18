@@ -1,5 +1,5 @@
 import type { SupabaseDataClient, SupabaseQuery } from '../../time-entries/infrastructure/supabaseTimeEntryService'
-import type { SupervisorDashboardSummary, SupervisorPendingEntry, SupervisorRequestSummary, SupervisorTimeOffRequest } from '../types'
+import type { SupervisorDashboardSummary, SupervisorPendingEntry } from '../types'
 import type { SupervisorService } from './supervisorService'
 
 type RpcClient = SupabaseDataClient & {
@@ -120,18 +120,6 @@ export class SupabaseSupervisorService implements SupervisorService {
     return Promise.all(entryIds.map((entryId) => this.reject(entryId, supervisorId, reason)))
   }
 
-  async listTimeOffRequests(_supervisorId: string): Promise<SupervisorTimeOffRequest[]> {
-    return []
-  }
-
-  approveTimeOffRequest(_requestId: string, _supervisorId: string): Promise<SupervisorTimeOffRequest> {
-    return Promise.reject(new Error('A persistência de folgas corporativas ainda não está disponível.'))
-  }
-
-  rejectTimeOffRequest(_requestId: string, _supervisorId: string, _reason: string): Promise<SupervisorTimeOffRequest> {
-    return Promise.reject(new Error('A persistência de folgas corporativas ainda não está disponível.'))
-  }
-
   async getSummary(): Promise<SupervisorDashboardSummary> {
     const entries = await this.listEntries()
     return {
@@ -141,7 +129,4 @@ export class SupabaseSupervisorService implements SupervisorService {
     }
   }
 
-  async getRequestSummary(_supervisorId: string): Promise<SupervisorRequestSummary> {
-    return { pending: 0, approved: 0, rejected: 0 }
-  }
 }

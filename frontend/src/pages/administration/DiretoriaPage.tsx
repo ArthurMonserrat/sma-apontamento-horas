@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { BrandMark } from '../../shared/ui/BrandMark'
 import { DirectorSidebar } from '../../app/layouts/DirectorSidebar'
 import { ThemeToggle } from '../../app/layouts/ThemeToggle'
 import { useSession } from '../../features/session/useSession'
-import { TIME_OFF_STORAGE_KEY } from '../../features/time-off/infrastructure/timeOffService'
 import { TIME_ENTRY_STORAGE_KEY } from '../../features/time-entries'
 import { getMonthKey } from '../../shared/lib/date'
 import { diretoriaService } from '../../features/reports/infrastructure/diretoriaService'
@@ -16,7 +15,6 @@ import type { Squad } from '../../features/squads/types'
 import { ManagerCalendar } from '../../features/calendar/ManagerCalendar'
 import { formatMinutes } from '../../features/time-entries/domain'
 import { useTour } from '../../app/providers/tourContext'
-import { AvisosPage } from './AvisosPage'
 
 type DiretoriaEntry = {
   id: string
@@ -24,11 +22,6 @@ type DiretoriaEntry = {
   entryDate: string
   projectCode: string
   durationMinutes: number
-  status: string
-}
-
-type DiretoriaAbsence = {
-  id: string
   status: string
 }
 
@@ -53,10 +46,6 @@ function readJsonArray(key: string): unknown[] {
       if (!entriesByCollaborator || typeof entriesByCollaborator !== 'object') return []
       return Object.values(entriesByCollaborator).flatMap((entries) => Array.isArray(entries) ? entries : [])
     }
-    if (parsed && typeof parsed === 'object' && key === TIME_OFF_STORAGE_KEY) {
-      const requests = (parsed as { requests?: unknown }).requests
-      return Array.isArray(requests) ? requests : []
-    }
     return []
   } catch {
     return []
@@ -78,16 +67,6 @@ function normalizeEntry(value: unknown): DiretoriaEntry | null {
     projectCode: entry.projectCode,
     durationMinutes: Number(entry.durationMinutes),
     status: typeof entry.status === 'string' ? entry.status : 'ACTIVE',
-  }
-}
-
-function normalizeAbsence(value: unknown): DiretoriaAbsence | null {
-  if (!value || typeof value !== 'object') return null
-  const absence = value as Record<string, unknown>
-  if (typeof absence.id !== 'string') return null
-  return {
-    id: absence.id,
-    status: typeof absence.status === 'string' ? absence.status : 'Pendente',
   }
 }
 
@@ -124,10 +103,7 @@ export function DiretoriaPage() {
   const { startTour } = useTour()
   const { session, signOut } = useSession()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const isNotices = searchParams.get('view') === 'avisos'
   const [entries, setEntries] = useState<DiretoriaEntry[]>([])
-  const [absences, setAbsences] = useState<DiretoriaAbsence[]>([])
   const [escalatedEntries, setEscalatedEntries] = useState<SupervisorPendingEntry[]>([])
   const [managerEntries, setManagerEntries] = useState<SupervisorPendingEntry[]>([])
   const [managerSquads, setManagerSquads] = useState<Array<Pick<Squad, 'id' | 'name'>>>([])
@@ -138,12 +114,7 @@ export function DiretoriaPage() {
       const normalized = normalizeEntry(entry)
       return normalized ? [normalized] : []
     })
-    const storedAbsences = readJsonArray(TIME_OFF_STORAGE_KEY).flatMap((absence) => {
-      const normalized = normalizeAbsence(absence)
-      return normalized ? [normalized] : []
-    })
     setEntries(storedEntries)
-    setAbsences(storedAbsences)
     void diretoriaService.listEscalatedEntries().then(setEscalatedEntries).catch(() => setEscalatedEntries([]))
   }, [])
 
@@ -179,7 +150,6 @@ export function DiretoriaPage() {
   const monthEntries = entries.filter((entry) => entry.entryDate.startsWith(currentMonth) && entry.status !== 'CANCELLED')
   const totalMonthHours = monthEntries.reduce((total, entry) => total + entry.durationMinutes / 60, 0)
   const activeProjects = new Set(entries.filter((entry) => entry.status !== 'CANCELLED').map((entry) => entry.projectCode)).size
-  const pendingAbsences = absences.filter((absence) => absence.status === 'PENDING' || absence.status === 'Pendente').length
 
   function exitDemo() {
     signOut()
@@ -206,7 +176,6 @@ export function DiretoriaPage() {
         <DirectorSidebar onSignOut={exitDemo} />
         <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl space-y-6">
-            {isNotices ? <AvisosPage embedded /> : <>
             <section>
               <p className="ui-eyebrow text-xs font-bold uppercase tracking-[0.16em]">Visão Macro</p>
               <h1 className="mt-2 text-3xl font-extrabold text-[var(--color-text)]">SM&A - Painel da Diretoria</h1>
@@ -218,7 +187,7 @@ export function DiretoriaPage() {
               <SummaryCard label="Total de Horas Apontadas (Mês)" value={totalMonthHours > 0 ? totalMonthHours.toFixed(1) : '298'} helper="Horas consolidadas no mês atual" />
               <SummaryCard label="Projetos Ativos" value={activeProjects || 3} helper="Projetos com apontamentos registrados" />
               <SummaryCard label="Apontamentos Registrados" value={entries.length} helper="Base persistida em localStorage" />
-              <SummaryCard label="Pendências Gerais" value={pendingAbsences} helper="Ausências aguardando decisão" />
+              <SummaryCard label="Pendências Gerais" value={managerEntries.filter((entry) => entry.status === 'PENDING').length} helper="Apontamentos aguardando decisão" />
             </section>
 
             <EscalatedApprovals entries={escalatedEntries} directorId={session?.id ?? 'diretoria'} onApproved={() => { void diretoriaService.listEscalatedEntries().then(setEscalatedEntries) }} />
@@ -253,7 +222,7 @@ export function DiretoriaPage() {
               squads={managerSquads}
               role="DIRECTOR_ADMIN"
             />
-            </>}
+            
           </div>
         </main>
       </div>

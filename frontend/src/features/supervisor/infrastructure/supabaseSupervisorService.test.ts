@@ -32,4 +32,12 @@ describe('SupabaseSupervisorService', () => {
     await expect(service.reject('entry-1', 'supervisor-1', '   ')).rejects.toThrow('Informe o motivo da rejeição.')
     expect(rpc).not.toHaveBeenCalled()
   })
+
+  it('não expõe operações de solicitações de ausência', () => {
+    const service = new SupabaseSupervisorService({ from: vi.fn(), rpc: vi.fn() } as never)
+
+    expect('listTimeOffRequests' in service).toBe(false)
+    expect('approveTimeOffRequest' in service).toBe(false)
+    expect('rejectTimeOffRequest' in service).toBe(false)
+  })
 })
