@@ -91,9 +91,6 @@
   --calendar-state-vacation-surface: #F5F0FB;
   --calendar-state-vacation-text: #5B3C88;
   --calendar-state-vacation-border: #7E5BA6;
-  --calendar-state-time-off-surface: #EDF8FC;
-  --calendar-state-time-off-text: #225E7A;
-  --calendar-state-time-off-border: #2C7DA0;
   --calendar-state-medical-leave-surface: #FAF0F8;
   --calendar-state-medical-leave-text: #633A61;
   --calendar-state-medical-leave-border: #8A5A83;
@@ -178,9 +175,6 @@
   --calendar-state-vacation-surface: #352944;
   --calendar-state-vacation-text: #E9DDFF;
   --calendar-state-vacation-border: #A98AD0;
-  --calendar-state-time-off-surface: #203A48;
-  --calendar-state-time-off-text: #D9F2FF;
-  --calendar-state-time-off-border: #6FB7D1;
   --calendar-state-medical-leave-surface: #42283F;
   --calendar-state-medical-leave-text: #F5DDF0;
   --calendar-state-medical-leave-border: #C28AB8;
@@ -599,13 +593,6 @@
     --calendar-state-text: var(--calendar-state-vacation-text);
     --calendar-state-border: var(--calendar-state-vacation-border);
     --calendar-state-accent: #A89BC8;
-  }
-
-  .calendar-state--time-off {
-    --calendar-state-surface: var(--calendar-state-time-off-surface);
-    --calendar-state-text: var(--calendar-state-time-off-text);
-    --calendar-state-border: var(--calendar-state-time-off-border);
-    --calendar-state-accent: #8AB7C7;
   }
 
   .calendar-state--medical-leave {

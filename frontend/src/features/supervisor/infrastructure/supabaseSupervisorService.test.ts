@@ -25,15 +25,6 @@ function row(id: string, collaborator: string, entryDate: string, status = 'PEND
 
 let fake: FakeSupabase
 let service: SupabaseSupervisorService
-const timeOffRows = [
-  { id: 'a1', collaboratorId: ANA, collaboratorName: 'Ana Souza', absenceType: 'Férias' as const, startDate: '2026-11-10', endDate: '2026-11-20', date: '2026-11-10', reason: 'Férias', status: 'PENDING' as const, assignmentSnapshot: null, createdAt: '', updatedAt: '' },
-  { id: 'a2', collaboratorId: BRUNO, collaboratorName: 'Bruno Lima', absenceType: 'Folga' as const, startDate: '2026-11-05', endDate: '2026-11-05', date: '2026-11-05', reason: 'Consulta', status: 'APPROVED' as const, assignmentSnapshot: null, createdAt: '', updatedAt: '' },
-]
-const timeOff = {
-  listVisible: vi.fn(async () => timeOffRows),
-  decide: vi.fn(async (id: string, decision: 'APPROVED' | 'REJECTED', reason?: string) => ({ ...timeOffRows.find((row) => row.id === id)!, collaboratorName: undefined, status: decision, rejectionReason: reason })),
-}
-
 beforeEach(() => {
   fake = createFakeSupabase()
   fake.tables.set(BANCO1_TIME_ENTRIES_TABLE, [
@@ -50,7 +41,6 @@ beforeEach(() => {
   })
   service = new SupabaseSupervisorService({
     getClient: () => fake.client,
-    timeOff,
     listPeople: async () => people,
     getUserId: () => SUP,
     daysUntilClosing: () => 10,
@@ -82,29 +72,13 @@ describe('SupabaseSupervisorService', () => {
   })
 
   it('escala pendências perto do fechamento para a diretoria', async () => {
-    const closing = new SupabaseSupervisorService({ getClient: () => fake.client, timeOff, listPeople: async () => people, getUserId: () => 'diretor', daysUntilClosing: () => 1 })
+    const closing = new SupabaseSupervisorService({ getClient: () => fake.client, listPeople: async () => people, getUserId: () => 'diretor', daysUntilClosing: () => 1 })
     expect((await closing.listEscalatedEntries()).map((entry) => entry.id)).toEqual(['e3', 'e1'])
     await expect(closing.approveEscalated('e4', 'diretor')).rejects.toThrow('não está na fila escalada')
   })
 
   it('lista colaboradores visíveis sem o próprio usuário', async () => {
     expect((await service.listCollaborators()).map((person) => person.name)).toEqual(['Ana Souza', 'Bruno Lima'])
-  })
-
-  it('lista as ausências da equipe pelo banco (sem as próprias) e resume', async () => {
-    const requests = await service.listTimeOffRequests(SUP)
-    expect(timeOff.listVisible).toHaveBeenCalledWith({ excludeOwn: true })
-    expect(requests.map((request) => [request.id, request.collaboratorName, request.absenceType, request.status])).toEqual([
-      ['a1', 'Ana Souza', 'Férias', 'PENDING'], ['a2', 'Bruno Lima', 'Folga', 'APPROVED'],
-    ])
-    expect(await service.getRequestSummary(SUP)).toEqual({ pending: 1, approved: 1, rejected: 0 })
-  })
-
-  it('aprova e rejeita ausência pela função do banco, com nome da pessoa', async () => {
-    expect(await service.approveTimeOffRequest('a1', SUP)).toMatchObject({ id: 'a1', status: 'APPROVED', collaboratorName: 'Ana Souza' })
-    expect(timeOff.decide).toHaveBeenCalledWith('a1', 'APPROVED', undefined)
-    await expect(service.rejectTimeOffRequest('a1', SUP, ' ')).rejects.toThrow('Informe o motivo da rejeição da folga.')
-    expect(await service.rejectTimeOffRequest('a1', SUP, 'Conflito')).toMatchObject({ status: 'REJECTED', rejectionReason: 'Conflito' })
   })
 
   it('não expõe operações de solicitações de ausência', () => {

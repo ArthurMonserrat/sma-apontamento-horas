@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { EntryDocumentDetails } from '../time-entries/EntryDocumentDetails'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { demoActivities } from '../../demo/fixtures/demoData'
@@ -61,16 +60,15 @@ export function TimeEntryHistory() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-extrabold ui-heading">{formatDatePtBr(entry.entryDate)} · Contratada {entry.projectCode}</h2>
+                      <h2 className="font-extrabold ui-heading">{formatDatePtBr(entry.entryDate)} · Contratada {entry.contractorNumber ?? entry.projectCode}</h2>
                       {entry.status === 'CANCELLED' && <StatusBadge tone={timeEntryStatusPresentation.CANCELLED.tone}>{timeEntryStatusPresentation.CANCELLED.label}</StatusBadge>}
                       <StatusBadge tone={approvalPresentation.tone}>{approvalPresentation.label}</StatusBadge>
                       <EntryRevisionBadge version={entry.version} />
                     </div>
-                    <p className="mt-2 text-sm ui-text-subtle">{entry.clientName} · {activity} · {formatMinutes(entry.durationMinutes)}</p>
-                    <EntryDocumentDetails entry={entry} />
+                    <p className="mt-2 text-sm ui-text-subtle">{activity} · {formatMinutes(entry.durationMinutes)}</p>
                     <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                      <div><dt className="font-bold ui-text-subtle">Disciplina</dt><dd>{entry.disciplineCode}</dd></div>
-                      <div><dt className="font-bold ui-text-subtle">Tipo de documento</dt><dd>{entry.documentTypeCode}</dd></div>
+                      <div><dt className="font-bold ui-text-subtle">Código primário</dt><dd>{entry.primaryCode || 'Não informado'}</dd></div>
+                      <div><dt className="font-bold ui-text-subtle">Código secundário</dt><dd>{entry.secondaryCode || 'Não informado'}</dd></div>
                       <div><dt className="font-bold ui-text-subtle">Squad registrada</dt><dd>{entry.assignmentSnapshot?.squadName ?? 'Não disponível (legado)'}</dd></div>
                       <div><dt className="font-bold ui-text-subtle">Supervisor registrado</dt><dd>{entry.assignmentSnapshot?.supervisorName ?? 'Não disponível (legado)'}</dd></div>
                       <div><dt className="font-bold ui-text-subtle">Situação da jornada</dt><dd>{getCalendarVisualState(row.summary).label}</dd></div>

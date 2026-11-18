@@ -17,7 +17,6 @@ type NavigationItem = {
 const navigationItems: NavigationItem[] = [
   { label: 'Painel Diretor', icon: 'dashboard', to: '/administracao', matches: (pathname, search) => pathname === '/administracao' && !new URLSearchParams(search).has('view'), tourClassName: 'tour-painel-diretor' },
   { label: 'Equipes', icon: 'users', to: '/administracao/equipes', matches: (pathname) => pathname === '/administracao/equipes' },
-  { label: 'Projetos', icon: 'folder', to: '/administracao/projetos', matches: (pathname) => pathname === '/administracao/projetos' },
   { label: 'Relatórios', icon: 'bar-chart', to: '/administracao/relatorios', matches: (pathname) => pathname === '/administracao/relatorios', tourClassName: 'tour-relatorios' },
   { label: 'Meu perfil', icon: 'user', to: '/administracao/perfil', matches: (pathname) => pathname === '/administracao/perfil' },
 ]

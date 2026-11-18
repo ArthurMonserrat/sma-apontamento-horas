@@ -118,6 +118,8 @@ function sharedFields(entry: Record<string, unknown>, collaboratorId: string) {
     entryDate: String(entry.entryDate),
     projectCode: entry.projectCode as string,
     contractorNumber: typeof entry.contractorNumber === 'string' ? entry.contractorNumber.trim() : undefined,
+    primaryCode: typeof entry.primaryCode === 'string' && entry.primaryCode.trim() ? entry.primaryCode.trim() : undefined,
+    secondaryCode: typeof entry.secondaryCode === 'string' && entry.secondaryCode.trim() ? entry.secondaryCode.trim() : undefined,
     ldDocument: isLdDocumentSnapshot(entry.ldDocument) ? entry.ldDocument : undefined,
     activityId: entry.activityId as string,
     disciplineCode: entry.disciplineCode as DisciplineCode,
@@ -148,7 +150,6 @@ export function normalizeTimeEntry(value: unknown, collaboratorId: string): Time
   const entry = value as Record<string, unknown>
   if (commonEntryIsInvalid(entry, collaboratorId)
     || typeof entry.clientName !== 'string'
-    || !entry.clientName.trim()
     || entry.clientName.trim().length > MAX_CLIENT_NAME_LENGTH) return null
   return { ...sharedFields(entry, collaboratorId), clientName: entry.clientName.trim() }
 }

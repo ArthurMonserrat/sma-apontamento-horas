@@ -4,7 +4,7 @@ import { dayApprovalService } from '../approvals'
 import { timeEntryService } from '../time-entries'
 import type { DayApproval } from '../approvals/types'
 import { isDayApprovalApplicable } from '../approvals/domain'
-import type { DisciplineCode, DocumentTypeCode, TimeEntry } from '../time-entries/types'
+import type { TimeEntry } from '../time-entries/types'
 import { getCorporateToday, getMonthKey, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import {
@@ -28,11 +28,10 @@ export type HistoryFiltersValue = {
   month: string
   startDate: string
   endDate: string
-  clientName: string
-  projectCode: string
+  contractorNumber: string
+  primaryCode: string
+  secondaryCode: string
   activityId: string
-  disciplineCode: DisciplineCode | ''
-  documentTypeCode: DocumentTypeCode | ''
   status: EntrySituationFilter
 }
 
@@ -53,11 +52,10 @@ function createInitialFilters(date = today): HistoryFiltersValue {
     month: getMonthKey(safeDate),
     startDate: `${getMonthKey(safeDate)}-01`,
     endDate: safeDate,
-    clientName: '',
-    projectCode: '',
+    contractorNumber: '',
+    primaryCode: '',
+    secondaryCode: '',
     activityId: '',
-    disciplineCode: '',
-    documentTypeCode: '',
     status: 'ACTIVE',
   }
 }
@@ -113,11 +111,10 @@ export function useTimeEntryHistory() {
         pageSize: 10,
         cursor,
         filters: {
-          clientName: filters.clientName.trim() || undefined,
-          projectCode: filters.projectCode.trim() || undefined,
+          contractorNumber: filters.contractorNumber.trim() || undefined,
+          primaryCode: filters.primaryCode.trim() || undefined,
+          secondaryCode: filters.secondaryCode.trim() || undefined,
           activityId: filters.activityId || undefined,
-          disciplineCode: filters.disciplineCode || undefined,
-          documentTypeCode: filters.documentTypeCode || undefined,
           status: toServiceStatusFilter(filters.status),
         },
         }),

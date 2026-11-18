@@ -1,22 +1,18 @@
 import { jsPDF } from 'jspdf'
-import { disciplines } from '../time-entries/documentCatalog'
 import { areValidDurationParts, formatMinutes } from '../time-entries/domain'
-import type { LdDocumentSnapshot } from '../time-entries/types'
 import { formatDatePtBr, isIsoDate } from '../../shared/lib/date'
 
 type RdoFormData = {
   entryDate?: string
   startDate?: string
-  projectCode: string
-  contractorNumber?: string
-  disciplineCode: string
-  documentTypeCode: string
+  contractorNumber: string
+  primaryCode?: string
+  secondaryCode?: string
   hours: string
   minutes: string
   details: string
-  ldDocument?: LdDocumentSnapshot
 }
-type RdoContext = { name: string; jobTitle?: string; clientName?: string; activityName?: string; assinaturaBase64?: string }
+type RdoContext = { name: string; jobTitle?: string; activityName?: string; assinaturaBase64?: string }
 export type RdoData = ReturnType<typeof buildRdoData>
 
 type DecodedSignature = {
@@ -42,23 +38,22 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
   if (!isIsoDate(entryDate)) throw new Error('Informe uma data válida para criar o RDO.')
   const hours = Number(values.hours || 0), minutes = Number(values.minutes || 0)
   if (!areValidDurationParts(hours, minutes)) throw new Error('Informe uma duração válida para criar o RDO.')
-  if (!values.projectCode.trim()) throw new Error('Informe o número da contratada para criar o RDO.')
+  if (!values.contractorNumber.trim()) throw new Error('Informe o número da contratada para criar o RDO.')
   return {
     contractor: 'SM&A Sistemas Elétricos e Automação',
-    contractorNumber: values.contractorNumber?.trim() ?? '',
+    contractorNumber: values.contractorNumber.trim(),
     date: entryDate, professional: context.name, category: context.jobTitle ?? '',
-    duration: formatMinutes(hours * 60 + minutes), object: values.ldDocument?.title ?? '',
-    valeNumber: values.ldDocument?.valeNumber ?? '',
-    discipline: disciplines.find(([code]) => code === values.disciplineCode)?.[1] ?? '',
-    documentType: values.documentTypeCode, client: context.clientName ?? '',
-    projectCode: values.projectCode.trim(), activity: context.activityName ?? '', details: values.details.trim(),
+    duration: formatMinutes(hours * 60 + minutes),
+    primaryCode: values.primaryCode?.trim() ?? '',
+    secondaryCode: values.secondaryCode?.trim() ?? '',
+    activity: context.activityName ?? '', details: values.details.trim(),
     assinaturaBase64: context.assinaturaBase64,
   }
 }
 
 export function rdoFileName(data: RdoData) {
   const safe = (value: string) => [...value].map((char) => char.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(char) ? '_' : char).join('').replace(/[. ]+$/g, '').slice(0, 70)
-  return ['RDO', data.date, safe(data.projectCode), safe(data.valeNumber)].filter(Boolean).join('_') + '.pdf'
+  return ['RDO', data.date, safe(data.contractorNumber), safe(data.primaryCode)].filter(Boolean).join('_') + '.pdf'
 }
 
 export function generateRdo(data: RdoData, logo: Uint8Array) {
@@ -129,20 +124,13 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
     let y = 40
     y = drawRow(y, [
       { label: 'Contratada', value: data.contractor, width: 96 },
-      { label: 'Nº da contratada', value: data.contractorNumber, width: 91 },
+      { label: 'Número da contratada', value: data.contractorNumber, width: 91 },
       { label: 'Data', value: formatDatePtBr(data.date), width: width - 187 },
     ])
     y = drawRow(y, [
-      { label: 'Cliente', value: data.client, width: 96 },
-      { label: 'Número da contratada', value: data.projectCode, width: width - 96 },
+      { label: 'Código primário', value: data.primaryCode, width: width / 2 },
+      { label: 'Código secundário', value: data.secondaryCode, width: width / 2 },
     ])
-    if (data.object || data.valeNumber || data.documentType || data.discipline) {
-      y = drawRow(y, [
-        { label: 'Objeto / Documento', value: data.object, width: 151 },
-        { label: 'Nº VALE', value: data.valeNumber, width: 66 },
-        { label: 'Disciplina / Tipo', value: [data.discipline, data.documentType].filter(Boolean).join(' / '), width: width - 217 },
-      ])
-    }
     y = drawSection('PROFISSIONAL', y)
     y = drawRow(y, [
       { label: 'Nome do profissional', value: data.professional, width: 127 },

@@ -11,71 +11,63 @@ import { TimeEntryFields } from './TimeEntryFields'
 import type { TimeEntryFormValues } from './useTimeEntryForm'
 
 const values: TimeEntryFormValues = {
-  startDate: '2026-07-20', endDate: '2026-07-20', weekdaysOnly: true, clientName: '', contractorNumber: '', activityId: '', disciplineCode: '', documentTypeCode: '',
+  startDate: '2026-07-20', endDate: '2026-07-20', weekdaysOnly: true, contractorNumber: '', primaryCode: '', secondaryCode: '', activityId: '',
   hours: '', minutes: '', details: '', editReason: '',
 }
 
 const filters: HistoryFiltersValue = {
   mode: 'MONTH', day: '2026-07-20', month: '2026-07', startDate: '2026-07-01', endDate: '2026-07-20',
-  clientName: '', projectCode: '', activityId: '', disciplineCode: '', documentTypeCode: '', status: 'ACTIVE',
+  contractorNumber: '', primaryCode: '', secondaryCode: '', activityId: '', status: 'ACTIVE',
 }
 
 describe('markup acessível de apontamentos e histórico', () => {
-  it('oferece contratada manual, Geral e Mecânica', () => {
+  it('oferece contratada manual e atividades disponíveis', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
     expect(markup).toContain('Número da contratada')
-    expect(markup).toContain('value="G"')
-    expect(markup).toContain('Mecânica')
+    expect(markup).toContain('Atividade realizada')
+    expect(markup).toContain('Outros')
   })
   it('associa labels aos campos obrigatórios e limita a data ao dia corporativo', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
     expect(markup).toContain('for="entry-start-date"')
     expect(markup).toContain('for="entry-end-date"')
     expect(markup).toContain('max="2026-07-20"')
-    expect(markup).toContain('for="client"')
-    expect(markup).not.toContain('for="project-code"')
     expect(markup).toContain('for="contractor-number"')
-    expect(markup).toContain('for="discipline"')
-    expect(markup).toContain('for="document-type"')
+    expect(markup).toContain('for="primary-code"')
+    expect(markup).toContain('for="secondary-code"')
     expect(markup).toContain('text-base')
   })
 
-  it('usa campo textual para cliente em vez do catálogo demonstrativo', () => {
+  it('não oferece cliente nem seleção de projeto no formulário', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
-    expect(markup).toContain('name="clientName"')
-    expect(markup).not.toContain('<select id="client"')
-    expect(markup).not.toContain('Selecione um cliente')
+    expect(markup).not.toContain('name="clientName"')
+    expect(markup).not.toContain('Projeto')
+    expect(markup).not.toContain('LD')
   })
 
-  it('torna o cliente somente leitura quando ele veio da LD', () => {
-    const markup = renderToStaticMarkup(<TimeEntryFields values={{ ...values, clientName: 'VALE', ldDocument: { valeNumber: 'VA-001', title: 'Documento', documentTypeCode: 'LD', disciplineName: 'GERAL', fileName: 'base.xlsm' } }} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
-    expect(markup).toContain('name="clientName"')
-    expect(markup).toContain('readOnly=""')
-    expect(markup).toContain('Identificado automaticamente pela LD')
-  })
-
-  it('mantém a contratada, a atividade Outros e remove campos descontinuados', () => {
+  it('usa somente os campos manuais de contratada, atividade e códigos', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
-    expect(markup).not.toContain('Número do projeto')
-    expect(markup).toContain('Outros')
-    expect(markup).toContain('Se a data final for diferente')
-    expect(markup).not.toContain('Avanço')
-    expect(markup).not.toContain('Documento (LD)')
+    expect(markup).toContain('Número da contratada')
+    expect(markup).toContain('Atividade realizada')
+    expect(markup).toContain('Código primário')
+    expect(markup).toContain('Código secundário')
+    expect(markup).not.toContain('Cliente')
+    expect(markup).not.toContain('Disciplina')
+    expect(markup).not.toContain('Tipo de documento')
+    expect(markup).not.toContain('Se a data final for diferente')
   })
 
   it('oferece filtros de período e dados individuais com labels', () => {
     const markup = renderToStaticMarkup(<HistoryFilters value={filters} onChange={vi.fn()} onApply={vi.fn()} />)
     expect(markup).toContain('aria-label="Filtros do histórico"')
     expect(markup).toContain('for="history-mode"')
-    expect(markup).toContain('for="history-client"')
-    expect(markup).toContain('for="history-project"')
+    expect(markup).toContain('for="history-contractor"')
+    expect(markup).toContain('for="history-primary-code"')
+    expect(markup).toContain('for="history-secondary-code"')
     expect(markup).toContain('Número da contratada')
-    expect(markup).not.toContain('Número do projeto')
-    expect(markup).toContain('value="G"')
-    expect(markup).toContain('Geral')
-    expect(markup).toContain('value="M"')
-    expect(markup).toContain('Mecânica')
-    expect(markup).toContain('for="history-document-type"')
+    expect(markup).not.toContain('Cliente')
+    expect(markup).not.toContain('Disciplina')
+    expect(markup).not.toContain('Tipo de documento')
     expect(markup).toContain('Situação do apontamento')
     expect(markup).toContain('Somente ativos')
     expect(markup).toContain('Somente cancelados')
@@ -100,5 +92,7 @@ describe('markup acessível de apontamentos e histórico', () => {
 
     expect(markup).toContain('Usar último apontamento')
     expect(markup).toContain('Dados de identificação serão preenchidos; data, duração e detalhamento permanecem para revisão.')
+    expect(markup).not.toContain('Lista de Documentos (LD)')
+    expect(markup).not.toContain('Selecionar projeto')
   })
 })

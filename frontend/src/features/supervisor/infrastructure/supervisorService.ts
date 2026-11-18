@@ -55,8 +55,6 @@ const TEAM_MEMBERS: readonly TeamMember[] = [
 
 const COLLABORATOR_NAME_BY_ID = new Map(TEAM_MEMBERS.map((member) => [member.id, member.name]))
 
-const SUPERVISOR_SESSION_ID = 'demo-supervisor-001'
-
 export const MOCK_TEAM_ENTRIES: readonly Omit<SupervisorPendingEntry, 'status'>[] = [
   { id: 'supervisor-demo-entry-001', collaboratorId: demoCollaborator.id, collaboratorName: demoCollaborator.name, entryDate: '2026-07-21', projectCode: 'SM&A-ENG-142', durationMinutes: 480, activityName: 'Elaboração de projeto' },
   { id: 'supervisor-demo-entry-002', collaboratorId: 'demo-collaborator-002', collaboratorName: 'Marina Costa', entryDate: '2026-07-21', projectCode: 'SM&A-AUT-087', durationMinutes: 360, activityName: 'Modelo 3D' },

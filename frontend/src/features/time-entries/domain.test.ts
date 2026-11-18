@@ -56,47 +56,36 @@ describe('validações e formatação', () => {
 
   const validData = {
     entryDate: monday,
-    clientName: 'Cliente Industrial Alfa',
-    projectCode: 'Ab-001/2.03',
+    contractorNumber: '20V159E',
+    primaryCode: 'PRIM-01',
+    secondaryCode: 'SEC-02',
     activityId: 'activity-project-design',
-    disciplineCode: '—',
-    documentTypeCode: '—',
     durationMinutes: 60,
     details: 'Atividade corporativa',
   } as CreateTimeEntryData
 
-  it('rejeita cliente vazio após remover espaços externos', () => {
-    const errors = validateTimeEntry({ ...validData, clientName: '   ' }, demoActivities)
-    expect(errors.clientName).toBe('Informe o cliente.')
-  })
-
-  it('aceita cliente textual informado manualmente', () => {
-    const errors = validateTimeEntry({ ...validData, clientName: '  Cliente Manual  ' }, demoActivities)
-    expect(errors.clientName).toBeUndefined()
-  })
-
   it('rejeita número da contratada composto somente por espaços', () => {
     const errors = validateTimeEntry(
-      { ...validData, projectCode: '   ' },
+      { ...validData, contractorNumber: '   ' },
       demoActivities,
     )
-    expect(errors.projectCode).toBe('Informe o número da contratada.')
+    expect(errors.contractorNumber).toBe('Informe o número da contratada.')
   })
 
   it('aceita número da contratada com 80 caracteres após trim', () => {
     const errors = validateTimeEntry(
-      { ...validData, projectCode: `  ${'A'.repeat(80)}  ` },
+      { ...validData, contractorNumber: `  ${'A'.repeat(80)}  ` },
       demoActivities,
     )
-    expect(errors.projectCode).toBeUndefined()
+    expect(errors.contractorNumber).toBeUndefined()
   })
 
   it('rejeita número da contratada acima de 80 caracteres após trim', () => {
     const errors = validateTimeEntry(
-      { ...validData, projectCode: `  ${'A'.repeat(81)}  ` },
+      { ...validData, contractorNumber: `  ${'A'.repeat(81)}  ` },
       demoActivities,
     )
-    expect(errors.projectCode).toBe('O número da contratada deve ter no máximo 80 caracteres.')
+    expect(errors.contractorNumber).toBe('O número da contratada deve ter no máximo 80 caracteres.')
   })
 
   it('bloqueia data futura no fuso corporativo', () => {
@@ -115,26 +104,26 @@ describe('validações e formatação', () => {
     expect(reopened.entryDate).toBeUndefined()
   })
 
-  it('exige seleção explícita de disciplina e aceita não se aplica', () => {
-    const missing = validateTimeEntry({ ...validData, disciplineCode: '' as '—' }, demoActivities)
-    const notApplicable = validateTimeEntry({ ...validData, disciplineCode: '—' }, demoActivities)
-    expect(missing.disciplineCode).toBe('Selecione uma disciplina.')
-    expect(notApplicable.disciplineCode).toBeUndefined()
-  })
-
-  it('exige seleção explícita de tipo de documento e aceita não se aplica', () => {
-    const missing = validateTimeEntry({ ...validData, documentTypeCode: '' as '—' }, demoActivities)
-    const notApplicable = validateTimeEntry({ ...validData, documentTypeCode: '—' }, demoActivities)
-    expect(missing.documentTypeCode).toBe('Selecione um tipo de documento.')
-    expect(notApplicable.documentTypeCode).toBeUndefined()
-  })
-
   it('aceita detalhamento vazio inclusive em Outros', () => {
     expect(validateTimeEntry({ ...validData, details: '   ', activityId: 'activity-other' }, demoActivities)).toEqual({})
   })
 
-  it.each(['G', 'M'] as const)('aceita disciplina %s', (disciplineCode) => {
-    expect(validateTimeEntry({ ...validData, disciplineCode }, demoActivities)).toEqual({})
+  it('aceita o contrato manual sem cliente, LD, disciplina ou tipo de documento', () => {
+    const manualData = {
+      entryDate: monday,
+      contractorNumber: '20V159E',
+      primaryCode: 'PRIM-01',
+      secondaryCode: 'SEC-02',
+      activityId: 'activity-project-design',
+      durationMinutes: 60,
+      details: 'Atividade corporativa',
+    } as unknown as CreateTimeEntryData
+
+    expect(validateTimeEntry(manualData, demoActivities)).toEqual({})
+  })
+
+  it('aceita códigos manuais vazios', () => {
+    expect(validateTimeEntry({ ...validData, primaryCode: '', secondaryCode: '' }, demoActivities)).toEqual({})
   })
 
   it('formata minutos positivos em HH:MM', () => expect(formatMinutes(125)).toBe('02:05'))

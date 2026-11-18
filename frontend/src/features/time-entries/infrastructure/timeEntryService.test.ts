@@ -59,26 +59,43 @@ const validData: CreateTimeEntryData = {
 }
 
 describe('dados opcionais de LD e contratada', () => {
-  it('preserva contratada, LD e detalhamento vazio na criação, recarga, edição e duplicação', async () => {
+  it('preserva os códigos manuais sem depender de cliente ou documento', async () => {
+    const storage = new MemoryStorage()
+    const service = buildService(storage)
+
+    const entry = await service.create(collaboratorId, {
+      entryDate: '2026-07-13',
+      contractorNumber: '20V159E',
+      primaryCode: 'PRIM-01',
+      secondaryCode: 'SEC-02',
+      activityId: 'activity-project-design',
+      durationMinutes: 60,
+      details: '',
+    })
+
+    const reloaded = await buildService(storage).getById(collaboratorId, entry.id)
+    expect(reloaded).toMatchObject({
+      contractorNumber: '20V159E', primaryCode: 'PRIM-01', secondaryCode: 'SEC-02', clientName: '',
+    })
+  })
+
+  it('preserva contratada e códigos manuais na criação, recarga, edição e duplicação', async () => {
     const storage = new MemoryStorage()
     let id = 0
     const service = buildService(storage, { createId: () => `ld-${++id}` })
-    const ldDocument = { valeNumber: 'ZZ-001', title: 'Título elétrico', documentTypeCode: 'ZZ-2', disciplineName: 'MECÂNICA', fileName: 'teste.xlsm' }
-    const entry = await service.create(collaboratorId, { ...validData, contractorNumber: '  ab-00/1  02.3  ', disciplineCode: 'M', documentTypeCode: 'ZZ-2', ldDocument, details: '' })
+    const entry = await service.create(collaboratorId, { ...validData, contractorNumber: '  ab-00/1  02.3  ', primaryCode: 'P-1', secondaryCode: 'S-1', details: '' })
     expect(entry.contractorNumber).toBe('ab-00/1  02.3')
-    expect((await buildService(storage).getById(collaboratorId, entry.id))?.ldDocument).toEqual(ldDocument)
-    const edited = await service.update(collaboratorId, entry.id, 1, { ...entry, disciplineCode: 'G' }, 'Ajustar disciplina')
+    expect((await buildService(storage).getById(collaboratorId, entry.id))?.primaryCode).toBe('P-1')
+    const edited = await service.update(collaboratorId, entry.id, 1, { ...entry, primaryCode: 'P-2' }, 'Ajustar código')
     const copy = await service.duplicate(collaboratorId, entry.id, edited.version, {})
     expect(copy.contractorNumber).toBe('ab-00/1  02.3')
-    expect(copy.ldDocument).toEqual(ldDocument)
+    expect(copy.primaryCode).toBe('P-2')
     expect(copy.details).toBe('')
-    expect(copy.disciplineCode).toBe('G')
     expect((await buildService(storage).listByDate(collaboratorId, validData.entryDate))).toHaveLength(2)
   })
 
-  it('rejeita tipo fora do catálogo sem origem LD e contratada longa', async () => {
+  it('rejeita contratada longa', async () => {
     const service = buildService(new MemoryStorage())
-    await expect(service.create(collaboratorId, { ...validData, documentTypeCode: 'ZZ' })).rejects.toThrow()
     await expect(service.create(collaboratorId, { ...validData, contractorNumber: 'a'.repeat(161) })).rejects.toThrow()
   })
 })
@@ -550,11 +567,11 @@ describe('comandos e consultas de apontamento', () => {
     let nextId = 0
     const service = buildService(storage, { createId: () => `entry-${++nextId}` })
     await service.create(collaboratorId, validData)
-    await service.create(collaboratorId, { ...validData, entryDate: '2026-07-14', clientName: 'Cliente Energia Beta', projectCode: 'BET-001' })
-    await service.create(collaboratorId, { ...validData, entryDate: '2026-07-15', projectCode: 'SMA-003' })
+    await service.create(collaboratorId, { ...validData, entryDate: '2026-07-14', contractorNumber: 'BET-001' })
+    await service.create(collaboratorId, { ...validData, entryDate: '2026-07-15', contractorNumber: 'SMA-003' })
 
     const firstPage = await service.list({ collaboratorId, startDate: '2026-07-01', endDate: '2026-07-31', pageSize: 2 })
-    const filtered = await service.list({ collaboratorId, startDate: '2026-07-01', endDate: '2026-07-31', pageSize: 10, filters: { clientName: 'energia' } })
+    const filtered = await service.list({ collaboratorId, startDate: '2026-07-01', endDate: '2026-07-31', pageSize: 10, filters: { contractorNumber: 'bet' } })
 
     expect(firstPage.items).toHaveLength(2)
     expect(firstPage.nextCursor).toBe('2')

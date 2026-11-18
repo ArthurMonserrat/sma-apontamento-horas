@@ -8,26 +8,16 @@ import { expandTimeEntryDates } from './domain'
 import { getCorporateToday, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } from './domain'
-import { applyLdDocument, type LdDocument } from '../document-list/ldImport'
-import { isManualDocumentType } from './documentCatalog'
 import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
-import type { Project } from '../projects/types'
 
 export type TimeEntryFormValues = {
   startDate: string
   endDate: string
   weekdaysOnly: boolean
-  clientName: string
-  contractorNumber?: string
-  /** Projeto escolhido na lista da diretoria ('' = sem projeto). */
-  projectId?: string
-  projectActivityId?: string
-  /** O projeto tem atividades para a pessoa: escolher uma é obrigatório. */
-  projectActivityRequired?: boolean
-  ldDocument?: CreateTimeEntryData['ldDocument']
+  contractorNumber: string
+  primaryCode: string
+  secondaryCode: string
   activityId: string
-  disciplineCode: CreateTimeEntryData['disciplineCode'] | ''
-  documentTypeCode: CreateTimeEntryData['documentTypeCode'] | ''
   hours: string
   minutes: string
   details: string
@@ -38,14 +28,10 @@ const emptyValues = (entryDate: string): TimeEntryFormValues => ({
   startDate: entryDate,
   endDate: entryDate,
   weekdaysOnly: true,
-  clientName: '',
   contractorNumber: '',
-  projectId: '',
-  projectActivityId: '',
-  projectActivityRequired: false,
+  primaryCode: '',
+  secondaryCode: '',
   activityId: '',
-  disciplineCode: '',
-  documentTypeCode: '',
   hours: '',
   minutes: '',
   details: '',
@@ -57,15 +43,10 @@ function valuesFromEntry(entry: TimeEntry): TimeEntryFormValues {
     startDate: entry.entryDate,
     endDate: entry.entryDate,
     weekdaysOnly: true,
-    clientName: entry.clientName,
     contractorNumber: entry.contractorNumber ?? '',
-    projectId: entry.projectId ?? '',
-    projectActivityId: entry.projectActivityId ?? '',
-    projectActivityRequired: Boolean(entry.projectActivityId),
-    ldDocument: entry.ldDocument,
+    primaryCode: entry.primaryCode ?? '',
+    secondaryCode: entry.secondaryCode ?? '',
     activityId: entry.activityId,
-    disciplineCode: entry.disciplineCode,
-    documentTypeCode: entry.documentTypeCode,
     hours: String(Math.floor(entry.durationMinutes / 60)),
     minutes: String(entry.durationMinutes % 60),
     details: entry.details,
@@ -138,15 +119,10 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       }
       setValues((current) => ({
         ...current,
-        clientName: lastEntry.clientName,
-        contractorNumber: lastEntry.contractorNumber ?? lastEntry.projectCode,
-        projectId: lastEntry.projectId ?? '',
-        projectActivityId: lastEntry.projectActivityId ?? '',
-        projectActivityRequired: Boolean(lastEntry.projectActivityId),
-        ldDocument: lastEntry.ldDocument,
+        contractorNumber: lastEntry.contractorNumber ?? lastEntry.projectCode ?? '',
         activityId: lastEntry.activityId,
-        disciplineCode: lastEntry.disciplineCode,
-        documentTypeCode: lastEntry.documentTypeCode,
+        primaryCode: lastEntry.primaryCode ?? '',
+        secondaryCode: lastEntry.secondaryCode ?? '',
       }))
       setErrors({})
       setReuseLastEntryMessage('Dados do último apontamento aplicados. Data, duração e detalhamento foram mantidos para revisão.')
@@ -174,16 +150,10 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       entryDate: values.startDate,
       endDate: effectiveEndDate,
       weekdaysOnly: effectiveWeekdaysOnly,
-      clientName: values.clientName,
-      projectCode: values.contractorNumber?.trim() ?? '',
       contractorNumber: values.contractorNumber,
-      // Sem projeto: só envia null se o apontamento de origem tinha projeto (limpa); senão não mexe.
-      projectId: values.projectId || (source?.projectId ? null : undefined),
-      projectActivityId: values.projectActivityId || (source?.projectActivityId ? null : undefined),
-      ldDocument: values.ldDocument,
+      primaryCode: values.primaryCode,
+      secondaryCode: values.secondaryCode,
       activityId: values.activityId,
-      disciplineCode: values.disciplineCode as CreateTimeEntryData['disciplineCode'],
-      documentTypeCode: values.documentTypeCode as CreateTimeEntryData['documentTypeCode'],
       durationMinutes: hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
       details: values.details,
     }
@@ -206,14 +176,7 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       }
     }
     const validationErrors = validateTimeEntry(data, demoActivities, { today: getCorporateToday(), canMutateDate })
-    if (validationErrors.projectCode) {
-      validationErrors.contractorNumber = 'Informe o número da contratada.'
-      delete validationErrors.projectCode
-    }
     if (dateBlock.blocked) validationErrors.entryDate = dateBlock.message
-    if (values.projectId && values.projectActivityRequired && !values.projectActivityId) {
-      validationErrors.projectActivityId = 'Escolha a atividade do projeto.'
-    }
     if (!areValidDurationParts(durationHours, durationRemainderMinutes)) {
       validationErrors.durationMinutes = 'Informe horas inteiras entre 0 e 24 e minutos inteiros entre 0 e 59, com total máximo de 24 horas.'
     }
@@ -287,14 +250,6 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     reuseLastEntryMessage,
     setField,
     reuseLastEntry,
-    selectLdDocument: (document: LdDocument) => { setValues((current) => applyLdDocument(current, document)); setErrors({}) },
-    selectProject: (project: Project | null, hasActivities: boolean) => {
-      setValues((current) => project
-        ? { ...current, projectId: project.id, projectActivityId: '', projectActivityRequired: hasActivities, clientName: current.ldDocument ? current.clientName : project.client, contractorNumber: project.code }
-        : { ...current, projectId: '', projectActivityId: '', projectActivityRequired: false })
-      setErrors((current) => ({ ...current, projectActivityId: undefined, clientName: undefined, contractorNumber: undefined }))
-    },
-    clearLdDocument: () => setValues((current) => ({ ...current, clientName: '', ldDocument: undefined, documentTypeCode: isManualDocumentType(current.documentTypeCode) ? current.documentTypeCode : '' })),
     submit,
   }
 }

@@ -78,10 +78,6 @@ const calendarStates = {
     light: [hex('F5F0FB'), hex('5B3C88'), hex('7E5BA6')],
     dark: [hex('352944'), hex('E9DDFF'), hex('A98AD0')],
   },
-  'time-off': {
-    light: [hex('EDF8FC'), hex('225E7A'), hex('2C7DA0')],
-    dark: [hex('203A48'), hex('D9F2FF'), hex('6FB7D1')],
-  },
   'medical-leave': {
     light: [hex('FAF0F8'), hex('633A61'), hex('8A5A83')],
     dark: [hex('42283F'), hex('F5DDF0'), hex('C28AB8')],

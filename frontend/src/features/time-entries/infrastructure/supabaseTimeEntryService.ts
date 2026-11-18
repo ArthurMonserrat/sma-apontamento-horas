@@ -28,6 +28,8 @@ export type Banco1TimeEntryRow = {
   client_name: string
   project_code: string
   contractor_number: string | null
+  primary_code?: string | null
+  secondary_code?: string | null
   project_id?: string | null
   project_activity_id?: string | null
   ld_document: LdDocumentSnapshot | null
@@ -61,6 +63,8 @@ export function timeEntryFromRow(row: Banco1TimeEntryRow): TimeEntry {
     clientName: row.client_name,
     projectCode: row.project_code,
     contractorNumber: row.contractor_number ?? undefined,
+    primaryCode: row.primary_code ?? undefined,
+    secondaryCode: row.secondary_code ?? undefined,
     projectId: row.project_id ?? undefined,
     projectActivityId: row.project_activity_id ?? undefined,
     ldDocument: row.ld_document ?? undefined,
@@ -84,18 +88,17 @@ export function timeEntryFromRow(row: Banco1TimeEntryRow): TimeEntry {
 function contentColumns(data: CreateTimeEntryData) {
   return {
     entry_date: data.entryDate,
-    client_name: data.clientName,
-    project_code: data.projectCode,
+    client_name: data.clientName ?? null,
+    project_code: data.contractorNumber ?? data.projectCode ?? '',
     contractor_number: data.contractorNumber?.trim() ? data.contractorNumber.trim() : null,
-    ld_document: data.ldDocument ?? null,
+    primary_code: data.primaryCode?.trim() || null,
+    secondary_code: data.secondaryCode?.trim() || null,
+    ld_document: null,
     activity_id: data.activityId,
-    discipline_code: data.disciplineCode,
-    document_type_code: data.documentTypeCode,
+    discipline_code: '—',
+    document_type_code: '—',
     duration_minutes: data.durationMinutes,
     details: data.details,
-    // Colunas de projeto só vão quando informadas (undefined = não mexe).
-    ...(data.projectId !== undefined ? { project_id: data.projectId } : {}),
-    ...(data.projectActivityId !== undefined ? { project_activity_id: data.projectActivityId } : {}),
   }
 }
 
@@ -224,11 +227,10 @@ export class SupabaseTimeEntryService implements TimeEntryService {
       .eq('collaborator_id', query.collaboratorId)
       .gte('entry_date', query.startDate)
       .lte('entry_date', query.endDate)
-    if (filters.clientName) request = request.ilike('client_name', `%${escapeLike(filters.clientName)}%`)
-    if (filters.projectCode) request = request.ilike('project_code', `%${escapeLike(filters.projectCode)}%`)
+    if (filters.contractorNumber) request = request.ilike('contractor_number', `%${escapeLike(filters.contractorNumber)}%`)
+    if (filters.primaryCode) request = request.ilike('primary_code', `%${escapeLike(filters.primaryCode)}%`)
+    if (filters.secondaryCode) request = request.ilike('secondary_code', `%${escapeLike(filters.secondaryCode)}%`)
     if (filters.activityId) request = request.eq('activity_id', filters.activityId)
-    if (filters.disciplineCode) request = request.eq('discipline_code', filters.disciplineCode)
-    if (filters.documentTypeCode) request = request.eq('document_type_code', filters.documentTypeCode)
     if (filters.status) request = filters.status === 'ACTIVE' ? request.neq('status', 'CANCELLED') : request.eq('status', filters.status)
     const { data, error, count } = await request
       .order('entry_date', { ascending: false })
@@ -317,15 +319,10 @@ export class SupabaseTimeEntryService implements TimeEntryService {
     if (entry.version !== expectedVersion) throw new Error('A versão do apontamento foi alterada. Recarregue os dados.')
     const normalized = normalizeCreateData({
       entryDate: overrides.entryDate ?? entry.entryDate,
-      clientName: overrides.clientName ?? entry.clientName,
-      projectCode: overrides.projectCode ?? entry.projectCode,
       contractorNumber: overrides.contractorNumber ?? entry.contractorNumber,
-      projectId: Object.hasOwn(overrides, 'projectId') ? overrides.projectId : entry.projectId,
-      projectActivityId: Object.hasOwn(overrides, 'projectActivityId') ? overrides.projectActivityId : entry.projectActivityId,
-      ldDocument: Object.hasOwn(overrides, 'ldDocument') ? overrides.ldDocument : entry.ldDocument,
+      primaryCode: overrides.primaryCode ?? entry.primaryCode,
+      secondaryCode: overrides.secondaryCode ?? entry.secondaryCode,
       activityId: overrides.activityId ?? entry.activityId,
-      disciplineCode: overrides.disciplineCode ?? entry.disciplineCode,
-      documentTypeCode: overrides.documentTypeCode ?? entry.documentTypeCode,
       durationMinutes: overrides.durationMinutes ?? entry.durationMinutes,
       details: overrides.details ?? entry.details,
     })
