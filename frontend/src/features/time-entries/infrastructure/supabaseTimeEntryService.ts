@@ -247,6 +247,6 @@ export class SupabaseTimeEntryService implements TimeEntryService {
   }
 
   async getDailySummary(collaboratorId: string, date: string, workloadVersions: WorkloadVersion[]): Promise<DailySummary> {
-    return calculateDaySummary({ collaboratorId, date, today: date, entries: await this.listByDate(collaboratorId, date), events: [], timeOffRequests: [], workloadVersions })
+    return calculateDaySummary({ collaboratorId, date, today: date, entries: await this.listByDate(collaboratorId, date), events: [], workloadVersions })
   }
 }

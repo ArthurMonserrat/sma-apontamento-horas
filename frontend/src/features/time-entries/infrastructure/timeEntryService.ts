@@ -439,7 +439,6 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
       today: date,
       entries: await this.listByDate(collaboratorId, date),
       events: [],
-      timeOffRequests: [],
       workloadVersions,
     })
   }

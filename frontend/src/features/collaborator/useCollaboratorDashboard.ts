@@ -10,9 +10,6 @@ import { calendarEventService } from '../calendar/infrastructure/calendarEventSe
 import { dayApprovalService } from '../approvals'
 import { holidayProvider } from '../calendar/infrastructure/holidayProvider'
 import { timeEntryService } from '../time-entries'
-import { timeOffService } from '../time-off/infrastructure/timeOffService'
-import type { TimeOffRequest } from '../time-off/types'
-import { requestAppliesToDate } from '../time-off/types'
 import type { AssignmentSnapshot } from '../squads/types'
 import type { WorkloadVersion } from '../workloads/types'
 import { eachIsoDate, getCorporateToday, getMonthRange } from '../../shared/lib/date'
@@ -32,8 +29,6 @@ type DashboardData = {
   selectedEvents: CalendarEvent[]
   selectedApproval: DayApproval | null
   approvals: DayApproval[]
-  selectedTimeOffRequests: TimeOffRequest[]
-  pendingTimeOffRequests: number
   pendingWorkloadRequests: number
   assignment: AssignmentSnapshot | null
   currentWorkload: WorkloadVersion | null
@@ -56,7 +51,7 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
   const load = useCallback(async () => {
     const corporateDataError = localDataAccessError(session)
     if (corporateDataError) {
-      setState({ data: null, isLoading: false, error: `${corporateDataError} O dashboard ainda depende dos serviços corporativos de jornada e folgas.` })
+      setState({ data: null, isLoading: false, error: `${corporateDataError} O dashboard ainda depende dos serviços corporativos de jornada.` })
       return
     }
     if (!profile) return
@@ -71,50 +66,46 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
       ])
       if (!professionalProfile) throw new Error('Perfil profissional não encontrado.')
       const totalStartDate = workloadVersions[0]?.effectiveFrom ?? today
-      const [monthEntries, totalEntries, monthEvents, totalEvents, monthHolidays, totalHolidays, monthTimeOff, totalTimeOff] = await Promise.all([
+      const [monthEntries, totalEntries, monthEvents, totalEvents, monthHolidays, totalHolidays] = await Promise.all([
         timeEntryService.listByRange(profile.id, monthRange.startDate, monthRange.endDate),
         timeEntryService.listByRange(profile.id, totalStartDate, today),
         calendarEventService.listByRange(profile.id, monthRange.startDate, monthRange.endDate),
         calendarEventService.listByRange(profile.id, totalStartDate, today),
         holidayProvider.list(professionalProfile.location, monthRange.startDate, monthRange.endDate),
         holidayProvider.list(professionalProfile.location, totalStartDate, today),
-        timeOffService.listByRange(profile.id, monthRange.startDate, monthRange.endDate),
-        timeOffService.listApprovedByRange(profile.id, totalStartDate, today),
       ])
       const monthAllEvents = [...monthEvents, ...holidaysToEvents(profile.id, monthHolidays)]
       const totalAllEvents = [...totalEvents, ...holidaysToEvents(profile.id, totalHolidays)]
       const monthSummary = calculatePeriodSummary({
         ...monthRange, today, collaboratorId: profile.id, entries: monthEntries, events: monthAllEvents,
-        timeOffRequests: monthTimeOff, workloadVersions,
+        workloadVersions,
       })
       const totalSummary = calculatePeriodSummary({
         startDate: totalStartDate, endDate: today, today, collaboratorId: profile.id, entries: totalEntries, events: totalAllEvents,
-        timeOffRequests: totalTimeOff, workloadVersions,
+        workloadVersions,
       })
       let filteredSummary = monthSummary
       if (periodStart && periodEnd) {
         if (periodStart > periodEnd) throw new Error('A data inicial do intervalo deve ser anterior à data final.')
-        const [periodEntries, periodEvents, periodHolidays, periodTimeOff] = await Promise.all([
+        const [periodEntries, periodEvents, periodHolidays] = await Promise.all([
           timeEntryService.listByRange(profile.id, periodStart, periodEnd),
           calendarEventService.listByRange(profile.id, periodStart, periodEnd),
           holidayProvider.list(professionalProfile.location, periodStart, periodEnd),
-          timeOffService.listByRange(profile.id, periodStart, periodEnd),
         ])
         filteredSummary = calculatePeriodSummary({
           startDate: periodStart, endDate: periodEnd, today, collaboratorId: profile.id, entries: periodEntries,
-          events: [...periodEvents, ...holidaysToEvents(profile.id, periodHolidays)], timeOffRequests: periodTimeOff, workloadVersions,
+          events: [...periodEvents, ...holidaysToEvents(profile.id, periodHolidays)], workloadVersions,
         })
       }
       const selectedEntries = monthEntries.filter((entry) => entry.entryDate === selectedDate)
       const selectedEvents = monthAllEvents.filter((event) => event.startDate <= selectedDate && event.endDate >= selectedDate)
-      const selectedTimeOffRequests = monthTimeOff.filter((request) => requestAppliesToDate(request, selectedDate) && request.status !== 'CANCELLED')
       const selectedSummary = monthSummary.days.find((day) => day.date === selectedDate) ?? calculateDaySummary({
         date: selectedDate, today, collaboratorId: profile.id, entries: selectedEntries, events: selectedEvents,
-        timeOffRequests: monthTimeOff, workloadVersions,
+        workloadVersions,
       })
       const todaySummary = monthKey === today.slice(0, 7)
         ? monthSummary.days.find((day) => day.date === today) ?? selectedSummary
-        : calculateDaySummary({ date: today, today, collaboratorId: profile.id, entries: totalEntries, events: totalAllEvents, timeOffRequests: totalTimeOff, workloadVersions })
+        : calculateDaySummary({ date: today, today, collaboratorId: profile.id, entries: totalEntries, events: totalAllEvents, workloadVersions })
       const currentAssignment = profileService.resolveAssignment(profile.id)
       const calendarDates = eachIsoDate(monthRange.startDate, monthRange.endDate)
       const approvals = (await Promise.all(calendarDates.flatMap((date) => {
@@ -142,8 +133,7 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
       setState({
         data: {
           monthSummary, filteredSummary, totalSummary, todaySummary, selectedSummary, calendarDays: monthSummary.days,
-          selectedEntries, selectedEvents, selectedTimeOffRequests, selectedApproval, approvals,
-          pendingTimeOffRequests: monthTimeOff.filter((request) => request.status === 'PENDING').length,
+          selectedEntries, selectedEvents, selectedApproval, approvals,
           pendingWorkloadRequests: workloadRequests.filter((request) => request.status === 'PENDING').length,
           assignment: currentAssignment,
           currentWorkload: await workloadService.getCurrent(profile.id, today),

@@ -36,7 +36,6 @@ export type CalendarVisualState =
   | 'COMPLETE'
   | 'EXCEEDED'
   | 'VACATION'
-  | 'TIME_OFF'
   | 'MEDICAL_LEAVE'
   | 'HOLIDAY'
 
