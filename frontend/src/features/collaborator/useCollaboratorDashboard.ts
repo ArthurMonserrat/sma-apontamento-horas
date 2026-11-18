@@ -44,6 +44,74 @@ function holidaysToEvents(collaboratorId: string, holidays: Awaited<ReturnType<t
   }))
 }
 
+export function buildEmptyCorporateDashboardData({
+  collaboratorId,
+  monthKey,
+  selectedDate,
+  today,
+  periodStart,
+  periodEnd,
+}: {
+  collaboratorId: string
+  monthKey: string
+  selectedDate: string
+  today: string
+  periodStart?: string
+  periodEnd?: string
+}): DashboardData {
+  const monthRange = getMonthRange(monthKey)
+  const entries: TimeEntry[] = []
+  const events: CalendarEvent[] = []
+  const workloadVersions: WorkloadVersion[] = []
+  const monthSummary = calculatePeriodSummary({
+    ...monthRange,
+    today,
+    collaboratorId,
+    entries,
+    events,
+    workloadVersions,
+  })
+  const totalSummary = calculatePeriodSummary({
+    startDate: today,
+    endDate: today,
+    today,
+    collaboratorId,
+    entries,
+    events,
+    workloadVersions,
+  })
+  const filteredSummary = periodStart && periodEnd
+    ? calculatePeriodSummary({ startDate: periodStart, endDate: periodEnd, today, collaboratorId, entries, events, workloadVersions })
+    : monthSummary
+  const selectedSummary = monthSummary.days.find((day) => day.date === selectedDate) ?? calculateDaySummary({
+    date: selectedDate,
+    today,
+    collaboratorId,
+    entries,
+    events,
+    workloadVersions,
+  })
+  const todaySummary = monthKey === today.slice(0, 7)
+    ? monthSummary.days.find((day) => day.date === today) ?? selectedSummary
+    : calculateDaySummary({ date: today, today, collaboratorId, entries, events, workloadVersions })
+
+  return {
+    monthSummary,
+    filteredSummary,
+    totalSummary,
+    todaySummary,
+    selectedSummary,
+    calendarDays: monthSummary.days,
+    selectedEntries: entries,
+    selectedEvents: events,
+    selectedApproval: null,
+    approvals: [],
+    assignment: null,
+    currentWorkload: null,
+    attention: buildAttentionSummary({ today, days: monthSummary.days, approvals: [] }),
+  }
+}
+
 export function useCollaboratorDashboard(selectedDate: string, monthKey: string, periodStart?: string, periodEnd?: string) {
   const { profile, session } = useSession()
   const [state, setState] = useState<DashboardState>({ data: null, isLoading: true, error: null })
@@ -51,7 +119,18 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
   const load = useCallback(async () => {
     const corporateDataError = localDataAccessError(session)
     if (corporateDataError) {
-      setState({ data: null, isLoading: false, error: `${corporateDataError} O dashboard ainda depende dos serviços corporativos de jornada.` })
+      setState({
+        data: buildEmptyCorporateDashboardData({
+          collaboratorId: profile?.id ?? session?.id ?? 'corporate-user',
+          monthKey,
+          selectedDate,
+          today: getCorporateToday(),
+          periodStart,
+          periodEnd,
+        }),
+        isLoading: false,
+        error: null,
+      })
       return
     }
     if (!profile) return
