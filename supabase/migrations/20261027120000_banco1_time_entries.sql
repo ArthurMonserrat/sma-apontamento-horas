@@ -34,7 +34,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select coalesce(a.role, p.role)::text
+  select coalesce(a.role, p.role::text)
   from public.profiles as p
   join public.profile_module_access as a on a.profile_id = p.id
   where p.id = auth.uid()
@@ -374,7 +374,7 @@ as $$
     select private.module_role('BANCO_1') as role
   ),
   people as (
-    select p.id, p.full_name, p.email, coalesce(a.role, p.role)::text as module_role
+    select p.id, p.full_name, p.email, coalesce(a.role, p.role::text) as module_role
     from public.profiles as p
     join public.profile_module_access as a on a.profile_id = p.id and a.module = 'BANCO_1' and a.active
     where p.active
