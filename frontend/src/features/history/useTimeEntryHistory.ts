@@ -43,6 +43,18 @@ export type HistoryRow = {
   canMutate: boolean
 }
 
+export function createEmptyCorporateHistoryState() {
+  return {
+    rows: [] as HistoryRow[],
+    nextCursor: null as string | null,
+    total: 0,
+    periodSummary: null as PeriodSummary | null,
+    periodEvents: [] as CalendarEvent[],
+    isLoading: false,
+    error: null as string | null,
+  }
+}
+
 const today = getCorporateToday()
 function createInitialFilters(date = today): HistoryFiltersValue {
   const safeDate = isIsoDate(date) ? date : today
@@ -87,11 +99,14 @@ export function useTimeEntryHistory() {
   const load = useCallback(async () => {
     const corporateDataError = localDataAccessError(session)
     if (corporateDataError) {
-      setRows([])
-      setPeriodSummary(null)
-      setPeriodEvents([])
-      setIsLoading(false)
-      setError(`${corporateDataError} O histórico corporativo ainda não está integrado aos serviços de jornada.`)
+      const emptyState = createEmptyCorporateHistoryState()
+      setRows(emptyState.rows)
+      setNextCursor(emptyState.nextCursor)
+      setTotal(emptyState.total)
+      setPeriodSummary(emptyState.periodSummary)
+      setPeriodEvents(emptyState.periodEvents)
+      setIsLoading(emptyState.isLoading)
+      setError(emptyState.error)
       return
     }
     if (!profile) return
