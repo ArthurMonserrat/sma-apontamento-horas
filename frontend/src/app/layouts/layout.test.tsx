@@ -123,9 +123,11 @@ describe('layout responsivo do colaborador', () => {
     expect(markup).toContain('Colaborador')
     expect(markup).toContain('Projetista')
     expect(markup).toContain('Engenharia de Automação')
-    for (const label of ['Visão geral', 'Novo apontamento', 'Histórico', 'Ausências', 'Meu perfil']) {
+    for (const label of ['Visão geral', 'Novo apontamento', 'Histórico', 'Meu perfil']) {
       expect(markup).toContain(label)
     }
+    expect(markup).not.toContain('Ausências')
+    expect(markup).not.toContain('Avisos')
   })
 
   it('separa sutilmente as ações de instalar aplicativo e sair do sistema', () => {

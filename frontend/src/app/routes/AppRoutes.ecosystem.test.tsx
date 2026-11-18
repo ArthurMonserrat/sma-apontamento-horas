@@ -30,7 +30,6 @@ describe('rota raiz do ecossistema', () => {
       '<Route path="/login" element={<Navigate to="/" replace />} />',
     ]
     const protectedRoutes = [
-      ['/avisos', "['SUPERVISOR', 'DIRECTOR_ADMIN']", 'ManagerNoticesRedirect'],
       ['/colaborador', "['COLLABORATOR']", 'AppLayout'],
       ['/supervisor', "['SUPERVISOR']", 'SupervisorPage'],
       ['/administracao', "['DIRECTOR_ADMIN']", 'DiretoriaPage'],
@@ -42,8 +41,6 @@ describe('rota raiz do ecossistema', () => {
       '<Route path="apontamentos/novo" element={<NovoApontamentoPage />} />',
       '<Route path="apontamentos/:entryId/editar" element={<NovoApontamentoPage />} />',
       '<Route path="historico" element={<HistoricoPage />} />',
-      '<Route path="folgas" element={<FolgasPage />} />',
-      '<Route path="avisos" element={<AvisosPage />} />',
       '<Route path="perfil" element={<PerfilPage />} />',
     ]
 
@@ -54,6 +51,9 @@ describe('rota raiz do ecossistema', () => {
       )
     })
     collaboratorChildren.forEach((route) => expect(normalizedSource).toContain(route))
+    expect(normalizedSource).not.toContain('FolgasPage')
+    expect(normalizedSource).not.toContain('AvisosPage')
+    expect(normalizedSource).not.toContain('ManagerNoticesRedirect')
     expect(normalizedSource).toContain('<Route path="*" element={<Navigate to="/" replace />} />')
   })
 })

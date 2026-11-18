@@ -10,8 +10,7 @@ import { BalancePeriodFilter } from '../../features/calendar/BalancePeriodFilter
 import { ManagerCalendar } from '../../features/calendar/ManagerCalendar'
 import { RejectionDialog } from '../../features/supervisor/RejectionDialog'
 import { SupervisorEntriesTable } from '../../features/supervisor/SupervisorEntriesTable'
-import { SupervisorRequestsTable } from '../../features/supervisor/SupervisorRequestsTable'
-import type { SupervisorPendingEntry, SupervisorTimeOffRequest } from '../../features/supervisor/types'
+import type { SupervisorPendingEntry } from '../../features/supervisor/types'
 import { useSupervisorDashboard } from '../../features/supervisor/useSupervisorDashboard'
 import { ApprovalDeadlineBanner } from '../../features/supervisor/ApprovalDeadlineBanner'
 import { useSession } from '../../features/session/useSession'
@@ -19,14 +18,11 @@ import { formatMinutes } from '../../features/time-entries/domain'
 import { getCorporateToday, getMonthKey, getMonthRange, isIsoDate } from '../../shared/lib/date'
 import { getAllColaboradores } from '../../demo/fixtures/mockDEP'
 import { useTour } from '../../app/providers/tourContext'
-import { AvisosPage } from '../administration/AvisosPage'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
 
-type ActiveView = 'entries' | 'requests' | 'history' | 'profile' | 'announcements'
+type ActiveView = 'entries' | 'history' | 'profile'
 type EntryStatusFilter = 'ALL' | SupervisorPendingEntry['status']
-type RejectionTarget =
-  | { type: 'entry', item: SupervisorPendingEntry }
-  | { type: 'time-off', item: SupervisorTimeOffRequest }
+type RejectionTarget = { type: 'entry', item: SupervisorPendingEntry }
 
 type ProjectHoursRow = {
   projeto: string
@@ -52,24 +48,18 @@ const defaultSupervisorProfile: SupervisorProfile = {
 
 const supervisorNavigation: Array<{ id: ActiveView, label: string, icon: NavigationIconName }> = [
   { id: 'entries', label: 'Gestão da Equipe', icon: 'users' },
-  { id: 'requests', label: 'Solicitações', icon: 'inbox' },
   { id: 'history', label: 'Histórico', icon: 'history' },
-  { id: 'announcements', label: 'Avisos', icon: 'bell' },
   { id: 'profile', label: 'Meu Perfil', icon: 'user' },
 ]
 
 const activeViewBySearchParam: Record<string, ActiveView> = {
-  solicitacoes: 'requests',
   historico: 'history',
-  avisos: 'announcements',
   perfil: 'profile',
 }
 
 const supervisorPathByView: Record<ActiveView, string> = {
   entries: '/supervisor',
-  requests: '/supervisor?view=solicitacoes',
   history: '/supervisor?view=historico',
-  announcements: '/supervisor?view=avisos',
   profile: '/supervisor?view=perfil',
 }
 
@@ -260,7 +250,7 @@ function SupervisorProfileView({ profile, onSave, onStartTour }: { profile: Supe
           </div>
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <dt className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)]">Permissões</dt>
-            <dd className="mt-1 font-bold text-[var(--color-text)]">Aprovar apontamentos e ausências</dd>
+            <dd className="mt-1 font-bold text-[var(--color-text)]">Aprovar apontamentos da equipe</dd>
           </div>
         </dl>
       )}
@@ -469,11 +459,7 @@ export function SupervisorPage() {
     if (!rejectionTarget) return
     setRejectionError(null)
     try {
-      if (rejectionTarget.type === 'entry') {
-        await dashboard.reject(rejectionTarget.item, reason)
-      } else {
-        await dashboard.rejectTimeOff(rejectionTarget.item, reason)
-      }
+      await dashboard.reject(rejectionTarget.item, reason)
       setRejectionTarget(null)
     } catch (requestError) {
       setRejectionError(requestError instanceof Error ? requestError.message : 'Não foi possível registrar a rejeição.')
@@ -509,7 +495,7 @@ export function SupervisorPage() {
             <p className="ui-eyebrow mb-2 text-xs font-bold uppercase tracking-[0.2em]">SM&A</p>
             <h1 className="text-2xl font-extrabold text-[var(--color-primary)] sm:text-3xl">{supervisorNavigation.find((item) => item.id === activeView)?.label}</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--color-text-muted)]">
-              Consulte dados sincronizados do localStorage, valide pendências e acompanhe o histórico da equipe.
+              Consulte apontamentos sincronizados, valide pendências e acompanhe o histórico da equipe.
             </p>
           </div>
 
@@ -637,34 +623,8 @@ export function SupervisorPage() {
               </>
             )}
 
-            {activeView === 'requests' && (
-              <>
-                <section className="grid gap-4 md:grid-cols-3" aria-label="Resumo das solicitações">
-                  <SummaryCard label="Ausências pendentes" value={dashboard.requestSummary.pending} helper="Solicitações aguardando decisão." />
-                  <SummaryCard label="Ausências aprovadas" value={dashboard.requestSummary.approved} helper="Ausências liberadas pela supervisão." />
-                  <SummaryCard label="Ausências rejeitadas" value={dashboard.requestSummary.rejected} helper="Solicitações recusadas com justificativa." />
-                </section>
-                {dashboard.isLoading ? (
-                  <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center font-semibold text-[var(--color-text-muted)]" aria-live="polite">
-                    Carregando solicitações da equipe...
-                  </p>
-                ) : (
-                  <SupervisorRequestsTable
-                    requests={dashboard.requests}
-                    isMutating={dashboard.isMutating}
-                    onApprove={(request) => void dashboard.approveTimeOff(request)}
-                    onReject={(request) => {
-                      setRejectionError(null)
-                      setRejectionTarget({ type: 'time-off', item: request })
-                    }}
-                  />
-                )}
-              </>
-            )}
-
             {activeView === 'history' && <HistoryView entries={dashboard.entries} />}
             {activeView === 'profile' && <SupervisorProfileView profile={supervisorProfile} onSave={updateSupervisorProfile} onStartTour={() => { changeActiveView('entries'); startTour() }} />}
-            {activeView === 'announcements' && <AvisosPage embedded />}
             </div>
           </div>
         </main>
@@ -674,7 +634,7 @@ export function SupervisorPage() {
         entry={rejectionTarget?.item ?? null}
         error={rejectionError}
         isSubmitting={dashboard.isMutating}
-        title={rejectionTarget?.type === 'time-off' ? 'Rejeitar solicitação de ausência' : 'Rejeitar apontamento'}
+        title="Rejeitar apontamento"
         description={rejectionDescription}
         onClose={() => setRejectionTarget(null)}
         onConfirm={(reason) => void rejectTarget(reason)}

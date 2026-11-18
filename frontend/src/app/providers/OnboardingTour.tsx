@@ -5,8 +5,7 @@ import { useSession } from '../../features/session/useSession'
 import { TourContext } from './tourContext'
 
 const collaboratorSteps: Step[] = [
-  { target: '.tour-menu', title: 'Navegação principal', content: 'Use este menu para acessar o calendário, seus apontamentos, ausências, avisos e perfil.', placement: 'right' },
-  { target: '.tour-avisos', title: 'Quadro de Avisos', content: 'Consulte comunicados da Diretoria, do RH e da supervisão sobre a operação e o fechamento do mês.', placement: 'right' },
+  { target: '.tour-menu', title: 'Navegação principal', content: 'Use este menu para acessar o calendário, seus apontamentos e seu perfil.', placement: 'right' },
   { target: '.tour-calendario', title: 'Seu calendário', content: 'Visualize o mês e interaja com cada dia para consultar lançamentos ou iniciar um novo apontamento.', placement: 'bottom' },
   { target: '.tour-btn-apontar', title: 'Novo apontamento', content: 'Acesse o formulário para registrar suas horas, projeto, atividade e detalhamento.', placement: 'bottom' },
 ]
