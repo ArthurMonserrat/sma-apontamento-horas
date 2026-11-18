@@ -477,7 +477,7 @@ export function SupervisorPage() {
           <BrandMark variant="compact" />
           <div className="hidden min-w-0 sm:block">
             <p className="ui-eyebrow text-xs font-bold uppercase tracking-[0.2em]">Área do supervisor</p>
-            <p className="truncate text-sm text-[var(--color-text-muted)]">Validação de apontamentos e solicitações da equipe</p>
+            <p className="truncate text-sm text-[var(--color-text-muted)]">Validação de apontamentos da equipe</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
