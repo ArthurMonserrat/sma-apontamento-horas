@@ -14,7 +14,6 @@ import monthlyCalendarSource from '../features/calendar/MonthlyCalendar.tsx?raw'
 import summaryCardSource from '../features/collaborator/SummaryCard.tsx?raw'
 import timeEntryHistorySource from '../features/history/TimeEntryHistory.tsx?raw'
 import entryRevisionBadgeSource from '../features/time-entries/EntryRevisionBadge.tsx?raw'
-import timeOffRequestListSource from '../features/time-off/TimeOffRequestList.tsx?raw'
 import workloadHistorySource from '../features/workloads/WorkloadHistory.tsx?raw'
 
 const hex = (value: string) => `#${value}`
@@ -252,7 +251,7 @@ describe('tokens institucionais e contraste', () => {
 
   it('faz todos os consumidores funcionais reutilizarem o badge semântico', () => {
     expect(statusBadgeSource).toContain('data-status-tone')
-    for (const source of [dayDetailsSource, timeEntryHistorySource, entryRevisionBadgeSource, timeOffRequestListSource, workloadHistorySource]) {
+    for (const source of [dayDetailsSource, timeEntryHistorySource, entryRevisionBadgeSource, workloadHistorySource]) {
       expect(source).toContain('<StatusBadge')
     }
   })

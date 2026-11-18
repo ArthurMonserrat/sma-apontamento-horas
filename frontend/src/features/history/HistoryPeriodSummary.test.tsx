@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { PeriodSummary } from '../calendar/types'
-import type { TimeOffRequest } from '../time-off/types'
 import { HistoryPeriodSummary } from './HistoryPeriodSummary'
 
 const summary: PeriodSummary = {
@@ -10,22 +9,17 @@ const summary: PeriodSummary = {
   realBalanceMinutes: -60, hasFutureDates: true, days: [],
 }
 
-const timeOff: TimeOffRequest = {
-  id: 'off-1', collaboratorId: 'collaborator-1', date: '2026-07-30', reason: 'Compensação', status: 'APPROVED',
-  assignmentSnapshot: null, createdAt: '2026-07-20T12:00:00.000Z', updatedAt: '2026-07-20T12:00:00.000Z',
-}
-
 describe('resumo do período no histórico', () => {
-  it('mostra somente saldo real, informa o corte futuro e preserva eventos sem apontamento', () => {
+  it('mostra somente saldo real, informa o corte futuro e preserva eventos administrativos', () => {
     const markup = renderToStaticMarkup(<HistoryPeriodSummary summary={summary} events={[{
       id: 'holiday-1', collaboratorId: 'collaborator-1', type: 'HOLIDAY', startDate: '2026-07-09', endDate: '2026-07-09',
       title: 'Feriado corporativo', source: 'DEMO', createdAt: '2026-07-01T12:00:00.000Z',
-    }]} timeOffRequests={[timeOff]} />)
+    }]} />)
     expect(markup).toContain('Saldo real do período')
     expect(markup).toContain('-01:00')
     expect(markup).not.toContain('Projeção futura')
     expect(markup).toContain('Datas futuras não são consideradas no saldo real.')
     expect(markup).toContain('Feriado corporativo')
-    expect(markup).toContain('Ausência aprovada')
+    expect(markup).not.toContain('Ausência')
   })
 })

@@ -41,7 +41,7 @@ export function TimeEntryHistory() {
       {history.feedback && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">{history.feedback}</p>}
       {history.error && <div role="alert" className="ui-alert-danger rounded-xl p-4 text-sm"><p>{history.error}</p><button type="button" onClick={() => void history.reload()} className="mt-2 font-bold underline">Tentar novamente</button></div>}
       {history.isLoading && <p aria-live="polite" className="rounded-2xl ui-surface p-8 text-center font-semibold ui-text-muted">Carregando histórico…</p>}
-      {!history.isLoading && history.periodSummary && <HistoryPeriodSummary summary={history.periodSummary} events={history.periodEvents} timeOffRequests={history.periodTimeOffRequests} />}
+      {!history.isLoading && history.periodSummary && <HistoryPeriodSummary summary={history.periodSummary} events={history.periodEvents} />}
       {!history.isLoading && !history.error && history.rows.length === 0 && <div className="rounded-2xl border border-dashed ui-border ui-surface p-10 text-center"><p className="font-bold ui-heading">Nenhum apontamento encontrado.</p><p className="mt-2 text-sm ui-text-subtle">Ajuste os filtros ou registre um novo apontamento.</p></div>}
       {!history.isLoading && history.rows.length > 0 && (
         <div className="space-y-4">
@@ -76,7 +76,7 @@ export function TimeEntryHistory() {
                       <div><dt className="font-bold ui-text-subtle">Situação da jornada</dt><dd>{getCalendarVisualState(row.summary).label}</dd></div>
                       <div><dt className="font-bold ui-text-subtle">Saldo do dia</dt><dd>{formatSignedMinutes(row.summary.balanceMinutes)}</dd></div>
                     </dl>
-                    {(row.events.length > 0 || row.timeOffRequests.length > 0) && <p className="mt-3 text-sm ui-text-muted"><strong>Eventos do dia:</strong> {[...row.events.map((event) => event.title), ...row.timeOffRequests.map((request) => `Folga ${request.status.toLocaleLowerCase('pt-BR')}`)].join(' · ')}</p>}
+                    {row.events.length > 0 && <p className="mt-3 text-sm ui-text-muted"><strong>Eventos do dia:</strong> {row.events.map((event) => event.title).join(' · ')}</p>}
                     <p className="mt-4 text-sm leading-6 ui-text">{entry.details}</p>
                     {approval?.correctionReason && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"><strong>Motivo da correção:</strong> {approval.correctionReason}</p>}
                     {approval?.deficitJustification && <p className="mt-3 text-sm ui-text-muted"><strong>Justificativa de aprovação com déficit:</strong> {approval.deficitJustification}</p>}

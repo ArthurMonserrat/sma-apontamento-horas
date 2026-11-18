@@ -380,7 +380,6 @@ export class SupabaseTimeEntryService implements TimeEntryService {
       today: date,
       entries: await this.listByDate(collaboratorId, date),
       events: [],
-      timeOffRequests: [],
       workloadVersions,
     })
   }

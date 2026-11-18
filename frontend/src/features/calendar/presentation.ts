@@ -7,7 +7,6 @@ export const calendarStatePresentation: Record<CalendarVisualState, { label: str
   COMPLETE: { label: 'Jornada atingida', marker: '✓', tone: 'complete' },
   EXCEEDED: { label: 'Jornada excedida', marker: '+', tone: 'exceeded' },
   VACATION: { label: 'Férias', marker: '▣', tone: 'vacation' },
-  TIME_OFF: { label: 'Folga', marker: '↺', tone: 'time-off' },
   MEDICAL_LEAVE: { label: 'Afastamento', marker: '✚', tone: 'medical-leave' },
   HOLIDAY: { label: 'Feriado', marker: '◆', tone: 'holiday' },
 }
