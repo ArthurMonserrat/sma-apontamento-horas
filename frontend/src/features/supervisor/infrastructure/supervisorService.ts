@@ -1,15 +1,11 @@
-import type { TimeOffRequest } from '../../time-off/types'
 import type { TimeEntryStatus } from '../../time-entries/types'
 import type {
   SupervisorDashboardSummary,
   SupervisorPendingEntry,
-  SupervisorRequestSummary,
-  SupervisorTimeOffRequest,
 } from '../types'
-import { demoAssignmentSnapshot, demoCollaborator } from '../../../demo/fixtures/demoData'
+import { demoCollaborator } from '../../../demo/fixtures/demoData'
 import { TIME_ENTRY_STORAGE_KEY } from '../../time-entries'
 import { normalizeTimeEntry, type TimeEntryStorageV4 } from '../../time-entries'
-import { TIME_OFF_STORAGE_KEY, corporateTimeOffService, timeOffService, type TimeOffStorage } from '../../time-off/infrastructure/timeOffService'
 import { createBrowserStorage, type StorageLike } from '../../../shared/infrastructure/storage/browserStorage'
 import { getDaysUntilMonthClosing } from '../../../shared/lib/date'
 import { getCorporateDataClient, isCorporateDataActive } from '../../corporate/corporateData'
@@ -47,11 +43,7 @@ export interface SupervisorService {
   approveEscalated(entryId: string, directorId: string): Promise<SupervisorPendingEntry>
   reject(entryId: string, supervisorId: string, reason: string): Promise<SupervisorPendingEntry>
   rejectMany(entryIds: string[], supervisorId: string, reason: string): Promise<SupervisorPendingEntry[]>
-  listTimeOffRequests(supervisorId: string): Promise<SupervisorTimeOffRequest[]>
-  approveTimeOffRequest(requestId: string, supervisorId: string): Promise<SupervisorTimeOffRequest>
-  rejectTimeOffRequest(requestId: string, supervisorId: string, reason: string): Promise<SupervisorTimeOffRequest>
   getSummary(): Promise<SupervisorDashboardSummary>
-  getRequestSummary(supervisorId: string): Promise<SupervisorRequestSummary>
 }
 
 const TEAM_MEMBERS: readonly TeamMember[] = [
@@ -64,19 +56,6 @@ const TEAM_MEMBERS: readonly TeamMember[] = [
 const COLLABORATOR_NAME_BY_ID = new Map(TEAM_MEMBERS.map((member) => [member.id, member.name]))
 
 const SUPERVISOR_SESSION_ID = 'demo-supervisor-001'
-const COMPATIBLE_SUPERVISOR_IDS = new Set([SUPERVISOR_SESSION_ID, demoAssignmentSnapshot.supervisorId])
-const timeOffStatusFromStored = {
-  Pendente: 'PENDING',
-  Aprovado: 'APPROVED',
-  Rejeitado: 'REJECTED',
-  Cancelado: 'CANCELLED',
-} as const
-const timeOffStatusToStored = {
-  PENDING: 'Pendente',
-  APPROVED: 'Aprovado',
-  REJECTED: 'Rejeitado',
-  CANCELLED: 'Cancelado',
-} as const
 
 export const MOCK_TEAM_ENTRIES: readonly Omit<SupervisorPendingEntry, 'status'>[] = [
   { id: 'supervisor-demo-entry-001', collaboratorId: demoCollaborator.id, collaboratorName: demoCollaborator.name, entryDate: '2026-07-21', projectCode: 'SM&A-ENG-142', durationMinutes: 480, activityName: 'Elaboração de projeto' },
@@ -96,13 +75,6 @@ const DEFAULT_APPROVALS: Record<string, StoredApproval> = {
   'supervisor-demo-entry-003': { status: 'REJECTED', rejectionReason: 'Detalhar melhor a verificação realizada.', decidedAt: '2026-07-23T12:00:00.000Z', decidedBy: 'demo-supervisor-001' },
   'supervisor-demo-entry-006': { status: 'APPROVED', decidedAt: '2026-07-25T12:00:00.000Z', decidedBy: 'demo-supervisor-001' },
 }
-
-export const SEED_TIME_OFF_REQUESTS: readonly TimeOffRequest[] = [
-  { id: 'supervisor-demo-time-off-001', collaboratorId: demoCollaborator.id, date: '2026-08-05', reason: 'Compromisso familiar previamente agendado.', status: 'PENDING', assignmentSnapshot: demoAssignmentSnapshot, createdAt: '2026-07-29T12:00:00.000Z', updatedAt: '2026-07-29T12:00:00.000Z' },
-  { id: 'supervisor-demo-time-off-002', collaboratorId: 'demo-collaborator-002', date: '2026-08-07', reason: 'Banco de horas para resolver documentação pessoal.', status: 'PENDING', assignmentSnapshot: demoAssignmentSnapshot, createdAt: '2026-07-30T12:00:00.000Z', updatedAt: '2026-07-30T12:00:00.000Z' },
-  { id: 'supervisor-demo-time-off-003', collaboratorId: 'demo-collaborator-003', date: '2026-08-10', reason: 'Consulta médica.', status: 'APPROVED', assignmentSnapshot: demoAssignmentSnapshot, createdAt: '2026-07-26T12:00:00.000Z', updatedAt: '2026-07-27T12:00:00.000Z', decidedAt: '2026-07-27T12:00:00.000Z' },
-  { id: 'supervisor-demo-time-off-004', collaboratorId: 'demo-collaborator-004', date: '2026-08-12', reason: 'Viagem curta.', status: 'REJECTED', assignmentSnapshot: demoAssignmentSnapshot, createdAt: '2026-07-25T12:00:00.000Z', updatedAt: '2026-07-26T12:00:00.000Z', decidedAt: '2026-07-26T12:00:00.000Z', rejectionReason: 'Conflito com entrega crítica da equipe.' },
-]
 
 function emptyStorage(): SupervisorApprovalStorage {
   return { version: 1, approvalsByEntryId: {} }
@@ -129,18 +101,15 @@ export class LocalStorageSupervisorService implements SupervisorService {
   private readonly storage: StorageLike
   private readonly now: () => string
   private readonly seedEntries: readonly Omit<SupervisorPendingEntry, 'status'>[]
-  private readonly seedTimeOffRequests: readonly TimeOffRequest[]
 
   constructor(
     storage: StorageLike,
     now = () => new Date().toISOString(),
     seedEntries: readonly Omit<SupervisorPendingEntry, 'status'>[] = [],
-    seedTimeOffRequests: readonly TimeOffRequest[] = [],
   ) {
     this.storage = storage
     this.now = now
     this.seedEntries = seedEntries
-    this.seedTimeOffRequests = seedTimeOffRequests
   }
 
   private read(): SupervisorApprovalStorage {
@@ -204,81 +173,6 @@ export class LocalStorageSupervisorService implements SupervisorService {
     } catch {
       return { version: 4, entriesByCollaborator: {} }
     }
-  }
-
-  private readTimeOffStorage(): TimeOffStorage {
-    try {
-      const raw = this.storage.getItem(TIME_OFF_STORAGE_KEY)
-      if (!raw) return { version: 1, requests: [] }
-      const parsed = JSON.parse(raw) as Partial<TimeOffStorage> | Array<Record<string, unknown>>
-      if (Array.isArray(parsed)) {
-        return {
-          version: 1,
-          requests: parsed.flatMap((item): TimeOffRequest[] => {
-            const status = timeOffStatusFromStored[item.status as keyof typeof timeOffStatusFromStored]
-            if (typeof item.id !== 'string'
-              || typeof item.colaborador !== 'string'
-              || typeof item.tipo !== 'string'
-              || typeof item.dataInicio !== 'string'
-              || typeof item.dataRetorno !== 'string'
-              || typeof item.justificativa !== 'string'
-              || !status) return []
-            return [{
-              id: item.id,
-              collaboratorId: typeof item.colaboradorId === 'string' ? item.colaboradorId : item.colaborador,
-              collaboratorName: item.colaborador,
-              absenceType: item.tipo as TimeOffRequest['absenceType'],
-              startDate: item.dataInicio,
-              endDate: item.dataRetorno,
-              date: item.dataInicio,
-              reason: item.justificativa,
-              status,
-              assignmentSnapshot: item.assignmentSnapshot as TimeOffRequest['assignmentSnapshot'],
-              createdAt: typeof item.createdAt === 'string' ? item.createdAt : this.now(),
-              updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : this.now(),
-              decidedAt: typeof item.decidedAt === 'string' ? item.decidedAt : undefined,
-              rejectionReason: typeof item.rejectionReason === 'string' ? item.rejectionReason : undefined,
-              cancellationReason: typeof item.cancellationReason === 'string' ? item.cancellationReason : undefined,
-              cancelledAt: typeof item.cancelledAt === 'string' ? item.cancelledAt : undefined,
-            }]
-          }),
-        }
-      }
-      if (parsed.version !== 1 || !Array.isArray(parsed.requests)) return { version: 1, requests: [] }
-      return { version: 1, requests: parsed.requests as TimeOffRequest[] }
-    } catch {
-      return { version: 1, requests: [] }
-    }
-  }
-
-  private writeTimeOffStorage(data: TimeOffStorage) {
-    this.storage.setItem(TIME_OFF_STORAGE_KEY, JSON.stringify(data.requests.map((request) => ({
-      id: request.id,
-      colaborador: request.collaboratorName ?? COLLABORATOR_NAME_BY_ID.get(request.collaboratorId) ?? request.collaboratorId,
-      colaboradorId: request.collaboratorId,
-      tipo: request.absenceType ?? 'Folga',
-      dataInicio: request.startDate ?? request.date,
-      dataRetorno: request.endDate ?? request.date,
-      justificativa: request.reason,
-      status: timeOffStatusToStored[request.status],
-      assignmentSnapshot: request.assignmentSnapshot,
-      createdAt: request.createdAt,
-      updatedAt: request.updatedAt,
-      decidedAt: request.decidedAt,
-      rejectionReason: request.rejectionReason,
-      cancellationReason: request.cancellationReason,
-      cancelledAt: request.cancelledAt,
-    }))))
-  }
-
-  private ensureSeedTimeOffRequests() {
-    const storage = this.readTimeOffStorage()
-    const existingIds = new Set(storage.requests.map((request) => request.id))
-    const missing = this.seedTimeOffRequests.filter((request) => !existingIds.has(request.id))
-    if (missing.length === 0) return storage
-    const nextStorage = { ...storage, requests: [...storage.requests, ...missing] }
-    this.writeTimeOffStorage(nextStorage)
-    return nextStorage
   }
 
   private async update(entryId: string, approval: StoredApproval) {
@@ -383,43 +277,6 @@ export class LocalStorageSupervisorService implements SupervisorService {
     return Promise.all(entryIds.map((entryId) => this.reject(entryId, supervisorId, reason)))
   }
 
-  async listTimeOffRequests(supervisorId: string) {
-    const storage = this.ensureSeedTimeOffRequests()
-    const collaborators = new Map(TEAM_MEMBERS.map((member) => [member.id, member.name]))
-    return storage.requests
-      .filter((request) => !request.assignmentSnapshot || request.assignmentSnapshot.supervisorId === supervisorId || (supervisorId === SUPERVISOR_SESSION_ID && COMPATIBLE_SUPERVISOR_IDS.has(request.assignmentSnapshot.supervisorId)))
-      .map<SupervisorTimeOffRequest>((request) => ({
-        id: request.id,
-        collaboratorId: request.collaboratorId,
-        collaboratorName: request.collaboratorName ?? collaborators.get(request.collaboratorId) ?? request.collaboratorId,
-        absenceType: request.absenceType ?? 'Folga',
-        startDate: request.startDate ?? request.date,
-        endDate: request.endDate ?? request.date,
-        date: request.date,
-        reason: request.reason,
-        status: request.status,
-        rejectionReason: request.rejectionReason,
-        decidedAt: request.decidedAt,
-      }))
-      .sort((left, right) => right.startDate.localeCompare(left.startDate) || left.collaboratorName.localeCompare(right.collaboratorName))
-  }
-
-  async approveTimeOffRequest(requestId: string, supervisorId: string) {
-    const effectiveSupervisorId = this.readTimeOffStorage().requests.find((request) => request.id === requestId)?.assignmentSnapshot?.supervisorId ?? supervisorId
-    await timeOffService.approve(effectiveSupervisorId, requestId)
-    const updated = (await this.listTimeOffRequests(supervisorId)).find((request) => request.id === requestId)
-    if (!updated) throw new Error('Solicitação de folga não encontrada.')
-    return updated
-  }
-
-  async rejectTimeOffRequest(requestId: string, supervisorId: string, reason: string) {
-    const effectiveSupervisorId = this.readTimeOffStorage().requests.find((request) => request.id === requestId)?.assignmentSnapshot?.supervisorId ?? supervisorId
-    await timeOffService.reject(effectiveSupervisorId, requestId, reason)
-    const updated = (await this.listTimeOffRequests(supervisorId)).find((request) => request.id === requestId)
-    if (!updated) throw new Error('Solicitação de folga não encontrada.')
-    return updated
-  }
-
   async getSummary() {
     const entries = await this.listEntries()
     return entries.reduce<SupervisorDashboardSummary>(
@@ -432,24 +289,12 @@ export class LocalStorageSupervisorService implements SupervisorService {
     )
   }
 
-  async getRequestSummary(supervisorId: string) {
-    const requests = await this.listTimeOffRequests(supervisorId)
-    return requests.reduce<SupervisorRequestSummary>(
-      (summary, request) => ({
-        pending: summary.pending + (request.status === 'PENDING' ? 1 : 0),
-        approved: summary.approved + (request.status === 'APPROVED' ? 1 : 0),
-        rejected: summary.rejected + (request.status === 'REJECTED' ? 1 : 0),
-      }),
-      { pending: 0, approved: 0, rejected: 0 },
-    )
-  }
 }
 
 export const localSupervisorService = new LocalStorageSupervisorService(createBrowserStorage())
 
 const corporateSupervisorService = new SupabaseSupervisorService({
   getClient: getCorporateDataClient,
-  timeOff: corporateTimeOffService,
 })
 
 /** Login Microsoft: aprovações no banco de dados. Demonstração e testes: armazenamento local. */
@@ -474,11 +319,7 @@ export class RuntimeSupervisorService implements SupervisorService {
   approveEscalated(entryId: string, directorId: string) { return this.active().approveEscalated(entryId, directorId) }
   reject(entryId: string, supervisorId: string, reason: string) { return this.active().reject(entryId, supervisorId, reason) }
   rejectMany(entryIds: string[], supervisorId: string, reason: string) { return this.active().rejectMany(entryIds, supervisorId, reason) }
-  listTimeOffRequests(supervisorId: string) { return this.active().listTimeOffRequests(supervisorId) }
-  approveTimeOffRequest(requestId: string, supervisorId: string) { return this.active().approveTimeOffRequest(requestId, supervisorId) }
-  rejectTimeOffRequest(requestId: string, supervisorId: string, reason: string) { return this.active().rejectTimeOffRequest(requestId, supervisorId, reason) }
   getSummary() { return this.active().getSummary() }
-  getRequestSummary(supervisorId: string) { return this.active().getRequestSummary(supervisorId) }
 }
 
 export const supervisorService: SupervisorService = new RuntimeSupervisorService(localSupervisorService, corporateSupervisorService)

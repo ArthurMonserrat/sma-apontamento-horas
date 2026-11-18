@@ -106,4 +106,12 @@ describe('SupabaseSupervisorService', () => {
     await expect(service.rejectTimeOffRequest('a1', SUP, ' ')).rejects.toThrow('Informe o motivo da rejeição da folga.')
     expect(await service.rejectTimeOffRequest('a1', SUP, 'Conflito')).toMatchObject({ status: 'REJECTED', rejectionReason: 'Conflito' })
   })
+
+  it('não expõe operações de solicitações de ausência', () => {
+    const service = new SupabaseSupervisorService({ from: vi.fn(), rpc: vi.fn() } as never)
+
+    expect('listTimeOffRequests' in service).toBe(false)
+    expect('approveTimeOffRequest' in service).toBe(false)
+    expect('rejectTimeOffRequest' in service).toBe(false)
+  })
 })
