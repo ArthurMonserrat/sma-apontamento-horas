@@ -58,8 +58,8 @@ const validData: CreateTimeEntryData = {
   details: 'Teste de persistência',
 }
 
-describe('dados opcionais de LD e contratada', () => {
-  it('preserva contratada, LD e detalhamento vazio na criação, recarga, edição e duplicação', async () => {
+describe('contratada e códigos livres', () => {
+  it('preserva a contratada e deixa de propagar metadados de LD nas duplicações', async () => {
     const storage = new MemoryStorage()
     let id = 0
     const service = buildService(storage, { createId: () => `ld-${++id}` })
@@ -70,15 +70,15 @@ describe('dados opcionais de LD e contratada', () => {
     const edited = await service.update(collaboratorId, entry.id, 1, { ...entry, disciplineCode: 'G' }, 'Ajustar disciplina')
     const copy = await service.duplicate(collaboratorId, entry.id, edited.version, {})
     expect(copy.contractorNumber).toBe('ab-00/1  02.3')
-    expect(copy.ldDocument).toEqual(ldDocument)
+    expect(copy.ldDocument).toBeUndefined()
     expect(copy.details).toBe('')
-    expect(copy.disciplineCode).toBe('G')
+    expect(copy.disciplineCode).toBeUndefined()
     expect((await buildService(storage).listByDate(collaboratorId, validData.entryDate))).toHaveLength(2)
   })
 
-  it('rejeita tipo fora do catálogo sem origem LD e contratada longa', async () => {
+  it('aceita campos descontinuados legados, mas rejeita contratada longa', async () => {
     const service = buildService(new MemoryStorage())
-    await expect(service.create(collaboratorId, { ...validData, documentTypeCode: 'ZZ' })).rejects.toThrow()
+    await expect(service.create(collaboratorId, { ...validData, documentTypeCode: 'ZZ' })).resolves.toMatchObject({ projectCode: validData.projectCode })
     await expect(service.create(collaboratorId, { ...validData, contractorNumber: 'a'.repeat(161) })).rejects.toThrow()
   })
 })
@@ -579,11 +579,11 @@ describe('comandos e consultas de apontamento', () => {
     let nextId = 0
     const service = buildService(storage, { createId: () => `entry-${++nextId}` })
     await service.create(collaboratorId, validData)
-    await service.create(collaboratorId, { ...validData, entryDate: '2026-07-14', clientName: 'Cliente Energia Beta', projectCode: 'BET-001' })
+    await service.create(collaboratorId, { ...validData, entryDate: '2026-07-14', contractorNumber: 'BET-001', projectCode: 'BET-001' })
     await service.create(collaboratorId, { ...validData, entryDate: '2026-07-15', projectCode: 'SMA-003' })
 
     const firstPage = await service.list({ collaboratorId, startDate: '2026-07-01', endDate: '2026-07-31', pageSize: 2 })
-    const filtered = await service.list({ collaboratorId, startDate: '2026-07-01', endDate: '2026-07-31', pageSize: 10, filters: { clientName: 'energia' } })
+    const filtered = await service.list({ collaboratorId, startDate: '2026-07-01', endDate: '2026-07-31', pageSize: 10, filters: { contractorNumber: 'bet' } })
 
     expect(firstPage.items).toHaveLength(2)
     expect(firstPage.nextCursor).toBe('2')

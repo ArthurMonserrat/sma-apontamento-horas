@@ -1,8 +1,6 @@
 import { demoActivities } from '../../demo/fixtures/demoData'
 import type { TimeEntryValidationErrors } from './types'
 import type { TimeEntryFormValues } from './useTimeEntryForm'
-import { disciplines, documentTypes, isManualDocumentType } from './documentCatalog'
-import { MAX_CLIENT_NAME_LENGTH } from '../../config/business'
 
 export const fieldClassName = 'mt-2 w-full ui-field rounded-xl px-3 py-2.5 text-base ui-text shadow-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-[var(--color-surface-subtle)]'
 
@@ -34,9 +32,6 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
             <input id="entry-end-date" name="endDate" type="date" min={values.startDate} max={maxDate} value={values.endDate} onChange={(event) => onChange('endDate', event.target.value)} className={fieldClassName} disabled={!allowBatchMode} />
           </div>
         </div>
-        <p className="mt-2 text-xs ui-text-subtle">
-          Se a data final for diferente, o sistema criará automaticamente lançamentos individuais para cada dia do período.
-        </p>
         <label className={`mt-3 inline-flex items-center gap-2 text-sm font-semibold ui-text ${allowBatchMode ? '' : 'opacity-60'}`}>
           <input type="checkbox" checked={values.weekdaysOnly} onChange={(event) => onChange('weekdaysOnly', event.target.checked)} disabled={!allowBatchMode} className="h-4 w-4 rounded border-[var(--color-border)] bg-[var(--color-surface)] accent-[var(--color-primary)]" />
           Somente dias úteis
@@ -44,16 +39,8 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
       </div>
 
       <div>
-        <label htmlFor="client" className="text-sm font-bold ui-text">Cliente</label>
-        <input id="client" name="clientName" type="text" maxLength={MAX_CLIENT_NAME_LENGTH} value={values.clientName} readOnly={Boolean(values.ldDocument)} onChange={(event) => onChange('clientName', event.target.value)} autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.clientName)} aria-describedby={values.ldDocument ? 'client-help client-error' : errors.clientName ? 'client-error' : undefined} />
-        {values.ldDocument && <p id="client-help" className="mt-1.5 text-xs ui-text-subtle">Identificado automaticamente pela LD.</p>}
-        <FieldError id="client-error" message={errors.clientName} />
-      </div>
-
-      <div>
         <label htmlFor="contractor-number" className="text-sm font-bold ui-text">Número da contratada</label>
-        <input id="contractor-number" name="contractorNumber" maxLength={160} value={values.contractorNumber ?? ''} onChange={(event) => onChange('contractorNumber', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.contractorNumber)} aria-describedby="contractor-number-help contractor-number-error" />
-        <p id="contractor-number-help" className="mt-1.5 text-xs ui-text-subtle">Opcional. Preencha manualmente ou selecione um documento da LD.</p>
+        <input id="contractor-number" name="contractorNumber" maxLength={80} value={values.contractorNumber} onChange={(event) => onChange('contractorNumber', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.contractorNumber)} aria-describedby={errors.contractorNumber ? 'contractor-number-error' : undefined} />
         <FieldError id="contractor-number-error" message={errors.contractorNumber} />
       </div>
 
@@ -67,22 +54,15 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
       </div>
 
       <div>
-        <label htmlFor="discipline" className="text-sm font-bold ui-text">Disciplina</label>
-        <select id="discipline" name="disciplineCode" value={values.disciplineCode} onChange={(event) => onChange('disciplineCode', event.target.value as TimeEntryFormValues['disciplineCode'])} className={fieldClassName} aria-invalid={Boolean(errors.disciplineCode)} aria-describedby={errors.disciplineCode ? 'discipline-error' : undefined}>
-          <option value="">Selecione uma disciplina</option>
-          {disciplines.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
-        </select>
-        <FieldError id="discipline-error" message={errors.disciplineCode} />
+        <label htmlFor="primary-code" className="text-sm font-bold ui-text">Código primário</label>
+        <input id="primary-code" name="primaryCode" maxLength={80} value={values.primaryCode} onChange={(event) => onChange('primaryCode', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.primaryCode)} aria-describedby={errors.primaryCode ? 'primary-code-error' : undefined} />
+        <FieldError id="primary-code-error" message={errors.primaryCode} />
       </div>
 
       <div>
-        <label htmlFor="document-type" className="text-sm font-bold ui-text">Tipo de documento</label>
-        <select id="document-type" name="documentTypeCode" value={values.documentTypeCode} onChange={(event) => onChange('documentTypeCode', event.target.value as TimeEntryFormValues['documentTypeCode'])} className={fieldClassName} aria-invalid={Boolean(errors.documentTypeCode)} aria-describedby={errors.documentTypeCode ? 'document-type-error' : undefined}>
-          <option value="">Selecione um tipo</option>
-          {values.ldDocument && !isManualDocumentType(values.ldDocument.documentTypeCode) && <option value={values.ldDocument.documentTypeCode}>{values.ldDocument.documentTypeCode} — Importado da LD</option>}
-          {documentTypes.map(([value, label]) => <option key={value} value={value}>{value} — {label}</option>)}
-        </select>
-        <FieldError id="document-type-error" message={errors.documentTypeCode} />
+        <label htmlFor="secondary-code" className="text-sm font-bold ui-text">Código secundário</label>
+        <input id="secondary-code" name="secondaryCode" maxLength={80} value={values.secondaryCode} onChange={(event) => onChange('secondaryCode', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.secondaryCode)} aria-describedby={errors.secondaryCode ? 'secondary-code-error' : undefined} />
+        <FieldError id="secondary-code-error" message={errors.secondaryCode} />
       </div>
     </div>
   )

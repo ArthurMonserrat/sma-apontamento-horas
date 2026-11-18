@@ -38,6 +38,8 @@ type DatabaseTimeEntry = {
   client_name: string | null
   project_code: string
   contractor_number: string | null
+  primary_code: string | null
+  secondary_code: string | null
   ld_document: TimeEntry['ldDocument'] | null
   activity_id: string | null
   discipline_code: TimeEntry['disciplineCode'] | null
@@ -74,13 +76,11 @@ function mapRow(row: DatabaseTimeEntry): TimeEntry {
     id: row.id,
     collaboratorId: row.profile_id,
     entryDate: row.date,
-    clientName: row.client_name ?? '',
     projectCode: row.project_code,
     contractorNumber: row.contractor_number ?? undefined,
-    ldDocument: row.ld_document ?? undefined,
+    primaryCode: row.primary_code ?? undefined,
+    secondaryCode: row.secondary_code ?? undefined,
     activityId: row.activity_id ?? '',
-    disciplineCode: row.discipline_code ?? '—',
-    documentTypeCode: row.document_type_code ?? '—',
     durationMinutes: row.duration_minutes,
     details: row.description ?? '',
     assignmentSnapshot: row.assignment_snapshot,
@@ -100,11 +100,10 @@ function mapRow(row: DatabaseTimeEntry): TimeEntry {
 
 function filters(query: SupabaseQuery, values: TimeEntryFilters | undefined) {
   let next = query
-  if (values?.clientName) next = next.eq('client_name', values.clientName)
-  if (values?.projectCode) next = next.eq('project_code', values.projectCode)
+  if (values?.contractorNumber) next = next.eq('contractor_number', values.contractorNumber)
+  if (values?.primaryCode) next = next.eq('primary_code', values.primaryCode)
+  if (values?.secondaryCode) next = next.eq('secondary_code', values.secondaryCode)
   if (values?.activityId) next = next.eq('activity_id', values.activityId)
-  if (values?.disciplineCode) next = next.eq('discipline_code', values.disciplineCode)
-  if (values?.documentTypeCode) next = next.eq('document_type_code', values.documentTypeCode)
   if (values?.status === 'ACTIVE') next = next.neq('status', 'cancelled')
   else if (values?.status) next = next.eq('status', statusToDb[values.status])
   return next
@@ -151,13 +150,15 @@ export class SupabaseTimeEntryService implements TimeEntryService {
       start_time: null,
       end_time: null,
       duration_minutes: data.durationMinutes,
-      client_name: data.clientName.trim(),
-      project_code: data.projectCode.trim(),
-      contractor_number: data.contractorNumber?.trim() || null,
-      ld_document: data.ldDocument ?? null,
+      client_name: null,
+      project_code: (data.contractorNumber ?? data.projectCode).trim(),
+      contractor_number: (data.contractorNumber ?? data.projectCode).trim(),
+      primary_code: data.primaryCode?.trim() || null,
+      secondary_code: data.secondaryCode?.trim() || null,
+      ld_document: null,
       activity_id: data.activityId,
-      discipline_code: data.disciplineCode,
-      document_type_code: data.documentTypeCode,
+      discipline_code: null,
+      document_type_code: null,
       description: data.details.trim() || null,
       assignment_snapshot: null,
       status: 'pending',
@@ -185,14 +186,11 @@ export class SupabaseTimeEntryService implements TimeEntryService {
         expected_version: expectedVersion,
         new_date: data.entryDate,
         new_duration_minutes: data.durationMinutes,
-        new_client_name: data.clientName.trim(),
-        new_project_code: data.projectCode.trim(),
         new_activity_id: data.activityId,
-        new_discipline_code: data.disciplineCode,
-        new_document_type_code: data.documentTypeCode,
         edit_reason: editReason,
-        new_contractor_number: data.contractorNumber?.trim() || null,
-        new_ld_document: data.ldDocument ?? null,
+        new_contractor_number: (data.contractorNumber ?? data.projectCode).trim(),
+        new_primary_code: data.primaryCode?.trim() || null,
+        new_secondary_code: data.secondaryCode?.trim() || null,
         new_description: data.details.trim() || null,
       })
       dataError(result.error, 'Não foi possível reabrir o apontamento rejeitado.')
@@ -203,13 +201,11 @@ export class SupabaseTimeEntryService implements TimeEntryService {
     const result = await this.client.from('time_entries').update({
       date: data.entryDate,
       duration_minutes: data.durationMinutes,
-      client_name: data.clientName.trim(),
-      project_code: data.projectCode.trim(),
-      contractor_number: data.contractorNumber?.trim() || null,
-      ld_document: data.ldDocument ?? null,
+      project_code: (data.contractorNumber ?? data.projectCode).trim(),
+      contractor_number: (data.contractorNumber ?? data.projectCode).trim(),
+      primary_code: data.primaryCode?.trim() || null,
+      secondary_code: data.secondaryCode?.trim() || null,
       activity_id: data.activityId,
-      discipline_code: data.disciplineCode,
-      document_type_code: data.documentTypeCode,
       description: data.details.trim() || null,
       last_edit_reason: editReason,
       version: expectedVersion + 1,
@@ -224,13 +220,11 @@ export class SupabaseTimeEntryService implements TimeEntryService {
     if (!source || source.version !== expectedVersion) throw new Error('O apontamento de origem está desatualizado.')
     return this.create(collaboratorId, {
       entryDate: overrides.entryDate ?? source.entryDate,
-      clientName: overrides.clientName ?? source.clientName,
       projectCode: overrides.projectCode ?? source.projectCode,
       contractorNumber: overrides.contractorNumber ?? source.contractorNumber,
-      ldDocument: Object.hasOwn(overrides, 'ldDocument') ? overrides.ldDocument : source.ldDocument,
+      primaryCode: overrides.primaryCode ?? source.primaryCode,
+      secondaryCode: overrides.secondaryCode ?? source.secondaryCode,
       activityId: overrides.activityId ?? source.activityId,
-      disciplineCode: overrides.disciplineCode ?? source.disciplineCode,
-      documentTypeCode: overrides.documentTypeCode ?? source.documentTypeCode,
       durationMinutes: overrides.durationMinutes ?? source.durationMinutes,
       details: overrides.details ?? source.details,
     })

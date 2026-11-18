@@ -2,7 +2,6 @@ import { demoActivities } from '../../demo/fixtures/demoData'
 import type { TimeEntry } from '../time-entries/types'
 import { formatMinutes, isCountableTimeEntryStatus } from '../time-entries/domain'
 import { EntryRevisionBadge } from '../time-entries/EntryRevisionBadge'
-import { EntryDocumentDetails } from '../time-entries/EntryDocumentDetails'
 
 export function DailyEntryList({ entries }: { entries: TimeEntry[] }) {
   const activeEntries = entries.filter((entry) => isCountableTimeEntryStatus(entry.status))
@@ -30,11 +29,11 @@ export function DailyEntryList({ entries }: { entries: TimeEntry[] }) {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold ui-heading">Número da contratada: {entry.projectCode}</p>
+                      <p className="font-bold ui-heading">Número da contratada: {entry.contractorNumber ?? entry.projectCode}</p>
                       <EntryRevisionBadge version={entry.version} />
                     </div>
-                    <p className="mt-1 text-sm ui-text-subtle">{entry.clientName} · {activity?.name}</p>
-                    <EntryDocumentDetails entry={entry} />
+                    <p className="mt-1 text-sm ui-text-subtle">{activity?.name}</p>
+                    {(entry.primaryCode || entry.secondaryCode) && <p className="mt-2 text-sm ui-text-subtle">{[entry.primaryCode && `Código primário: ${entry.primaryCode}`, entry.secondaryCode && `Código secundário: ${entry.secondaryCode}`].filter(Boolean).join(' · ')}</p>}
                     <p className="mt-3 text-sm leading-6 ui-text">{entry.details}</p>
                   </div>
                   <span className="shrink-0 rounded-lg ui-surface-subtle px-3 py-2 text-sm font-extrabold ui-heading">{formatMinutes(entry.durationMinutes)}</span>

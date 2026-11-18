@@ -134,7 +134,7 @@ status="$(request_status GET "$API_URL/rest/v1/access_preapprovals?select=email"
 status="$(request_status PATCH "$API_URL/rest/v1/profiles?id=eq.$COLLAB_ID" "$COLLAB_TOKEN" '{"role":"diretor","auth_user_id":"00000000-0000-0000-0000-000000000099"}')"
 [[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'direct role/auth_user_id update unexpectedly succeeded' >&2; exit 1; }; }
 
-status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"'"$COLLAB_ID"'","date":"2026-01-07","duration_minutes":90,"client_name":"Synthetic Client","project_code":"LOCAL-RICH","contractor_number":"CONTRACT-7","activity_id":"activity-7","discipline_code":"E","document_type_code":"RN","description":"Persisted from Data API","status":"pending"}')"
+status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"'"$COLLAB_ID"'","date":"2026-01-07","duration_minutes":90,"project_code":"CONTRACT-7","contractor_number":"CONTRACT-7","primary_code":"PRIMARY-7","secondary_code":"SECONDARY-7","activity_id":"activity-7","description":"Persisted from Data API","status":"pending"}')"
 [[ "$status" =~ ^2 ]] || { echo "rich time entry insert failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
 ENTRY_ID="$(jq -er '.[0].id // .id' "$tmp_dir/response")"
 
@@ -142,7 +142,7 @@ status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVI
 [[ "$status" =~ ^2 ]] || { echo "supervisor approval RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
 [[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'approved' ]] || { echo 'approval RPC did not persist approved status' >&2; exit 1; }
 
-status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"'"$COLLAB_ID"'","date":"2026-01-08","duration_minutes":45,"client_name":"Synthetic Client","project_code":"LOCAL-REJECT","activity_id":"activity-8","discipline_code":"E","document_type_code":"RN","description":"Rejected synthetic entry","status":"pending"}')"
+status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"'"$COLLAB_ID"'","date":"2026-01-08","duration_minutes":45,"project_code":"CONTRACT-REJECT","contractor_number":"CONTRACT-REJECT","activity_id":"activity-8","description":"Rejected synthetic entry","status":"pending"}')"
 [[ "$status" =~ ^2 ]] || { echo "rejection fixture insert failed: HTTP $status" >&2; exit 1; }
 REJECT_ENTRY_ID="$(jq -er '.[0].id // .id' "$tmp_dir/response")"
 status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":1,"decision":"rejected","p_rejection_reason":"Detalhar a atividade registrada."}')"
@@ -158,7 +158,7 @@ status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$REJECT_ENTRY_
 status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$REJECT_ENTRY_ID" "$COLLAB_TOKEN" '{"status":"pending","description":"forged rework without reason"}')"
 [[ ! "$status" =~ ^2 ]] || { [[ ! -s "$tmp_dir/response" || "$(jq 'length' "$tmp_dir/response")" -eq 0 ]] || { echo 'direct rejected-entry rework unexpectedly succeeded' >&2; exit 1; }; }
 
-status="$(request_status POST "$API_URL/rest/v1/rpc/rework_time_entry" "$COLLAB_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":2,"new_date":"2026-01-09","new_duration_minutes":60,"new_client_name":"Synthetic Client","new_project_code":"LOCAL-REWORK","new_activity_id":"activity-9","new_discipline_code":"E","new_document_type_code":"RN","edit_reason":"Corrigir detalhamento rejeitado","new_contractor_number":null,"new_ld_document":null,"new_description":"Versão corrigida pelo colaborador"}')"
+status="$(request_status POST "$API_URL/rest/v1/rpc/rework_time_entry" "$COLLAB_TOKEN" '{"target_entry_id":"'"$REJECT_ENTRY_ID"'","expected_version":2,"new_date":"2026-01-09","new_duration_minutes":60,"new_contractor_number":"CONTRACT-REWORK","new_activity_id":"activity-9","edit_reason":"Corrigir detalhamento rejeitado","new_primary_code":"PRIMARY-REWORK","new_secondary_code":"SECONDARY-REWORK","new_description":"Versão corrigida pelo colaborador"}')"
 [[ "$status" =~ ^2 ]] || { echo "rework RPC failed: HTTP $status" >&2; cat "$tmp_dir/response" >&2; exit 1; }
 [[ "$(jq -r '.[0].status // .status' "$tmp_dir/response")" == 'pending' ]] || { echo 'rework RPC did not return pending status' >&2; exit 1; }
 [[ "$(jq -r '.[0].version // .version' "$tmp_dir/response")" == '3' ]] || { echo 'rework RPC did not increment version atomically' >&2; exit 1; }
@@ -192,10 +192,11 @@ status="$(request_status PATCH "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID" "
 status="$(request_status POST "$API_URL/rest/v1/rpc/decide_time_entry" "$SUPERVISOR_TOKEN" '{"target_entry_id":"'"$INACTIVE_ENTRY_ID"'","expected_version":1,"decision":"approved","p_rejection_reason":null}')"
 [[ ! "$status" =~ ^2 ]] || { echo 'inactive profile entry was approved unexpectedly' >&2; exit 1; }
 
-status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID&select=id,status,client_name,activity_id" "$COLLAB_TOKEN")"
+status="$(request_status GET "$API_URL/rest/v1/time_entries?id=eq.$ENTRY_ID&select=id,status,contractor_number,primary_code,secondary_code,activity_id" "$COLLAB_TOKEN")"
 [[ "$status" =~ ^2 ]] || { echo "collaborator persisted read failed: HTTP $status" >&2; exit 1; }
 [[ "$(jq -r '.[0].status' "$tmp_dir/response")" == 'approved' ]] || { echo 'collaborator did not see persisted approval' >&2; exit 1; }
-[[ "$(jq -r '.[0].client_name' "$tmp_dir/response")" == 'Synthetic Client' ]] || { echo 'rich client field was lost' >&2; exit 1; }
+[[ "$(jq -r '.[0].primary_code' "$tmp_dir/response")" == 'PRIMARY-7' ]] || { echo 'primary code was lost' >&2; exit 1; }
+[[ "$(jq -r '.[0].secondary_code' "$tmp_dir/response")" == 'SECONDARY-7' ]] || { echo 'secondary code was lost' >&2; exit 1; }
 
 status="$(request_status POST "$API_URL/rest/v1/time_entries" "$COLLAB_TOKEN" '{"profile_id":"00000000-0000-0000-0000-000000000099","date":"2026-01-06","start_time":"08:00","end_time":"09:00","duration_minutes":60,"project_code":"FORBIDDEN","status":"pending"}')"
 [[ ! "$status" =~ ^2 ]] || { echo 'cross-profile time entry insert unexpectedly succeeded' >&2; exit 1; }

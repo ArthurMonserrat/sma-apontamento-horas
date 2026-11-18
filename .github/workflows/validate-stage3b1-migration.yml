@@ -83,6 +83,13 @@ jobs:
           PGPASSWORD: postgres
         run: psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/tests/reconciliation_assertions.sql
 
+      - name: Apply Banco 1 persistence contract and simplified time-entry fields
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261018210000_banco1_persistence_contract.sql
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname historical --file supabase/migrations/20261117120000_simplificar_campos_de_apontamento.sql
+
       - name: Apply Banco 2 persistence contract
         env:
           PGPASSWORD: postgres
@@ -157,6 +164,8 @@ jobs:
         run: |
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/stage3b1_assertions.sql
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/reconciliation_assertions.sql
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261018210000_banco1_persistence_contract.sql
+          psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261117120000_simplificar_campos_de_apontamento.sql
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/migrations/20261026190000_banco2_time_entries.sql
           psql --no-psqlrc --set ON_ERROR_STOP=1 --host 127.0.0.1 --username postgres --dbname legacy --file supabase/tests/banco2_time_entries_assertions.sql
           {

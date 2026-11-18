@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { buildRdoData, downloadRdo, generateRdo, rdoFileName } from './rdo'
 
-const values = { entryDate: '2026-09-07', projectCode: 'Ab/001', clientName: 'Cliente de Teste', activityId: 'activity', disciplineCode: 'M', documentTypeCode: 'MD', contractorNumber: '  00-Ab/1  ', hours: '1', minutes: '30', details: '' }
-const context = { name: 'Profissional de Teste', jobTitle: 'Engenheira', clientName: 'Cliente de Teste', activityName: 'Análise de documento' }
+const values = { entryDate: '2026-09-07', projectCode: 'Ab/001', activityId: 'activity', contractorNumber: '  00-Ab/1  ', primaryCode: 'PRIM-01', secondaryCode: 'SEC-01', hours: '1', minutes: '30', details: '' }
+const context = { name: 'Profissional de Teste', jobTitle: 'Engenheira', activityName: 'Análise de documento' }
 const logo = new Uint8Array(readFileSync(new URL('../../assets/brand/sma-logo.jpg', import.meta.url)))
 const signatureBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDyqiiiu880/9k='
 
@@ -14,20 +14,18 @@ describe('RDO independente da gravação', () => {
   })
   it('usa dados manuais e não inventa campos indisponíveis', () => {
     const data = buildRdoData(values, context)
-    expect(data).toMatchObject({ contractor: 'SM&A Sistemas Elétricos e Automação', contractorNumber: '00-Ab/1', projectCode: 'Ab/001', duration: '01:30', details: '', professional: 'Profissional de Teste', category: 'Engenheira', discipline: 'Mecânica' })
-    expect(data.object).toBe('')
-    expect(data.valeNumber).toBe('')
+    expect(data).toMatchObject({ contractor: 'SM&A Sistemas Elétricos e Automação', contractorNumber: '00-Ab/1', projectCode: 'Ab/001', primaryCode: 'PRIM-01', secondaryCode: 'SEC-01', duration: '01:30', details: '', professional: 'Profissional de Teste', category: 'Engenheira' })
     expect(data).not.toHaveProperty('startTime')
     expect(data).not.toHaveProperty('signature')
   })
-  it('usa título e número do documento selecionado sem inferir projeto', () => {
-    const data = buildRdoData({ ...values, ldDocument: { valeNumber: 'LD-002', title: 'Memória de cálculo', documentTypeCode: 'ZZ', disciplineName: 'GERAL', fileName: 'teste.xlsm' } }, context)
-    expect(data.object).toBe('Memória de cálculo')
-    expect(data.valeNumber).toBe('LD-002')
+  it('usa os códigos informados sem inferir dados de documento', () => {
+    const data = buildRdoData({ ...values, primaryCode: 'A', secondaryCode: 'B' }, context)
+    expect(data.primaryCode).toBe('A')
+    expect(data.secondaryCode).toBe('B')
     expect(data.projectCode).toBe('Ab/001')
   })
   it('sanitiza o nome do download sem caracteres de caminho', () => {
-    expect(rdoFileName(buildRdoData(values, context))).toBe('RDO_2026-09-07_Ab_001.pdf')
+    expect(rdoFileName(buildRdoData(values, context))).toBe('RDO_2026-09-07_Ab_001_PRIM-01.pdf')
   })
   it('gera PDF A4 paisagem válido, com logo e estrutura tabular sem exigir LD ou detalhamento', () => {
     const pdf = generateRdo(buildRdoData(values, context), logo)

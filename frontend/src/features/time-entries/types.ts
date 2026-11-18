@@ -36,13 +36,19 @@ export interface TimeEntry {
   id: string
   collaboratorId: string
   entryDate: string
-  clientName: string
+  /** @deprecated Preservado somente para leitura de registros legados. */
+  clientName?: string
   projectCode: string
   contractorNumber?: string
+  primaryCode?: string
+  secondaryCode?: string
+  /** @deprecated Preservado somente para migração de registros legados. */
   ldDocument?: LdDocumentSnapshot
   activityId: string
-  disciplineCode: DisciplineCode
-  documentTypeCode: DocumentTypeCode
+  /** @deprecated Preservado somente para migração de registros legados. */
+  disciplineCode?: DisciplineCode
+  /** @deprecated Preservado somente para migração de registros legados. */
+  documentTypeCode?: DocumentTypeCode
   durationMinutes: number
   details: string
   assignmentSnapshot: AssignmentSnapshot | null
@@ -62,16 +68,14 @@ export interface TimeEntry {
 export type CreateTimeEntryData = Pick<
   TimeEntry,
   | 'entryDate'
-  | 'clientName'
   | 'projectCode'
   | 'contractorNumber'
-  | 'ldDocument'
+  | 'primaryCode'
+  | 'secondaryCode'
   | 'activityId'
-  | 'disciplineCode'
-  | 'documentTypeCode'
   | 'durationMinutes'
   | 'details'
-> & {
+> & Partial<Pick<TimeEntry, 'clientName' | 'ldDocument' | 'disciplineCode' | 'documentTypeCode'>> & {
   endDate?: string
   weekdaysOnly?: boolean
 }

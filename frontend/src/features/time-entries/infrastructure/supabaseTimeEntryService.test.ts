@@ -89,6 +89,8 @@ describe('SupabaseTimeEntryService', () => {
       client_name: 'Cliente A',
       project_code: 'CONTR-1',
       contractor_number: 'CONTR-1',
+      primary_code: 'PRIMARY-1',
+      secondary_code: 'SECONDARY-1',
       ld_document: { valeNumber: 'LD-1', title: 'Doc', documentTypeCode: 'RN', disciplineName: 'Engenharia', fileName: 'doc.pdf' },
       activity_id: 'activity-1',
       discipline_code: 'E',
@@ -112,10 +114,12 @@ describe('SupabaseTimeEntryService', () => {
     expect(page.items[0]).toMatchObject({
       id: 'entry-1',
       collaboratorId: 'profile-1',
-      clientName: 'Cliente A',
       durationMinutes: 90,
       status: 'PENDING',
       assignmentSnapshot: { squadId: 'squad-1' },
+      contractorNumber: 'CONTR-1',
+      primaryCode: 'PRIMARY-1',
+      secondaryCode: 'SECONDARY-1',
     })
     expect(page.items[0]).not.toHaveProperty('startTime')
     expect(entryQuery.insert).not.toHaveBeenCalled()

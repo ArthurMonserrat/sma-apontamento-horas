@@ -1,7 +1,7 @@
 import { MAX_CLIENT_NAME_LENGTH, MAX_ENTRY_MINUTES, MAX_PROJECT_CODE_LENGTH } from '../../../config/business'
 import type { AssignmentSnapshot } from '../../squads/types'
 import type { DisciplineCode, DocumentTypeCode, TimeEntry } from '../types'
-import { isAllowedDocumentType, isDisciplineCode, isLdDocumentSnapshot } from '../documentCatalog'
+import { isDisciplineCode, isLdDocumentSnapshot } from '../documentCatalog'
 import { isIsoDate } from '../../../shared/lib/date'
 
 export const LEGACY_V1_TIME_ENTRY_STORAGE_KEY = 'sma:time-entries:v1'
@@ -96,8 +96,8 @@ function commonEntryIsInvalid(entry: Record<string, unknown>, collaboratorId: st
     || entry.projectCode !== entry.projectCode.trim()
     || entry.projectCode.length > MAX_PROJECT_CODE_LENGTH
     || typeof entry.activityId !== 'string'
-    || !isDisciplineCode(entry.disciplineCode)
-    || !isAllowedDocumentType(entry.documentTypeCode, entry.ldDocument)
+    || !entry.activityId.trim()
+    || (entry.disciplineCode !== undefined && !isDisciplineCode(entry.disciplineCode))
     || (entry.ldDocument !== undefined && !isLdDocumentSnapshot(entry.ldDocument))
     || (entry.contractorNumber !== undefined && (typeof entry.contractorNumber !== 'string' || entry.contractorNumber.trim().length > 160))
     || !Number.isInteger(entry.durationMinutes)
@@ -118,10 +118,12 @@ function sharedFields(entry: Record<string, unknown>, collaboratorId: string) {
     entryDate: String(entry.entryDate),
     projectCode: entry.projectCode as string,
     contractorNumber: typeof entry.contractorNumber === 'string' ? entry.contractorNumber.trim() : undefined,
+    primaryCode: typeof entry.primaryCode === 'string' ? entry.primaryCode.trim() || undefined : undefined,
+    secondaryCode: typeof entry.secondaryCode === 'string' ? entry.secondaryCode.trim() || undefined : undefined,
     ldDocument: isLdDocumentSnapshot(entry.ldDocument) ? entry.ldDocument : undefined,
     activityId: entry.activityId as string,
-    disciplineCode: entry.disciplineCode as DisciplineCode,
-    documentTypeCode: entry.documentTypeCode as DocumentTypeCode,
+    disciplineCode: isDisciplineCode(entry.disciplineCode) ? entry.disciplineCode : undefined,
+    documentTypeCode: typeof entry.documentTypeCode === 'string' ? entry.documentTypeCode : undefined,
     durationMinutes: Number(entry.durationMinutes),
     details: (entry.details as string).trim(),
     assignmentSnapshot: entry.assignmentSnapshot as AssignmentSnapshot | null,
@@ -149,11 +151,11 @@ function normalizeV3TimeEntry(value: unknown, collaboratorId: string): LegacyV3T
 export function normalizeTimeEntry(value: unknown, collaboratorId: string): TimeEntry | null {
   if (!value || typeof value !== 'object') return null
   const entry = value as Record<string, unknown>
-  if (commonEntryIsInvalid(entry, collaboratorId)
-    || typeof entry.clientName !== 'string'
-    || !entry.clientName.trim()
-    || entry.clientName.trim().length > MAX_CLIENT_NAME_LENGTH) return null
-  return { ...sharedFields(entry, collaboratorId), clientName: entry.clientName.trim() }
+  if (commonEntryIsInvalid(entry, collaboratorId)) return null
+  const clientName = typeof entry.clientName === 'string' && entry.clientName.trim().length <= MAX_CLIENT_NAME_LENGTH
+    ? entry.clientName.trim() || undefined
+    : undefined
+  return { ...sharedFields(entry, collaboratorId), clientName }
 }
 
 function migrateV2Entry(entry: V2TimeEntry, collaboratorId: string): LegacyV3TimeEntry | null {
