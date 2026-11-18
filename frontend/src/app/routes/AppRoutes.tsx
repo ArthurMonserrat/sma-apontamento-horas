@@ -5,16 +5,13 @@ import { HistoricoPage } from '../../pages/collaborator/HistoricoPage'
 import { EcosystemLogin } from '../../pages/access/EcosystemLogin'
 import { NovoApontamentoPage } from '../../pages/collaborator/NovoApontamentoPage'
 import { PerfilPage } from '../../pages/collaborator/PerfilPage'
-import { FolgasPage } from '../../pages/collaborator/FolgasPage'
 import { ProtectedRoute } from '../../features/session/ProtectedRoute'
 import { SupervisorPage } from '../../pages/supervisor/SupervisorPage'
 import { DiretoriaPage } from '../../pages/administration/DiretoriaPage'
 import { EquipesPage } from '../../pages/administration/EquipesPage'
 import { ProjetosPage } from '../../pages/administration/ProjetosPage'
 import { RelatoriosPage } from '../../pages/administration/RelatoriosPage'
-import { AvisosPage } from '../../pages/administration/AvisosPage'
 import { DiretorPerfilPage } from '../../pages/administration/DiretorPerfilPage'
-import { ManagerNoticesRedirect } from '../../features/session/ManagerNoticesRedirect'
 import { AuthCallbackPage } from '../../pages/access/AuthCallbackPage'
 
 export function AppRoutes() {
@@ -23,14 +20,11 @@ export function AppRoutes() {
       <Route path="/" element={<EcosystemLogin />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/avisos" element={<ProtectedRoute allowedRoles={['SUPERVISOR', 'DIRECTOR_ADMIN']}><ManagerNoticesRedirect /></ProtectedRoute>} />
       <Route path="/colaborador" element={<ProtectedRoute allowedRoles={['COLLABORATOR']}><AppLayout /></ProtectedRoute>}>
         <Route index element={<ColaboradorPage />} />
         <Route path="apontamentos/novo" element={<NovoApontamentoPage />} />
         <Route path="apontamentos/:entryId/editar" element={<NovoApontamentoPage />} />
         <Route path="historico" element={<HistoricoPage />} />
-        <Route path="folgas" element={<FolgasPage />} />
-        <Route path="avisos" element={<AvisosPage />} />
         <Route path="perfil" element={<PerfilPage />} />
       </Route>
       <Route path="/supervisor" element={<ProtectedRoute allowedRoles={['SUPERVISOR']}><SupervisorPage /></ProtectedRoute>} />

@@ -4,15 +4,21 @@ import supervisorSource from '../pages/supervisor/SupervisorPage?raw'
 import directorSource from '../pages/administration/DiretoriaPage?raw'
 import teamsSource from '../pages/administration/EquipesPage?raw'
 import reportsSource from '../pages/administration/RelatoriosPage?raw'
-import announcementsSource from '../pages/administration/AvisosPage?raw'
 import sidebarSource from './layouts/DirectorSidebar.tsx?raw'
+import gestorLayoutSource from './layouts/GestorLayout.tsx?raw'
 
 describe('navegação da gestão', () => {
-  it('mantém Avisos dentro da shell do perfil que está autenticado', () => {
-    expect(appRoutesSource).toContain('<ManagerNoticesRedirect />')
-    expect(appRoutesSource).not.toContain('<GestorLayout />')
-    expect(supervisorSource).toContain("id: 'announcements'")
-    expect(sidebarSource).toContain('/administracao?view=avisos')
+  it('remove rotas, links e abas de Avisos e solicitações de ausência', () => {
+    expect(appRoutesSource).not.toContain('ManagerNoticesRedirect')
+    expect(appRoutesSource).not.toContain('AvisosPage')
+    expect(appRoutesSource).not.toContain('FolgasPage')
+    expect(appRoutesSource).not.toContain('path="/avisos"')
+    expect(appRoutesSource).not.toContain('path="folgas"')
+    expect(appRoutesSource).not.toContain('path="avisos"')
+    expect(supervisorSource).not.toContain("id: 'announcements'")
+    expect(supervisorSource).not.toContain("id: 'requests'")
+    expect(sidebarSource).not.toContain('/administracao?view=avisos')
+    expect(gestorLayoutSource).not.toContain('to="/avisos"')
   })
 
   it('mantém somente uma opção ativa e impede que cards vizinhos expandam na edição', () => {
@@ -32,22 +38,10 @@ describe('navegação da gestão', () => {
     expect(supervisorSource).not.toContain('grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]')
   })
 
-  it('mantém cada aba do Supervisor identificada na URL, sem voltar à gestão ao sair de Avisos', () => {
+  it('mantém cada aba restante do Supervisor identificada na URL', () => {
     expect(supervisorSource).toContain("const activeView = activeViewBySearchParam[searchParams.get('view') ?? ''] ?? 'entries'")
     expect(supervisorSource).toContain('navigate(supervisorPathByView[view])')
-    expect(supervisorSource).toContain("requests: '/supervisor?view=solicitacoes'")
     expect(supervisorSource).toContain("history: '/supervisor?view=historico'")
     expect(supervisorSource).toContain("profile: '/supervisor?view=perfil'")
-    expect(supervisorSource).toContain("announcements: '/supervisor?view=avisos'")
-  })
-
-  it('posiciona Avisos antes de Meu Perfil na navegação do Supervisor', () => {
-    expect(supervisorSource.indexOf("id: 'announcements'"))
-      .toBeLessThan(supervisorSource.indexOf("id: 'profile'"))
-  })
-
-  it('nomeia a página do colaborador como Avisos', () => {
-    expect(announcementsSource).toContain('title="Avisos"')
-    expect(announcementsSource).not.toContain('title="Quadro de Avisos"')
   })
 })

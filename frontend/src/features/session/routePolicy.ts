@@ -46,7 +46,11 @@ export function canAccessDemoPath(role: DemoRole, path: string) {
   const pathname = getSafePathname(path)
   if (!pathname) return false
   if (pathname === '/selecao-perfil' || pathname === '/portal') return true
-  if (pathname === '/avisos') return role === 'SUPERVISOR' || role === 'DIRECTOR_ADMIN'
+  if (pathname === '/avisos' || pathname === '/colaborador/folgas' || pathname === '/colaborador/avisos') return false
+  if (pathname === '/supervisor' || pathname === '/administracao') {
+    const query = new URL(path, POLICY_ORIGIN).searchParams
+    if (query.get('view') === 'avisos' || query.get('view') === 'solicitacoes') return false
+  }
   const homePath = getDemoHomePath(role)
   return pathname === homePath || pathname.startsWith(`${homePath}/`)
 }

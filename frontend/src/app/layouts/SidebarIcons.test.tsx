@@ -40,20 +40,20 @@ describe('ícones das navegações laterais', () => {
     const markup = renderArea('COLLABORATOR', '/colaborador')
     const names = iconNames(markup)
 
-    expect(new Set(names)).toEqual(new Set(['dashboard', 'file-plus', 'history', 'calendar-off', 'bell', 'user']))
-    expect(markup).toContain('Avisos')
-    expect(markup).not.toContain('Quadro de Avisos')
+    expect(new Set(names)).toEqual(new Set(['dashboard', 'file-plus', 'history', 'user']))
+    expect(markup).not.toContain('Ausências')
+    expect(markup).not.toContain('Avisos')
   })
 
   it('mostra ícones semânticos em todas as abas da Supervisão', () => {
     const names = iconNames(renderArea('SUPERVISOR', '/supervisor'))
 
-    expect(names).toEqual(['users', 'inbox', 'history', 'bar-chart', 'bell', 'user'])
+    expect(names).toEqual(['users', 'history', 'bar-chart', 'user'])
   })
 
   it('mostra ícones semânticos em todas as abas da Direção', () => {
     const names = iconNames(renderArea('DIRECTOR_ADMIN', '/administracao'))
 
-    expect(names).toEqual(['dashboard', 'users', 'folder', 'bar-chart', 'bell', 'user'])
+    expect(names).toEqual(['dashboard', 'users', 'folder', 'bar-chart', 'user'])
   })
 })

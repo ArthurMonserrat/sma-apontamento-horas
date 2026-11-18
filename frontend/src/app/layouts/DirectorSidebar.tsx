@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { NavigationIcon, type NavigationIconName } from '../../shared/ui/NavigationIcon'
 import { SwitchSystemButton } from '../../features/session/SwitchSystemButton'
-import { AnnouncementBadge } from '../../features/announcements/notifications/AnnouncementBadge'
 
 type DirectorSidebarProps = {
   onSignOut: () => void
@@ -20,7 +19,6 @@ const navigationItems: NavigationItem[] = [
   { label: 'Equipes', icon: 'users', to: '/administracao/equipes', matches: (pathname) => pathname === '/administracao/equipes' },
   { label: 'Projetos', icon: 'folder', to: '/administracao/projetos', matches: (pathname) => pathname === '/administracao/projetos' },
   { label: 'Relatórios', icon: 'bar-chart', to: '/administracao/relatorios', matches: (pathname) => pathname === '/administracao/relatorios', tourClassName: 'tour-relatorios' },
-  { label: 'Avisos', icon: 'bell', to: '/administracao?view=avisos', matches: (pathname, search) => pathname === '/administracao' && new URLSearchParams(search).get('view') === 'avisos' },
   { label: 'Meu perfil', icon: 'user', to: '/administracao/perfil', matches: (pathname) => pathname === '/administracao/perfil' },
 ]
 
@@ -52,7 +50,6 @@ export function DirectorSidebar({ onSignOut }: DirectorSidebarProps) {
             <Link key={item.to} to={item.to} aria-current={isActive ? 'page' : undefined} className={`flex w-full items-center gap-3 rounded-xl border-l-4 px-3 py-3 text-left text-sm font-semibold transition ${linkClassName} ${item.tourClassName ?? ''}`}>
               <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClassName}`}><NavigationIcon name={item.icon} /></span>
               <span className="flex-1">{item.label}</span>
-              {item.icon === 'bell' && <AnnouncementBadge />}
               {isActive && <span className="text-[10px] font-extrabold uppercase">Atual</span>}
             </Link>
           )
