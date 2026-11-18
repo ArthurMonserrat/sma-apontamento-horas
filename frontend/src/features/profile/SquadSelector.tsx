@@ -23,7 +23,7 @@ export function SquadSelector({ squads, activeSquadId, isSaving, onChange }: Squ
           {squads.map((squad) => <option key={squad.id} value={squad.id}>{squad.name}</option>)}
         </select>
         <p className="mt-2 text-sm ui-text-muted">
-          Ao alterar a squad, o supervisor será definido automaticamente para os próximos registros e solicitações.
+          Ao alterar a squad, o supervisor será definido automaticamente para os próximos registros.
         </p>
       </div>
     </section>

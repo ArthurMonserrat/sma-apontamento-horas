@@ -5,14 +5,14 @@ import { PageContainer } from '../../shared/ui/PageContainer'
 import { useProfile } from '../../features/collaborator/useProfile'
 import { ProfileSummary } from '../../features/profile/ProfileSummary'
 import { WorkloadHistory } from '../../features/workloads/WorkloadHistory'
-import { WorkloadRequestForm, type WorkloadFormField } from '../../features/workloads/WorkloadRequestForm'
+import { InitialWorkloadForm, type InitialWorkloadFormField } from '../../features/workloads/InitialWorkloadForm'
 import { getCorporateToday } from '../../shared/lib/date'
 import { useTour } from '../../app/providers/tourContext'
 
-type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; justification: string }
+type WorkloadForm = { hours: string; minutes: string; effectiveFrom: string; observation: string }
 type ProfileForm = { name: string; email: string; jobTitle: string; activeSquadId: string }
 
-const initialForm = (): WorkloadForm => ({ hours: '8', minutes: '0', effectiveFrom: getCorporateToday(), justification: '' })
+const initialForm = (): WorkloadForm => ({ hours: '8', minutes: '0', effectiveFrom: getCorporateToday(), observation: '' })
 const emptyProfileForm: ProfileForm = { name: '', email: '', jobTitle: '', activeSquadId: '' }
 
 function toDailyMinutes(form: WorkloadForm) {
@@ -39,7 +39,7 @@ export function PerfilPage() {
   const [signatureError, setSignatureError] = useState<string | null>(null)
   const signatureRef = useRef<SignatureCanvas | null>(null)
 
-  const updateField = (field: WorkloadFormField, value: string) => setForm((current) => ({ ...current, [field]: value }))
+  const updateField = (field: InitialWorkloadFormField, value: string) => setForm((current) => ({ ...current, [field]: value }))
   const updateProfileField = (field: keyof ProfileForm, value: string) => setProfileForm((current) => ({ ...current, [field]: value }))
 
   useEffect(() => {
@@ -124,13 +124,9 @@ export function PerfilPage() {
     setOperationError(null)
     try {
       const dailyMinutes = toDailyMinutes(form)
-      if (profileState.data?.workloadVersions.length) {
-        await profileState.requestWorkloadChange({ requestedDailyMinutes: dailyMinutes, requestedEffectiveFrom: form.effectiveFrom, justification: form.justification })
-        setFeedback('Solicitação de alteração enviada ao supervisor da squad atual.')
-      } else {
-        await profileState.createInitialWorkload(dailyMinutes, form.effectiveFrom)
-        setFeedback('Carga horária inicial cadastrada.')
-      }
+      if (profileState.data?.workloadVersions.length) return
+      await profileState.createInitialWorkload(dailyMinutes, form.effectiveFrom)
+      setFeedback('Carga horária inicial cadastrada.')
       setForm(initialForm())
     } catch (error) {
       setOperationError(error instanceof Error ? error.message : 'Não foi possível salvar a carga horária.')
@@ -200,15 +196,21 @@ export function PerfilPage() {
               <button type="button" onClick={() => void saveSignature()} className="ui-button-primary" disabled={profileState.isSaving}>Salvar Assinatura</button>
             </div>
           </section>
-          <WorkloadRequestForm
-            {...form}
-            minDate={getCorporateToday()}
-            isSubmitting={profileState.isSaving}
-            isInitial={profileState.data.workloadVersions.length === 0}
-            onFieldChange={updateField}
-            onSubmit={() => void submitWorkload()}
-          />
-          <WorkloadHistory versions={profileState.data.workloadVersions} requests={profileState.data.workloadRequests} />
+          {profileState.data.workloadVersions.length === 0 ? (
+            <InitialWorkloadForm
+              {...form}
+              minDate={getCorporateToday()}
+              isSubmitting={profileState.isSaving}
+              onFieldChange={updateField}
+              onSubmit={() => void submitWorkload()}
+            />
+          ) : (
+            <section className="rounded-2xl border ui-border p-5" aria-label="Carga horária administrativa">
+              <h2 className="text-lg font-extrabold ui-heading">Carga horária administrativa</h2>
+              <p className="mt-2 text-sm ui-text-muted">Alterações de carga horária devem ser tratadas pela gestão.</p>
+            </section>
+          )}
+          <WorkloadHistory versions={profileState.data.workloadVersions} />
         </div>
       )}
     </PageContainer>

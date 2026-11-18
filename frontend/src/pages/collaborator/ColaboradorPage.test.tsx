@@ -28,6 +28,7 @@ describe('visão geral do colaborador', () => {
 
     expect(markup).not.toContain('Consultar histórico')
     expect(markup).not.toContain('Minhas folgas')
+    expect(markup).not.toContain('Cargas pendentes')
     expect(markup).not.toContain('data-dashboard-shortcuts')
     expect(markup).toContain('Carregando visão geral')
   })

@@ -29,7 +29,6 @@ type DashboardData = {
   selectedEvents: CalendarEvent[]
   selectedApproval: DayApproval | null
   approvals: DayApproval[]
-  pendingWorkloadRequests: number
   assignment: AssignmentSnapshot | null
   currentWorkload: WorkloadVersion | null
   attention: ReturnType<typeof buildAttentionSummary>
@@ -59,10 +58,9 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
     try {
       const today = getCorporateToday()
       const monthRange = getMonthRange(monthKey)
-      const [professionalProfile, workloadVersions, workloadRequests] = await Promise.all([
+      const [professionalProfile, workloadVersions] = await Promise.all([
         profileService.getById(profile.id),
         workloadService.listVersions(profile.id),
-        workloadService.listRequests(profile.id),
       ])
       if (!professionalProfile) throw new Error('Perfil profissional não encontrado.')
       const totalStartDate = workloadVersions[0]?.effectiveFrom ?? today
@@ -134,7 +132,6 @@ export function useCollaboratorDashboard(selectedDate: string, monthKey: string,
         data: {
           monthSummary, filteredSummary, totalSummary, todaySummary, selectedSummary, calendarDays: monthSummary.days,
           selectedEntries, selectedEvents, selectedApproval, approvals,
-          pendingWorkloadRequests: workloadRequests.filter((request) => request.status === 'PENDING').length,
           assignment: currentAssignment,
           currentWorkload: await workloadService.getCurrent(profile.id, today),
           attention: buildAttentionSummary({ today, days: monthSummary.days, approvals }),

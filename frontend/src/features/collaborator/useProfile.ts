@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { CollaboratorProfile } from '../profile/types'
 import type { AssignmentSnapshot, Squad } from '../squads/types'
-import type { WorkloadChangeRequest, WorkloadVersion } from '../workloads/types'
+import type { WorkloadVersion } from '../workloads/types'
 import { profileService } from '../profile/infrastructure/profileService'
 import { squadService } from '../squads/infrastructure/squadService'
 import { workloadService } from '../workloads/infrastructure/workloadService'
@@ -14,7 +14,6 @@ type ProfileData = {
   assignment: AssignmentSnapshot | null
   squads: Squad[]
   workloadVersions: WorkloadVersion[]
-  workloadRequests: WorkloadChangeRequest[]
   currentWorkload: WorkloadVersion | null
 }
 
@@ -37,11 +36,10 @@ export function useProfile() {
     }
     setState((current) => ({ ...current, isLoading: true, error: null }))
     try {
-      const [profile, squads, workloadVersions, workloadRequests] = await Promise.all([
+      const [profile, squads, workloadVersions] = await Promise.all([
         profileService.getById(sessionProfile.id),
         squadService.listActive(),
         workloadService.listVersions(sessionProfile.id),
-        workloadService.listRequests(sessionProfile.id),
       ])
       if (!profile) throw new Error('Perfil profissional não encontrado.')
       setState({
@@ -50,7 +48,6 @@ export function useProfile() {
           assignment: profileService.resolveAssignment(profile.id),
           squads,
           workloadVersions,
-          workloadRequests,
           currentWorkload: await workloadService.getCurrent(profile.id, getCorporateToday()),
         },
         isLoading: false,
@@ -85,6 +82,5 @@ export function useProfile() {
     updateSignature: (assinaturaBase64: string) => runAndReload((collaboratorId) => profileService.updateSignature(collaboratorId, assinaturaBase64)),
     changeSquad: (squadId: string) => runAndReload((collaboratorId) => profileService.changeActiveSquad(collaboratorId, squadId)),
     createInitialWorkload: (dailyMinutes: number, effectiveFrom: string) => runAndReload((collaboratorId) => workloadService.createInitial(collaboratorId, dailyMinutes, effectiveFrom)),
-    requestWorkloadChange: (input: { requestedDailyMinutes: number; requestedEffectiveFrom: string; justification: string }) => runAndReload((collaboratorId) => workloadService.requestChange(collaboratorId, input)),
   }
 }

@@ -91,11 +91,10 @@ export function ColaboradorPage() {
               periodLabel={hasCustomRange ? 'Saldo do intervalo' : 'Saldo do mês'}
             />
 
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Pendências e ações">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Pendências e ações">
               <article className="rounded-2xl border border-l-4 ui-border ui-surface p-4 [border-left-color:#C99393]"><p className="text-sm font-bold ui-text-muted">Dias pendentes</p><p className="mt-2 text-2xl font-extrabold ui-text">{dashboard.data.attention.pendingDays}</p></article>
               <article className="rounded-2xl border border-l-4 ui-border ui-surface p-4 [border-left-color:#8AB7C7]"><p className="text-sm font-bold ui-text-muted">Disponíveis para aprovação</p><p className="mt-2 text-2xl font-extrabold ui-text">{dashboard.data.attention.availableForApprovalDays}</p></article>
               <article className="rounded-2xl border border-l-4 ui-border ui-surface p-4 [border-left-color:#C9A66B]"><p className="text-sm font-bold ui-text-muted">Correções solicitadas</p><p className="mt-2 text-2xl font-extrabold ui-text">{dashboard.data.attention.correctionRequestedDays}</p></article>
-              <article className="rounded-2xl border border-l-4 ui-border ui-surface p-4 [border-left-color:#77C2A4]"><p className="text-sm font-bold ui-text-muted">Cargas pendentes</p><p className="mt-2 text-2xl font-extrabold ui-text">{dashboard.data.pendingWorkloadRequests}</p></article>
             </section>
 
             {dashboard.data.approvals.some((approval) => approval.status === 'CORRECTION_REQUESTED') && (
