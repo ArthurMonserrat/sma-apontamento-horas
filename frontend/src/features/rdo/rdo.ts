@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { AlignmentType, Document, HeadingLevel, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx'
 import { areValidDurationParts, formatMinutes } from '../time-entries/domain'
 import { formatDatePtBr, isIsoDate } from '../../shared/lib/date'
 
@@ -8,6 +9,7 @@ type RdoFormData = {
   contractorNumber: string
   primaryCode?: string
   secondaryCode?: string
+  funcaoContrato?: string
   hours: string
   minutes: string
   details: string
@@ -42,7 +44,7 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
   return {
     contractor: 'SM&A Sistemas Elétricos e Automação',
     contractorNumber: values.contractorNumber.trim(),
-    date: entryDate, professional: context.name, category: context.jobTitle ?? '',
+    date: entryDate, professional: context.name, category: values.funcaoContrato?.trim() || context.jobTitle || '',
     duration: formatMinutes(hours * 60 + minutes),
     primaryCode: values.primaryCode?.trim() ?? '',
     secondaryCode: values.secondaryCode?.trim() ?? '',
@@ -54,6 +56,49 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
 export function rdoFileName(data: RdoData) {
   const safe = (value: string) => [...value].map((char) => char.charCodeAt(0) < 32 || '<>:"/\\|?*'.includes(char) ? '_' : char).join('').replace(/[. ]+$/g, '').slice(0, 70)
   return ['RDO', data.date, safe(data.contractorNumber), safe(data.primaryCode)].filter(Boolean).join('_') + '.pdf'
+}
+
+export function rdoWordFileName(data: RdoData) {
+  return rdoFileName(data).replace(/\.pdf$/i, '.docx')
+}
+
+function wordCell(label: string, value: string) {
+  return new TableCell({
+    children: [
+      new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 18 })] }),
+      new Paragraph({ children: [new TextRun({ text: value || '—', size: 20 })] }),
+    ],
+  })
+}
+
+export function generateRdoWord(data: RdoData) {
+  const identification = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [wordCell('Contratada', data.contractor), wordCell('Projeto / obra', data.contractorNumber), wordCell('Data', formatDatePtBr(data.date))] }),
+      new TableRow({ children: [wordCell('Código primário', data.primaryCode), wordCell('Código secundário', data.secondaryCode), wordCell('Total de horas', data.duration)] }),
+    ],
+  })
+  const body = [
+    new Paragraph({ text: 'RELATÓRIO DIÁRIO DE OBRA', heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }),
+    new Paragraph({ text: 'Apontamento individual do colaborador', alignment: AlignmentType.CENTER }),
+    new Paragraph({ text: '' }),
+    identification,
+    new Paragraph({ text: '' }),
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [new TableRow({ children: [wordCell('Nome do profissional', data.professional), wordCell('Função contratual', data.category)] })],
+    }),
+    new Paragraph({ text: '' }),
+    new Paragraph({ children: [new TextRun({ text: 'ATIVIDADE REALIZADA', bold: true })] }),
+    new Paragraph({ text: data.activity || '—' }),
+    new Paragraph({ children: [new TextRun({ text: 'DETALHAMENTO DAS ATIVIDADES', bold: true })] }),
+    new Paragraph({ text: data.details || '—' }),
+    new Paragraph({ text: '' }),
+    new Paragraph({ text: 'ASSINATURA DO RESPONSÁVEL', alignment: AlignmentType.CENTER }),
+    new Paragraph({ text: data.professional, alignment: AlignmentType.CENTER }),
+  ]
+  return new Document({ sections: [{ properties: {}, children: body }] })
 }
 
 export function generateRdo(data: RdoData, logo: Uint8Array) {

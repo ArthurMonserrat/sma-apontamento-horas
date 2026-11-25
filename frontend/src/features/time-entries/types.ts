@@ -42,6 +42,7 @@ export interface TimeEntry {
   contractorNumber?: string
   primaryCode?: string
   secondaryCode?: string
+  funcaoContrato?: string
   /** Projeto/atividade cadastrados pela diretoria (null = apontamento sem projeto). */
   projectId?: string | null
   projectActivityId?: string | null
@@ -68,6 +69,7 @@ export type CreateTimeEntryData = {
   contractorNumber?: string
   primaryCode?: string
   secondaryCode?: string
+  funcaoContrato?: string
   activityId: string
   durationMinutes: number
   details: string

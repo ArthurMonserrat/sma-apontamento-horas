@@ -12,7 +12,7 @@ import type { TimeEntryFormValues } from './useTimeEntryForm'
 
 const values: TimeEntryFormValues = {
   startDate: '2026-07-20', endDate: '2026-07-20', weekdaysOnly: true, contractorNumber: '', primaryCode: '', secondaryCode: '', activityId: '',
-  hours: '', minutes: '', details: '', editReason: '',
+  hours: '8', minutes: '0', details: '', funcaoContrato: '', editReason: '',
 }
 
 const filters: HistoryFiltersValue = {
@@ -53,6 +53,30 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('Se a data final for diferente')
   })
 
+  it('mantém o intervalo de datas disponível para um novo apontamento', () => {
+    const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" allowBatchMode onChange={vi.fn()} />)
+    expect(markup).toContain('id="entry-end-date"')
+    expect(markup).not.toContain('id="entry-end-date" type="date" min="2026-07-20" max="2026-07-20" disabled')
+    expect(markup).toContain('Somente dias úteis')
+  })
+
+  it('replica a sequência do formulário sem duração visível e com função contratual', () => {
+    const markup = renderToStaticMarkup(
+      <MemoryRouter>
+        <SessionContext.Provider value={{ session: null, profile: demoCollaborator, isLoading: false, signIn: vi.fn(), signOut: vi.fn() }}>
+          <TimeEntryForm />
+        </SessionContext.Provider>
+      </MemoryRouter>,
+    )
+    expect(markup).toContain('Importar arquivo RDO para preenchimento automático')
+    expect(markup).toContain('Detalhamento das atividades')
+    expect(markup).toContain('Função do profissional de acordo com o contrato do cliente final')
+    expect(markup).toContain('Gerar RDO (PDF)')
+    expect(markup).toContain('Gerar RDO (Word)')
+    expect(markup).not.toContain('Como deseja preencher?')
+    expect(markup).not.toContain('Duração em horas e minutos')
+  })
+
   it('oferece filtros de período e dados individuais com labels', () => {
     const markup = renderToStaticMarkup(<HistoryFilters value={filters} onChange={vi.fn()} onApply={vi.fn()} />)
     expect(markup).toContain('aria-label="Filtros do histórico"')
@@ -87,7 +111,7 @@ describe('markup acessível de apontamentos e histórico', () => {
     )
 
     expect(markup).toContain('Usar último apontamento')
-    expect(markup).toContain('Dados de identificação serão preenchidos; data, duração e detalhamento permanecem para revisão.')
+    expect(markup).toContain('Dados de identificação serão preenchidos; data e detalhamento permanecem para revisão.')
     expect(markup).not.toContain('Lista de Documentos (LD)')
     expect(markup).not.toContain('Selecionar projeto')
   })

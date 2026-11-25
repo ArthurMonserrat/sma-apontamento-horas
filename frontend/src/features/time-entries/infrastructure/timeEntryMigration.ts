@@ -100,6 +100,7 @@ function commonEntryIsInvalid(entry: Record<string, unknown>, collaboratorId: st
     || !isAllowedDocumentType(entry.documentTypeCode, entry.ldDocument)
     || (entry.ldDocument !== undefined && !isLdDocumentSnapshot(entry.ldDocument))
     || (entry.contractorNumber !== undefined && (typeof entry.contractorNumber !== 'string' || entry.contractorNumber.trim().length > 160))
+    || (entry.funcaoContrato !== undefined && (typeof entry.funcaoContrato !== 'string' || entry.funcaoContrato.trim().length > 160))
     || !Number.isInteger(entry.durationMinutes)
     || Number(entry.durationMinutes) <= 0
     || Number(entry.durationMinutes) > MAX_ENTRY_MINUTES
@@ -120,6 +121,7 @@ function sharedFields(entry: Record<string, unknown>, collaboratorId: string) {
     contractorNumber: typeof entry.contractorNumber === 'string' ? entry.contractorNumber.trim() : undefined,
     primaryCode: typeof entry.primaryCode === 'string' && entry.primaryCode.trim() ? entry.primaryCode.trim() : undefined,
     secondaryCode: typeof entry.secondaryCode === 'string' && entry.secondaryCode.trim() ? entry.secondaryCode.trim() : undefined,
+    funcaoContrato: typeof entry.funcaoContrato === 'string' && entry.funcaoContrato.trim() ? entry.funcaoContrato.trim() : undefined,
     ldDocument: isLdDocumentSnapshot(entry.ldDocument) ? entry.ldDocument : undefined,
     activityId: entry.activityId as string,
     disciplineCode: entry.disciplineCode as DisciplineCode,

@@ -353,6 +353,7 @@ export class LocalStorageTimeEntryService implements TimeEntryService {
       contractorNumber: overrides.contractorNumber ?? entry.contractorNumber,
       primaryCode: overrides.primaryCode ?? entry.primaryCode,
       secondaryCode: overrides.secondaryCode ?? entry.secondaryCode,
+      funcaoContrato: overrides.funcaoContrato ?? entry.funcaoContrato,
       activityId: overrides.activityId ?? entry.activityId,
       durationMinutes: overrides.durationMinutes ?? entry.durationMinutes,
       details: overrides.details ?? entry.details,
