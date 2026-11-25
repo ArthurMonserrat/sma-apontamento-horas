@@ -7,7 +7,7 @@ import type { CreateTimeEntryData, TimeEntry, TimeEntryValidationErrors } from '
 import { expandTimeEntryDates } from './domain'
 import { getCorporateToday, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
-import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } from './domain'
+import { areValidDurationParts, hoursAndMinutesToMinutes, timeRangeToMinutes, validateTimeEntry } from './domain'
 import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
 import type { ParsedRdoDay } from '../rdo/rdoParser'
 
@@ -20,6 +20,8 @@ export type TimeEntryFormValues = {
   secondaryCode: string
   funcaoContrato: string
   activityId: string
+  startTime: string
+  endTime: string
   hours: string
   minutes: string
   details: string
@@ -34,6 +36,8 @@ const emptyValues = (entryDate: string): TimeEntryFormValues => ({
   primaryCode: '',
   secondaryCode: '',
   activityId: '',
+  startTime: '',
+  endTime: '',
   hours: '8',
   minutes: '0',
   details: '',
@@ -51,6 +55,8 @@ function valuesFromEntry(entry: TimeEntry): TimeEntryFormValues {
     secondaryCode: entry.secondaryCode ?? '',
     funcaoContrato: entry.funcaoContrato ?? '',
     activityId: entry.activityId,
+    startTime: entry.startTime ?? '',
+    endTime: entry.endTime ?? '',
     hours: String(Math.floor(entry.durationMinutes / 60)),
     minutes: String(entry.durationMinutes % 60),
     details: entry.details,
@@ -128,6 +134,8 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
         primaryCode: lastEntry.primaryCode ?? '',
         secondaryCode: lastEntry.secondaryCode ?? '',
         funcaoContrato: lastEntry.funcaoContrato ?? '',
+        startTime: lastEntry.startTime ?? '',
+        endTime: lastEntry.endTime ?? '',
       }))
       setErrors({})
       setReuseLastEntryMessage('Dados do último apontamento aplicados. Data e detalhamento foram mantidos para revisão.')
@@ -148,6 +156,7 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     const firstImportedRdoDay = importedRdoDays[0]
     const durationHours = Number(values.hours || 0)
     const durationRemainderMinutes = Number(values.minutes || 0)
+    const rangeDurationMinutes = timeRangeToMinutes(values.startTime, values.endTime)
     const projectNumber = values.contractorNumber.trim() || firstImportedRdoDay?.numeroObra?.trim() || ''
     const effectiveEntryDate = firstImportedRdoDay?.data ?? values.startDate
     const effectiveEndDate = hasImportedRdo ? effectiveEntryDate : mode === 'CREATE' ? values.endDate : values.startDate
@@ -165,10 +174,12 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       primaryCode: values.primaryCode,
       secondaryCode: values.secondaryCode,
       funcaoContrato: values.funcaoContrato,
+      startTime: values.startTime,
+      endTime: values.endTime,
       activityId: values.activityId,
       durationMinutes: hasImportedRdo && firstImportedRdoDay
         ? hoursAndMinutesToMinutes(firstImportedRdoDay.horas, firstImportedRdoDay.minutos)
-        : hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
+        : rangeDurationMinutes ?? hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
       details: hasImportedRdo && firstImportedRdoDay ? firstImportedRdoDay.detalhamento : values.details,
     }
     let canMutateDate = true
@@ -191,6 +202,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     }
     const validationErrors = validateTimeEntry(data, demoActivities, { today: getCorporateToday(), canMutateDate })
     if (dateBlock.blocked) validationErrors.entryDate = dateBlock.message
+    if (periodDates.some((date) => date > getCorporateToday())) {
+      validationErrors.entryDate = 'Não é permitido apontar horas em uma data futura.'
+    }
     if (!hasImportedRdo && !areValidDurationParts(durationHours, durationRemainderMinutes)) {
       validationErrors.durationMinutes = 'Informe horas inteiras entre 0 e 24 e minutos inteiros entre 0 e 59, com total máximo de 24 horas.'
     }

@@ -35,6 +35,22 @@ export function isValidDuration(durationMinutes: number) {
   return Number.isInteger(durationMinutes) && durationMinutes > 0 && durationMinutes <= MAX_ENTRY_MINUTES
 }
 
+/** Retorna a duração do intervalo HH:MM, ou null quando o par está incompleto/inválido. */
+export function timeRangeToMinutes(startTime?: string, endTime?: string) {
+  const start = startTime?.trim() ?? ''
+  const end = endTime?.trim() ?? ''
+  if (!start && !end) return null
+  const parse = (value: string) => {
+    const match = /^(\d{2}):(\d{2})$/.exec(value)
+    if (!match) return null
+    const hours = Number(match[1]), minutes = Number(match[2])
+    return hours <= 23 && minutes <= 59 ? hours * 60 + minutes : null
+  }
+  const startMinutes = parse(start), endMinutes = parse(end)
+  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) return null
+  return endMinutes - startMinutes
+}
+
 export function isCountableTimeEntryStatus(status: TimeEntryStatus) {
   return status === 'PENDING' || status === 'APPROVED' || status === 'REJECTED' || status === 'ACTIVE'
 }
@@ -63,6 +79,13 @@ export function validateTimeEntry(
   else if (contractorNumber.length > MAX_PROJECT_CODE_LENGTH) errors.contractorNumber = 'O número do projeto ou da obra deve ter no máximo 80 caracteres.'
   if (!activities.some((activity) => activity.id === data.activityId && activity.active)) errors.activityId = 'Selecione uma atividade ativa.'
   if (!isValidDuration(data.durationMinutes)) errors.durationMinutes = 'A duração deve ser maior que zero e de no máximo 24 horas.'
+  const hasStartTime = Boolean(data.startTime?.trim())
+  const hasEndTime = Boolean(data.endTime?.trim())
+  if (hasStartTime !== hasEndTime) {
+    errors.startTime = 'Informe a hora de início e a hora de fim.'
+  } else if (hasStartTime && timeRangeToMinutes(data.startTime, data.endTime) === null) {
+    errors.startTime = 'Informe um intervalo de horas válido, com o fim posterior ao início.'
+  }
   if (contractorNumber.length > 160) errors.contractorNumber = 'Use no máximo 160 caracteres.'
   if ((data.primaryCode?.trim().length ?? 0) > 160) errors.primaryCode = 'Use no máximo 160 caracteres.'
   if ((data.secondaryCode?.trim().length ?? 0) > 160) errors.secondaryCode = 'Use no máximo 160 caracteres.'

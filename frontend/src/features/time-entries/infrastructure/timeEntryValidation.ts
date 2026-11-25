@@ -1,5 +1,6 @@
 import { MAX_ENTRY_MINUTES, MAX_PROJECT_CODE_LENGTH } from '../../../config/business'
 import { isIsoDate } from '../../../shared/lib/date'
+import { timeRangeToMinutes } from '../domain'
 import type { CreateTimeEntryData } from '../types'
 
 /** Validação e limpeza dos dados de um apontamento (mesmas regras no armazenamento local e no banco). */
@@ -14,6 +15,10 @@ export function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryD
   if ((data.primaryCode?.trim().length ?? 0) > 160) throw new Error('Código primário inválido.')
   if ((data.secondaryCode?.trim().length ?? 0) > 160) throw new Error('Código secundário inválido.')
   if ((data.funcaoContrato?.trim().length ?? 0) > 160) throw new Error('Função contratual inválida.')
+  const startTime = data.startTime?.trim() || undefined
+  const endTime = data.endTime?.trim() || undefined
+  if ((startTime && !endTime) || (!startTime && endTime)) throw new Error('Informe a hora de início e a hora de fim.')
+  if (startTime && timeRangeToMinutes(startTime, endTime) === null) throw new Error('Informe um intervalo de horas válido.')
   if (!Number.isInteger(data.durationMinutes) || data.durationMinutes <= 0 || data.durationMinutes > MAX_ENTRY_MINUTES) {
     throw new Error('Informe uma duração válida.')
   }
@@ -30,6 +35,8 @@ export function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryD
     primaryCode: data.primaryCode?.trim() || undefined,
     secondaryCode: data.secondaryCode?.trim() || undefined,
     funcaoContrato: data.funcaoContrato?.trim() || undefined,
+    startTime,
+    endTime,
     details,
   }
 }

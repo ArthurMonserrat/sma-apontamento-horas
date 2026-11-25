@@ -12,7 +12,7 @@ import type { TimeEntryFormValues } from './useTimeEntryForm'
 
 const values: TimeEntryFormValues = {
   startDate: '2026-07-20', endDate: '2026-07-20', weekdaysOnly: true, contractorNumber: '', primaryCode: '', secondaryCode: '', activityId: '',
-  hours: '8', minutes: '0', details: '', funcaoContrato: '', editReason: '',
+  startTime: '', endTime: '', hours: '8', minutes: '0', details: '', funcaoContrato: '', editReason: '',
 }
 
 const filters: HistoryFiltersValue = {
@@ -27,11 +27,12 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('Atividade realizada')
     expect(markup).toContain('Outros')
   })
-  it('associa labels aos campos obrigatórios e limita a data ao dia corporativo', () => {
+  it('associa labels aos campos e limita somente a data inicial ao dia corporativo', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
     expect(markup).toContain('for="entry-start-date"')
     expect(markup).toContain('for="entry-end-date"')
     expect(markup).toContain('max="2026-07-20"')
+    expect(markup).not.toMatch(/id="entry-end-date"[^>]*max=/)
     expect(markup).toContain('for="project-code"')
     expect(markup).toContain('text-base')
   })
@@ -70,6 +71,9 @@ describe('markup acessível de apontamentos e histórico', () => {
     )
     expect(markup).toContain('Importar arquivo RDO para preenchimento automático')
     expect(markup).toContain('Detalhamento das atividades')
+    expect(markup).toContain('Hora de início')
+    expect(markup).toContain('Hora de fim')
+    expect(markup).toContain('Esses horários são usados na geração do RDO e são opcionais no apontamento.')
     expect(markup).toContain('Função do profissional de acordo com o contrato do cliente final')
     expect(markup).toContain('Gerar RDO (PDF)')
     expect(markup).toContain('Gerar RDO (Word)')
