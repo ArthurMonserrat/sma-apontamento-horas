@@ -35,8 +35,7 @@ describe('lista diária de apontamentos', () => {
 
     expect(markup).toContain('Elaboração de projeto')
     expect(markup).toContain('Cliente Industrial Alfa')
-    expect(markup).toContain('Número da contratada: SMA-001')
-    expect(markup).not.toContain('Número do projeto')
+    expect(markup).toContain('Número do projeto / obra: SMA-001')
     expect(markup).toContain('Registro criado antes da ampliação do catálogo.')
   })
 

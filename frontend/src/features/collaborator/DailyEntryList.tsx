@@ -30,7 +30,7 @@ export function DailyEntryList({ entries }: { entries: TimeEntry[] }) {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-bold ui-heading">Número da contratada: {entry.projectCode}</p>
+                      <p className="font-bold ui-heading">Número do projeto / obra: {entry.projectCode}</p>
                       <EntryRevisionBadge version={entry.version} />
                     </div>
                     <p className="mt-1 text-sm ui-text-subtle">{entry.clientName} · {activity?.name}</p>

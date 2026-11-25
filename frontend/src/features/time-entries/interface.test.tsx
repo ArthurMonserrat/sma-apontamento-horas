@@ -21,9 +21,9 @@ const filters: HistoryFiltersValue = {
 }
 
 describe('markup acessível de apontamentos e histórico', () => {
-  it('oferece contratada manual e atividades disponíveis', () => {
+  it('oferece número do projeto/obra e atividade realizada', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
-    expect(markup).toContain('Número da contratada')
+    expect(markup).toContain('Número do projeto / obra')
     expect(markup).toContain('Atividade realizada')
     expect(markup).toContain('Outros')
   })
@@ -32,29 +32,25 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('for="entry-start-date"')
     expect(markup).toContain('for="entry-end-date"')
     expect(markup).toContain('max="2026-07-20"')
-    expect(markup).toContain('for="contractor-number"')
-    expect(markup).toContain('for="primary-code"')
-    expect(markup).toContain('for="secondary-code"')
+    expect(markup).toContain('for="project-code"')
     expect(markup).toContain('text-base')
   })
 
-  it('não oferece cliente nem seleção de projeto no formulário', () => {
+  it('não oferece cliente nem seleção de projeto cadastrada no formulário', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
     expect(markup).not.toContain('name="clientName"')
-    expect(markup).not.toContain('Projeto')
+    expect(markup).toContain('Número do projeto / obra')
     expect(markup).not.toContain('LD')
   })
 
-  it('usa somente os campos manuais de contratada, atividade e códigos', () => {
+  it('usa somente os campos manuais de projeto/obra e atividade', () => {
     const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
-    expect(markup).toContain('Número da contratada')
+    expect(markup).toContain('Número do projeto / obra')
     expect(markup).toContain('Atividade realizada')
-    expect(markup).toContain('Código primário')
-    expect(markup).toContain('Código secundário')
     expect(markup).not.toContain('Cliente')
     expect(markup).not.toContain('Disciplina')
     expect(markup).not.toContain('Tipo de documento')
-    expect(markup).not.toContain('Se a data final for diferente')
+    expect(markup).toContain('Se a data final for diferente')
   })
 
   it('oferece filtros de período e dados individuais com labels', () => {
@@ -64,7 +60,7 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('for="history-contractor"')
     expect(markup).toContain('for="history-primary-code"')
     expect(markup).toContain('for="history-secondary-code"')
-    expect(markup).toContain('Número da contratada')
+    expect(markup).toContain('Número do projeto / obra')
     expect(markup).not.toContain('Cliente')
     expect(markup).not.toContain('Disciplina')
     expect(markup).not.toContain('Tipo de documento')

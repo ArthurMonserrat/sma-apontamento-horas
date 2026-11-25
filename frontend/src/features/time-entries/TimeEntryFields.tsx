@@ -32,6 +32,9 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
             <input id="entry-end-date" name="endDate" type="date" min={values.startDate} max={maxDate} value={values.endDate} onChange={(event) => onChange('endDate', event.target.value)} className={fieldClassName} disabled={!allowBatchMode} />
           </div>
         </div>
+        <p className="mt-2 text-xs ui-text-subtle">
+          Se a data final for diferente, o sistema criará automaticamente lançamentos individuais para cada dia do período.
+        </p>
         <label className={`mt-3 inline-flex items-center gap-2 text-sm font-semibold ui-text ${allowBatchMode ? '' : 'opacity-60'}`}>
           <input type="checkbox" checked={values.weekdaysOnly} onChange={(event) => onChange('weekdaysOnly', event.target.checked)} disabled={!allowBatchMode} className="h-4 w-4 rounded border-[var(--color-border)] bg-[var(--color-surface)] accent-[var(--color-primary)]" />
           Somente dias úteis
@@ -39,9 +42,10 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
       </div>
 
       <div>
-        <label htmlFor="contractor-number" className="text-sm font-bold ui-text">Número da contratada</label>
-        <input id="contractor-number" name="contractorNumber" maxLength={80} value={values.contractorNumber ?? ''} onChange={(event) => onChange('contractorNumber', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.contractorNumber)} aria-describedby={errors.contractorNumber ? 'contractor-number-error' : undefined} />
-        <FieldError id="contractor-number-error" message={errors.contractorNumber} />
+        <label htmlFor="project-code" className="text-sm font-bold ui-text">Número do projeto / obra</label>
+        <input id="project-code" name="projectCode" maxLength={80} value={values.contractorNumber ?? ''} onChange={(event) => onChange('contractorNumber', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} placeholder="Digite o número do projeto ou da obra" aria-invalid={Boolean(errors.contractorNumber)} aria-describedby={errors.contractorNumber ? 'project-code-error' : 'project-code-help'} />
+        <p id="project-code-help" className="mt-1.5 text-xs ui-text-subtle">Informe o projeto ou a obra vinculada ao apontamento.</p>
+        <FieldError id="project-code-error" message={errors.contractorNumber} />
       </div>
 
       <div>
@@ -53,17 +57,6 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
         <FieldError id="activity-error" message={errors.activityId} />
       </div>
 
-      <div>
-        <label htmlFor="primary-code" className="text-sm font-bold ui-text">Código primário</label>
-        <input id="primary-code" name="primaryCode" maxLength={160} value={values.primaryCode} onChange={(event) => onChange('primaryCode', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.primaryCode)} aria-describedby={errors.primaryCode ? 'primary-code-error' : undefined} />
-        <FieldError id="primary-code-error" message={errors.primaryCode} />
-      </div>
-
-      <div>
-        <label htmlFor="secondary-code" className="text-sm font-bold ui-text">Código secundário</label>
-        <input id="secondary-code" name="secondaryCode" maxLength={160} value={values.secondaryCode} onChange={(event) => onChange('secondaryCode', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} aria-invalid={Boolean(errors.secondaryCode)} aria-describedby={errors.secondaryCode ? 'secondary-code-error' : undefined} />
-        <FieldError id="secondary-code-error" message={errors.secondaryCode} />
-      </div>
     </div>
   )
 }

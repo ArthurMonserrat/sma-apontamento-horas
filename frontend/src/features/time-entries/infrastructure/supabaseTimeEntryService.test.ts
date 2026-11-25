@@ -63,7 +63,7 @@ describe('SupabaseTimeEntryService', () => {
   })
 
   it('aplica as mesmas validações do formulário antes de ir ao banco', async () => {
-    await expect(service.create(ME, { ...baseData, contractorNumber: '  ' })).rejects.toThrow('Informe um número de contratada válido.')
+    await expect(service.create(ME, { ...baseData, contractorNumber: '  ' })).rejects.toThrow('Informe um número de projeto ou obra válido.')
     expect(rows()).toHaveLength(0)
   })
 

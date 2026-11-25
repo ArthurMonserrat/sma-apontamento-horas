@@ -38,7 +38,7 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
   if (!isIsoDate(entryDate)) throw new Error('Informe uma data válida para criar o RDO.')
   const hours = Number(values.hours || 0), minutes = Number(values.minutes || 0)
   if (!areValidDurationParts(hours, minutes)) throw new Error('Informe uma duração válida para criar o RDO.')
-  if (!values.contractorNumber.trim()) throw new Error('Informe o número da contratada para criar o RDO.')
+  if (!values.contractorNumber.trim()) throw new Error('Informe o número do projeto ou da obra para criar o RDO.')
   return {
     contractor: 'SM&A Sistemas Elétricos e Automação',
     contractorNumber: values.contractorNumber.trim(),
@@ -124,7 +124,7 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
     let y = 40
     y = drawRow(y, [
       { label: 'Contratada', value: data.contractor, width: 96 },
-      { label: 'Número da contratada', value: data.contractorNumber, width: 91 },
+      { label: 'Número do projeto / obra', value: data.contractorNumber, width: 91 },
       { label: 'Data', value: formatDatePtBr(data.date), width: width - 187 },
     ])
     y = drawRow(y, [

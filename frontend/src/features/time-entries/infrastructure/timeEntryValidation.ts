@@ -9,7 +9,7 @@ export function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryD
   if (!isIsoDate(data.entryDate)) throw new Error('Informe uma data válida.')
   if (data.endDate && !isIsoDate(data.endDate)) throw new Error('Informe uma data final válida.')
   if (data.endDate && data.endDate < data.entryDate) throw new Error('A data final deve ser igual ou posterior à data inicial.')
-  if (!contractorNumber || contractorNumber.length > MAX_PROJECT_CODE_LENGTH) throw new Error('Informe um número de contratada válido.')
+  if (!contractorNumber || contractorNumber.length > MAX_PROJECT_CODE_LENGTH) throw new Error('Informe um número de projeto ou obra válido.')
   if (!data.activityId) throw new Error('Informe a atividade.')
   if ((data.primaryCode?.trim().length ?? 0) > 160) throw new Error('Código primário inválido.')
   if ((data.secondaryCode?.trim().length ?? 0) > 160) throw new Error('Código secundário inválido.')

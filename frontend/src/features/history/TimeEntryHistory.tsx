@@ -60,7 +60,7 @@ export function TimeEntryHistory() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-extrabold ui-heading">{formatDatePtBr(entry.entryDate)} · Contratada {entry.contractorNumber ?? entry.projectCode}</h2>
+                      <h2 className="font-extrabold ui-heading">{formatDatePtBr(entry.entryDate)} · Projeto / obra {entry.contractorNumber ?? entry.projectCode}</h2>
                       {entry.status === 'CANCELLED' && <StatusBadge tone={timeEntryStatusPresentation.CANCELLED.tone}>{timeEntryStatusPresentation.CANCELLED.label}</StatusBadge>}
                       <StatusBadge tone={approvalPresentation.tone}>{approvalPresentation.label}</StatusBadge>
                       <EntryRevisionBadge version={entry.version} />
