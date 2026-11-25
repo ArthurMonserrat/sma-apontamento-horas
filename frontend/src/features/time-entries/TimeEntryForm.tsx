@@ -1,13 +1,19 @@
-import { useEffect, useRef, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getCorporateToday } from '../../shared/lib/date'
+import { formatDatePtBr, getCorporateToday } from '../../shared/lib/date'
 import { FieldError, fieldClassName, TimeEntryFields } from './TimeEntryFields'
 import { useTimeEntryForm } from './useTimeEntryForm'
 import { CreateRdoButton } from '../rdo/CreateRdoButton'
+import { parseRdo, type ParsedRdoDay } from '../rdo/rdoParser'
+import { useSession } from '../session/useSession'
 
 export function TimeEntryForm({ entryId }: { entryId?: string }) {
   const [searchParams] = useSearchParams()
   const formRef = useRef<HTMLFormElement>(null)
+  const { profile } = useSession()
+  const [rdoDays, setRdoDays] = useState<ParsedRdoDay[]>([])
+  const [rdoStatus, setRdoStatus] = useState<'idle' | 'reading' | 'success' | 'error'>('idle')
+  const [rdoMessage, setRdoMessage] = useState<string | null>(null)
   const controller = useTimeEntryForm({
     initialDate: searchParams.get('date') ?? getCorporateToday(),
     entryId,
@@ -21,7 +27,51 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    await controller.submit()
+    const saved = await controller.submit(rdoDays)
+    if (saved) {
+      setRdoDays([])
+      setRdoMessage(null)
+      setRdoStatus('idle')
+    }
+  }
+
+  const handleRdoImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setRdoStatus('reading')
+    setRdoMessage('Lendo PDF localmente…')
+    try {
+      const parsed = await parseRdo(file, { collaboratorName: profile?.name })
+      if (parsed.aviso) {
+        setRdoDays([])
+        setRdoStatus('error')
+        setRdoMessage(parsed.aviso)
+        return
+      }
+      if (parsed.dias.length === 0) {
+        setRdoDays([])
+        setRdoStatus('error')
+        setRdoMessage('Não foi possível encontrar dias com horas no RDO informado.')
+        return
+      }
+      const orderedDays = [...parsed.dias].sort((left, right) => left.data.localeCompare(right.data))
+      const firstDay = orderedDays[0]
+      const lastDay = orderedDays.at(-1) ?? firstDay
+      setRdoDays(orderedDays)
+      controller.setField('startDate', firstDay.data)
+      controller.setField('endDate', lastDay.data)
+      controller.setField('weekdaysOnly', false)
+      controller.setField('hours', String(firstDay.horas))
+      controller.setField('minutes', String(firstDay.minutos))
+      controller.setField('details', firstDay.detalhamento)
+      if (parsed.numeroObra) controller.setField('contractorNumber', parsed.numeroObra)
+      setRdoStatus('success')
+      setRdoMessage(`${orderedDays.length} dia(s) lido(s). Revise a atividade e os dados antes de salvar.`)
+    } catch (error) {
+      setRdoStatus('error')
+      setRdoMessage(error instanceof Error ? error.message : 'Não foi possível ler o PDF informado.')
+    }
   }
 
   if (controller.isLoading) return <p aria-live="polite" className="text-sm font-semibold ui-text-muted">Carregando apontamento…</p>
@@ -51,7 +101,7 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         </section>
       )}
 
-      <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} onChange={controller.setField} />
+      <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} dateFieldsLocked={rdoDays.length > 0} onChange={controller.setField} />
 
       <fieldset>
         <legend className="text-sm font-bold ui-text">Duração em horas e minutos</legend>
@@ -68,6 +118,20 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         </div>
         <FieldError id="duration-error" message={controller.errors.durationMinutes} />
       </fieldset>
+
+      {controller.mode === 'CREATE' && (
+        <section className="rounded-2xl border ui-border ui-surface-subtle p-4" aria-labelledby="rdo-import-title">
+          <label id="rdo-import-title" htmlFor="rdo-upload" className="text-sm font-bold ui-text">Importar arquivo RDO para preenchimento automático</label>
+          <input id="rdo-upload" name="rdoUpload" type="file" accept=".pdf,application/pdf" onChange={(event) => void handleRdoImport(event)} disabled={rdoStatus === 'reading'} className={`${fieldClassName} file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-2 file:text-sm file:font-bold file:text-[#06241f] disabled:opacity-60`} />
+          <p className="mt-2 text-xs ui-text-subtle">O PDF é lido apenas neste navegador para preencher os campos. O arquivo não é salvo nem enviado.</p>
+          {rdoMessage && <p className={`mt-2 text-sm font-semibold ${rdoStatus === 'error' ? 'ui-text-danger' : 'ui-accent'}`} role={rdoStatus === 'error' ? 'alert' : 'status'}>{rdoMessage}</p>}
+          {rdoDays.length > 0 && (
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2" aria-label="Dias importados do RDO">
+              {rdoDays.map((day) => <li key={day.data} className="rounded-lg border ui-border ui-surface px-3 py-2 text-sm"><strong>{formatDatePtBr(day.data)}</strong><span className="ml-2 ui-text-muted">{String(day.horas).padStart(2, '0')}:{String(day.minutos).padStart(2, '0')}</span><p className="mt-1 ui-text-muted">{day.detalhamento}</p></li>)}
+            </ul>
+          )}
+        </section>
+      )}
 
       <div>
         <label htmlFor="details" className="text-sm font-bold ui-text">Detalhamento das atividades</label>

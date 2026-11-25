@@ -9,6 +9,7 @@ import { getCorporateToday, isIsoDate } from '../../shared/lib/date'
 import { useSession } from '../session/useSession'
 import { areValidDurationParts, hoursAndMinutesToMinutes, validateTimeEntry } from './domain'
 import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
+import type { ParsedRdoDay } from '../rdo/rdoParser'
 
 export type TimeEntryFormValues = {
   startDate: string
@@ -135,27 +136,35 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     }
   }
 
-  const submit = async () => {
+  const submit = async (importedRdoDays: ParsedRdoDay[] = []) => {
     if (!profile || isSubmitting) return false
     setSubmitError(null)
     setSuccessMessage(null)
+    const hasImportedRdo = mode === 'CREATE' && importedRdoDays.length > 0
+    const firstImportedRdoDay = importedRdoDays[0]
     const durationHours = Number(values.hours || 0)
     const durationRemainderMinutes = Number(values.minutes || 0)
-    const effectiveEndDate = mode === 'CREATE' ? values.endDate : values.startDate
-    const effectiveWeekdaysOnly = mode === 'CREATE' ? values.weekdaysOnly : true
-    const periodDates = mode === 'CREATE'
+    const projectNumber = values.contractorNumber.trim() || firstImportedRdoDay?.numeroObra?.trim() || ''
+    const effectiveEntryDate = firstImportedRdoDay?.data ?? values.startDate
+    const effectiveEndDate = hasImportedRdo ? effectiveEntryDate : mode === 'CREATE' ? values.endDate : values.startDate
+    const effectiveWeekdaysOnly = hasImportedRdo ? false : mode === 'CREATE' ? values.weekdaysOnly : true
+    const periodDates = hasImportedRdo
+      ? importedRdoDays.map((day) => day.data)
+      : mode === 'CREATE'
       ? expandTimeEntryDates(values.startDate, effectiveEndDate, effectiveWeekdaysOnly)
       : [values.startDate]
     const data: CreateTimeEntryData = {
-      entryDate: values.startDate,
+      entryDate: effectiveEntryDate,
       endDate: effectiveEndDate,
       weekdaysOnly: effectiveWeekdaysOnly,
-      contractorNumber: values.contractorNumber,
+      contractorNumber: projectNumber,
       primaryCode: values.primaryCode,
       secondaryCode: values.secondaryCode,
       activityId: values.activityId,
-      durationMinutes: hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
-      details: values.details,
+      durationMinutes: hasImportedRdo && firstImportedRdoDay
+        ? hoursAndMinutesToMinutes(firstImportedRdoDay.horas, firstImportedRdoDay.minutos)
+        : hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
+      details: hasImportedRdo && firstImportedRdoDay ? firstImportedRdoDay.detalhamento : values.details,
     }
     let canMutateDate = true
     let dateBlock = { blocked: false } as Awaited<ReturnType<typeof entryDateAvailabilityService.getBlock>>
@@ -177,11 +186,17 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     }
     const validationErrors = validateTimeEntry(data, demoActivities, { today: getCorporateToday(), canMutateDate })
     if (dateBlock.blocked) validationErrors.entryDate = dateBlock.message
-    if (!areValidDurationParts(durationHours, durationRemainderMinutes)) {
+    if (!hasImportedRdo && !areValidDurationParts(durationHours, durationRemainderMinutes)) {
       validationErrors.durationMinutes = 'Informe horas inteiras entre 0 e 24 e minutos inteiros entre 0 e 59, com total máximo de 24 horas.'
     }
     if (mode === 'CREATE') {
-      if (!isIsoDate(values.endDate)) {
+      if (hasImportedRdo) {
+        const invalidDay = importedRdoDays.find((day) => !isIsoDate(day.data) || day.data > getCorporateToday() || !day.detalhamento.trim() || !areValidDurationParts(day.horas, day.minutos))
+        if (invalidDay) {
+          setSubmitError('O RDO possui um ou mais dias com data, duração ou detalhamento inválido.')
+          return false
+        }
+      } else if (!isIsoDate(values.endDate)) {
         validationErrors.entryDate = validationErrors.entryDate ?? 'Informe uma data final válida.'
       } else if (values.endDate < values.startDate) {
         validationErrors.entryDate = validationErrors.entryDate ?? 'A data final deve ser igual ou posterior à data inicial.'
@@ -210,7 +225,25 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
         await timeEntryService.duplicate(profile.id, source.id, source.version, data)
         setSuccessMessage('Apontamento duplicado com sucesso.')
       } else {
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (hasImportedRdo) {
+          const importedEntries = importedRdoDays.map((day) => ({
+            ...data,
+            entryDate: day.data,
+            endDate: day.data,
+            weekdaysOnly: false,
+            durationMinutes: hoursAndMinutesToMinutes(day.horas, day.minutos),
+            details: day.detalhamento,
+            contractorNumber: projectNumber || day.numeroObra,
+          }))
+          await Promise.all(importedEntries.map(async (entry) => {
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+              await offlineQueueService.enqueue({ id: crypto.randomUUID(), status: 'PENDING', collaboratorId: profile.id, data: entry })
+              return
+            }
+            await timeEntryService.create(profile.id, entry)
+          }))
+          setSuccessMessage(`${importedRdoDays.length} lançamentos do RDO salvos individualmente com sucesso.`)
+        } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
           await offlineQueueService.enqueue({
             id: crypto.randomUUID(),
             status: 'PENDING',
