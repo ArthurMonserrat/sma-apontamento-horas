@@ -64,15 +64,15 @@ describe('validações e formatação', () => {
     details: 'Atividade corporativa',
   } as CreateTimeEntryData
 
-  it('rejeita número da contratada composto somente por espaços', () => {
+  it('rejeita número do projeto/obra composto somente por espaços', () => {
     const errors = validateTimeEntry(
       { ...validData, contractorNumber: '   ' },
       demoActivities,
     )
-    expect(errors.contractorNumber).toBe('Informe o número da contratada.')
+    expect(errors.contractorNumber).toBe('Informe o número do projeto ou da obra.')
   })
 
-  it('aceita número da contratada com 80 caracteres após trim', () => {
+  it('aceita número do projeto/obra com 80 caracteres após trim', () => {
     const errors = validateTimeEntry(
       { ...validData, contractorNumber: `  ${'A'.repeat(80)}  ` },
       demoActivities,
@@ -80,12 +80,12 @@ describe('validações e formatação', () => {
     expect(errors.contractorNumber).toBeUndefined()
   })
 
-  it('rejeita número da contratada acima de 80 caracteres após trim', () => {
+  it('rejeita número do projeto/obra acima de 80 caracteres após trim', () => {
     const errors = validateTimeEntry(
       { ...validData, contractorNumber: `  ${'A'.repeat(81)}  ` },
       demoActivities,
     )
-    expect(errors.contractorNumber).toBe('O número da contratada deve ter no máximo 80 caracteres.')
+    expect(errors.contractorNumber).toBe('O número do projeto ou da obra deve ter no máximo 80 caracteres.')
   })
 
   it('bloqueia data futura no fuso corporativo', () => {
