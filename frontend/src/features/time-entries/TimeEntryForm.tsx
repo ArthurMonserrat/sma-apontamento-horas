@@ -92,7 +92,7 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         <section className="flex flex-col gap-3 rounded-xl border ui-border ui-surface-subtle p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="reuse-last-entry-title">
           <div>
             <h2 id="reuse-last-entry-title" className="font-bold ui-heading">Apontamento recorrente</h2>
-            <p className="mt-1 text-sm ui-text-muted">Dados de identificação serão preenchidos; data, duração e detalhamento permanecem para revisão.</p>
+            <p className="mt-1 text-sm ui-text-muted">Dados de identificação serão preenchidos; data e detalhamento permanecem para revisão.</p>
           </div>
           <button type="button" onClick={() => void controller.reuseLastEntry()} disabled={controller.isReusingLastEntry} className="shrink-0 rounded-xl border ui-border px-4 py-2.5 text-sm font-bold ui-text hover:bg-[var(--color-surface)] disabled:cursor-not-allowed disabled:opacity-60">
             {controller.isReusingLastEntry ? 'Carregando…' : 'Usar último apontamento'}
@@ -102,22 +102,6 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
       )}
 
       <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} dateFieldsLocked={rdoDays.length > 0} onChange={controller.setField} />
-
-      <fieldset>
-        <legend className="text-sm font-bold ui-text">Duração em horas e minutos</legend>
-        <p className="mt-1 text-xs ui-text-subtle">Exemplos: 00h30, 01h15 ou 08h00.</p>
-        <div className="mt-2 grid max-w-sm grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="duration-hours" className="text-xs font-semibold ui-text-muted">Horas</label>
-            <input id="duration-hours" name="hours" type="number" min="0" max="24" step="1" inputMode="numeric" value={controller.values.hours} onChange={(event) => controller.setField('hours', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.durationMinutes)} aria-describedby={controller.errors.durationMinutes ? 'duration-error' : undefined} />
-          </div>
-          <div>
-            <label htmlFor="duration-minutes" className="text-xs font-semibold ui-text-muted">Minutos</label>
-            <input id="duration-minutes" name="minutes" type="number" min="0" max="59" step="1" inputMode="numeric" value={controller.values.minutes} onChange={(event) => controller.setField('minutes', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.durationMinutes)} aria-describedby={controller.errors.durationMinutes ? 'duration-error' : undefined} />
-          </div>
-        </div>
-        <FieldError id="duration-error" message={controller.errors.durationMinutes} />
-      </fieldset>
 
       {controller.mode === 'CREATE' && (
         <section className="rounded-2xl border ui-border ui-surface-subtle p-4" aria-labelledby="rdo-import-title">
@@ -138,6 +122,13 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         <textarea id="details" name="details" rows={5} value={controller.values.details} onChange={(event) => controller.setField('details', event.target.value)} className={fieldClassName} placeholder="Descreva objetivamente o trabalho realizado" aria-invalid={Boolean(controller.errors.details)} aria-describedby={controller.errors.details ? 'details-error' : 'details-help'} />
         <p id="details-help" className="mt-1.5 text-xs ui-text-subtle">Opcional. Não inclua senhas, dados pessoais ou informações sensíveis.</p>
         <FieldError id="details-error" message={controller.errors.details} />
+      </div>
+
+      <div>
+        <label htmlFor="funcao-contrato" className="text-sm font-bold ui-text">Função do profissional de acordo com o contrato do cliente final</label>
+        <input id="funcao-contrato" name="funcaoContrato" maxLength={160} value={controller.values.funcaoContrato} onChange={(event) => controller.setField('funcaoContrato', event.target.value)} className={fieldClassName} placeholder="Informe a função conforme o contrato" aria-invalid={Boolean(controller.errors.funcaoContrato)} aria-describedby={controller.errors.funcaoContrato ? 'funcao-contrato-error' : 'funcao-contrato-help'} />
+        <p id="funcao-contrato-help" className="mt-1.5 text-xs ui-text-subtle">Preencha a categoria conforme o contrato ou a orientação do gestor.</p>
+        <FieldError id="funcao-contrato-error" message={controller.errors.funcaoContrato} />
       </div>
 
       {controller.mode === 'EDIT' && (

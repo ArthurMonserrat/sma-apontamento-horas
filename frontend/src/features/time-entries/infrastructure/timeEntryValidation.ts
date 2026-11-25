@@ -13,6 +13,7 @@ export function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryD
   if (!data.activityId) throw new Error('Informe a atividade.')
   if ((data.primaryCode?.trim().length ?? 0) > 160) throw new Error('Código primário inválido.')
   if ((data.secondaryCode?.trim().length ?? 0) > 160) throw new Error('Código secundário inválido.')
+  if ((data.funcaoContrato?.trim().length ?? 0) > 160) throw new Error('Função contratual inválida.')
   if (!Number.isInteger(data.durationMinutes) || data.durationMinutes <= 0 || data.durationMinutes > MAX_ENTRY_MINUTES) {
     throw new Error('Informe uma duração válida.')
   }
@@ -28,6 +29,7 @@ export function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryD
     projectActivityId: undefined,
     primaryCode: data.primaryCode?.trim() || undefined,
     secondaryCode: data.secondaryCode?.trim() || undefined,
+    funcaoContrato: data.funcaoContrato?.trim() || undefined,
     details,
   }
 }

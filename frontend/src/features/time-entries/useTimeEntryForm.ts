@@ -18,6 +18,7 @@ export type TimeEntryFormValues = {
   contractorNumber: string
   primaryCode: string
   secondaryCode: string
+  funcaoContrato: string
   activityId: string
   hours: string
   minutes: string
@@ -33,9 +34,10 @@ const emptyValues = (entryDate: string): TimeEntryFormValues => ({
   primaryCode: '',
   secondaryCode: '',
   activityId: '',
-  hours: '',
-  minutes: '',
+  hours: '8',
+  minutes: '0',
   details: '',
+  funcaoContrato: '',
   editReason: '',
 })
 
@@ -47,6 +49,7 @@ function valuesFromEntry(entry: TimeEntry): TimeEntryFormValues {
     contractorNumber: entry.contractorNumber ?? '',
     primaryCode: entry.primaryCode ?? '',
     secondaryCode: entry.secondaryCode ?? '',
+    funcaoContrato: entry.funcaoContrato ?? '',
     activityId: entry.activityId,
     hours: String(Math.floor(entry.durationMinutes / 60)),
     minutes: String(entry.durationMinutes % 60),
@@ -124,9 +127,10 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
         activityId: lastEntry.activityId,
         primaryCode: lastEntry.primaryCode ?? '',
         secondaryCode: lastEntry.secondaryCode ?? '',
+        funcaoContrato: lastEntry.funcaoContrato ?? '',
       }))
       setErrors({})
-      setReuseLastEntryMessage('Dados do último apontamento aplicados. Data, duração e detalhamento foram mantidos para revisão.')
+      setReuseLastEntryMessage('Dados do último apontamento aplicados. Data e detalhamento foram mantidos para revisão.')
       return true
     } catch {
       setReuseLastEntryMessage('Não foi possível carregar o último apontamento. Tente novamente.')
@@ -160,6 +164,7 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       contractorNumber: projectNumber,
       primaryCode: values.primaryCode,
       secondaryCode: values.secondaryCode,
+      funcaoContrato: values.funcaoContrato,
       activityId: values.activityId,
       durationMinutes: hasImportedRdo && firstImportedRdoDay
         ? hoursAndMinutesToMinutes(firstImportedRdoDay.horas, firstImportedRdoDay.minutos)
