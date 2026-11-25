@@ -1,4 +1,7 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
+import { isMedicaoRdo, parseMedicaoRdoPages, type RdoPage } from './rdoMedicaoParser'
+
+export type { RdoPage } from './rdoMedicaoParser'
 
 export type ParsedRdoDay = {
   data: string
@@ -9,8 +12,14 @@ export type ParsedRdoDay = {
 }
 
 export type ParsedRdo = {
+  modelo?: 'padrao' | 'medicao'
   numeroObra?: string
+  aviso?: string
   dias: ParsedRdoDay[]
+}
+
+export type ParseRdoOptions = {
+  collaboratorName?: string
 }
 
 type TextItem = { str?: string; transform?: unknown }
@@ -130,22 +139,45 @@ function pageText(items: TextItem[]) {
     .join('\n')
 }
 
-export async function parseRdo(file: File): Promise<ParsedRdo> {
+function pageItems(items: TextItem[]): RdoPage {
+  return items.flatMap((item) => {
+    const text = item.str?.trim()
+    if (!text) return []
+    const { x, y } = itemPosition(item)
+    return [{ text, x, y }]
+  })
+}
+
+export function parseRdoPages(pages: RdoPage[], options: ParseRdoOptions = {}): ParsedRdo {
+  if (isMedicaoRdo(pages)) {
+    const parsed = parseMedicaoRdoPages(pages, options)
+    return {
+      modelo: 'medicao',
+      numeroObra: parsed.numeroObra,
+      aviso: parsed.aviso,
+      dias: parsed.dias.map(({ data, horas, minutos, detalhamento, numeroObra }) => ({ data, horas, minutos, detalhamento, numeroObra })),
+    }
+  }
+  const text = pages.map((page, index) => `\n--- Página ${index + 1} ---\n${pageText(page.map((item) => ({ str: item.text, transform: [1, 0, 0, 1, item.x, item.y] })))}\n`).join('\n')
+  return { modelo: 'padrao', ...parseRdoText(text) }
+}
+
+export async function parseRdo(file: File, options: ParseRdoOptions = {}): Promise<ParsedRdo> {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
   try {
-    const pages: string[] = []
+    const pages: RdoPage[] = []
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber)
       try {
         const content = await page.getTextContent()
-        pages.push(pageText(content.items as TextItem[]))
+        pages.push(pageItems(content.items as TextItem[]))
       } finally {
         page.cleanup()
       }
     }
-    return parseRdoText(pages.join('\n--- Página ---\n'))
+    return parseRdoPages(pages, options)
   } finally {
     await pdf.cleanup()
   }

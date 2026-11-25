@@ -5,10 +5,12 @@ import { FieldError, fieldClassName, TimeEntryFields } from './TimeEntryFields'
 import { useTimeEntryForm } from './useTimeEntryForm'
 import { CreateRdoButton } from '../rdo/CreateRdoButton'
 import { parseRdo, type ParsedRdoDay } from '../rdo/rdoParser'
+import { useSession } from '../session/useSession'
 
 export function TimeEntryForm({ entryId }: { entryId?: string }) {
   const [searchParams] = useSearchParams()
   const formRef = useRef<HTMLFormElement>(null)
+  const { profile } = useSession()
   const [rdoDays, setRdoDays] = useState<ParsedRdoDay[]>([])
   const [rdoStatus, setRdoStatus] = useState<'idle' | 'reading' | 'success' | 'error'>('idle')
   const [rdoMessage, setRdoMessage] = useState<string | null>(null)
@@ -40,7 +42,13 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
     setRdoStatus('reading')
     setRdoMessage('Lendo PDF localmente…')
     try {
-      const parsed = await parseRdo(file)
+      const parsed = await parseRdo(file, { collaboratorName: profile?.name })
+      if (parsed.aviso) {
+        setRdoDays([])
+        setRdoStatus('error')
+        setRdoMessage(parsed.aviso)
+        return
+      }
       if (parsed.dias.length === 0) {
         setRdoDays([])
         setRdoStatus('error')
