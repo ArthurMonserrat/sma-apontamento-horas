@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { Packer } from 'docx'
 import { buildRdoData, downloadRdo, generateRdo, generateRdoWord, rdoFileName } from './rdo'
 
-const values = { entryDate: '2026-09-07', contractorNumber: '  00-Ab/1  ', primaryCode: 'PRIM-01', secondaryCode: 'SEC-02', activityId: 'activity', hours: '1', minutes: '30', details: '', funcaoContrato: 'Engenheira de campo' }
+const values = { entryDate: '2026-09-07', contractorNumber: '  00-Ab/1  ', primaryCode: 'PRIM-01', secondaryCode: 'SEC-02', activityId: 'activity', startTime: '08:00', endTime: '09:30', hours: '1', minutes: '30', details: '', funcaoContrato: 'Engenheira de campo' }
 const context = { name: 'Profissional de Teste', jobTitle: 'Engenheira', activityName: 'Análise de documento' }
 const logo = new Uint8Array(readFileSync(new URL('../../assets/brand/sma-logo.jpg', import.meta.url)))
 const signatureBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDyqiiiu880/9k='
@@ -16,7 +16,7 @@ describe('RDO independente da gravação', () => {
   it('usa dados manuais e não inventa campos indisponíveis', () => {
     const data = buildRdoData(values, context)
     expect(data).toMatchObject({ contractor: 'SM&A Sistemas Elétricos e Automação', contractorNumber: '00-Ab/1', primaryCode: 'PRIM-01', secondaryCode: 'SEC-02', duration: '01:30', details: '', professional: 'Profissional de Teste', category: 'Engenheira de campo' })
-    expect(data).not.toHaveProperty('startTime')
+    expect(data).toMatchObject({ startTime: '08:00', endTime: '09:30' })
     expect(data).not.toHaveProperty('signature')
   })
   it('preserva os códigos manuais sem depender da LD', () => {

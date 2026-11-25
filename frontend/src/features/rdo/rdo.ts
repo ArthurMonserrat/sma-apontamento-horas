@@ -10,6 +10,8 @@ type RdoFormData = {
   primaryCode?: string
   secondaryCode?: string
   funcaoContrato?: string
+  startTime?: string
+  endTime?: string
   hours: string
   minutes: string
   details: string
@@ -46,6 +48,8 @@ export function buildRdoData(values: RdoFormData, context: RdoContext) {
     contractorNumber: values.contractorNumber.trim(),
     date: entryDate, professional: context.name, category: values.funcaoContrato?.trim() || context.jobTitle || '',
     duration: formatMinutes(hours * 60 + minutes),
+    startTime: values.startTime?.trim() || '',
+    endTime: values.endTime?.trim() || '',
     primaryCode: values.primaryCode?.trim() ?? '',
     secondaryCode: values.secondaryCode?.trim() ?? '',
     activity: context.activityName ?? '', details: values.details.trim(),
@@ -77,6 +81,7 @@ export function generateRdoWord(data: RdoData) {
     rows: [
       new TableRow({ children: [wordCell('Contratada', data.contractor), wordCell('Projeto / obra', data.contractorNumber), wordCell('Data', formatDatePtBr(data.date))] }),
       new TableRow({ children: [wordCell('Código primário', data.primaryCode), wordCell('Código secundário', data.secondaryCode), wordCell('Total de horas', data.duration)] }),
+      new TableRow({ children: [wordCell('Hora de início', data.startTime), wordCell('Hora de fim', data.endTime), wordCell('Intervalo informado', data.startTime && data.endTime ? `${data.startTime} às ${data.endTime}` : '')] }),
     ],
   })
   const body = [
@@ -178,9 +183,13 @@ export function generateRdo(data: RdoData, logo: Uint8Array) {
     ])
     y = drawSection('PROFISSIONAL', y)
     y = drawRow(y, [
-      { label: 'Nome do profissional', value: data.professional, width: 127 },
-      { label: 'Categoria / Função', value: data.category, width: 100 },
-      { label: 'Total de horas', value: data.duration, width: width - 227 },
+      { label: 'Nome do profissional', value: data.professional, width: width / 2 },
+      { label: 'Categoria / Função', value: data.category, width: width / 2 },
+    ])
+    y = drawRow(y, [
+      { label: 'Hora de início', value: data.startTime, width: width / 3 },
+      { label: 'Hora de fim', value: data.endTime, width: width / 3 },
+      { label: 'Total de horas', value: data.duration, width: width / 3 },
     ])
     return y
   }

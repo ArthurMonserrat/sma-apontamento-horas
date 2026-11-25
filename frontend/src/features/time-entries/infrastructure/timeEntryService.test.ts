@@ -94,6 +94,13 @@ describe('dados opcionais de LD e contratada', () => {
     expect((await buildService(storage).listByDate(collaboratorId, validData.entryDate))).toHaveLength(2)
   })
 
+  it('preserva o intervalo de horários no armazenamento local', async () => {
+    const storage = new MemoryStorage()
+    const service = buildService(storage)
+    const entry = await service.create(collaboratorId, { ...validData, startTime: '08:00', endTime: '16:00' })
+    await expect(buildService(storage).getById(collaboratorId, entry.id)).resolves.toMatchObject({ startTime: '08:00', endTime: '16:00' })
+  })
+
   it('rejeita contratada longa', async () => {
     const service = buildService(new MemoryStorage())
     await expect(service.create(collaboratorId, { ...validData, contractorNumber: 'a'.repeat(161) })).rejects.toThrow()

@@ -3,6 +3,7 @@ import type { AssignmentSnapshot } from '../../squads/types'
 import type { DisciplineCode, DocumentTypeCode, TimeEntry } from '../types'
 import { isAllowedDocumentType, isDisciplineCode, isLdDocumentSnapshot } from '../documentCatalog'
 import { isIsoDate } from '../../../shared/lib/date'
+import { timeRangeToMinutes } from '../domain'
 
 export const LEGACY_V1_TIME_ENTRY_STORAGE_KEY = 'sma:time-entries:v1'
 export const LEGACY_V2_TIME_ENTRY_STORAGE_KEY = 'sma:time-entries:v2'
@@ -101,6 +102,10 @@ function commonEntryIsInvalid(entry: Record<string, unknown>, collaboratorId: st
     || (entry.ldDocument !== undefined && !isLdDocumentSnapshot(entry.ldDocument))
     || (entry.contractorNumber !== undefined && (typeof entry.contractorNumber !== 'string' || entry.contractorNumber.trim().length > 160))
     || (entry.funcaoContrato !== undefined && (typeof entry.funcaoContrato !== 'string' || entry.funcaoContrato.trim().length > 160))
+    || (entry.startTime !== undefined && typeof entry.startTime !== 'string')
+    || (entry.endTime !== undefined && typeof entry.endTime !== 'string')
+    || (Boolean(entry.startTime) !== Boolean(entry.endTime))
+    || (Boolean(entry.startTime) && timeRangeToMinutes(entry.startTime as string, entry.endTime as string) === null)
     || !Number.isInteger(entry.durationMinutes)
     || Number(entry.durationMinutes) <= 0
     || Number(entry.durationMinutes) > MAX_ENTRY_MINUTES
@@ -122,6 +127,8 @@ function sharedFields(entry: Record<string, unknown>, collaboratorId: string) {
     primaryCode: typeof entry.primaryCode === 'string' && entry.primaryCode.trim() ? entry.primaryCode.trim() : undefined,
     secondaryCode: typeof entry.secondaryCode === 'string' && entry.secondaryCode.trim() ? entry.secondaryCode.trim() : undefined,
     funcaoContrato: typeof entry.funcaoContrato === 'string' && entry.funcaoContrato.trim() ? entry.funcaoContrato.trim() : undefined,
+    startTime: typeof entry.startTime === 'string' && entry.startTime.trim() ? entry.startTime.trim() : undefined,
+    endTime: typeof entry.endTime === 'string' && entry.endTime.trim() ? entry.endTime.trim() : undefined,
     ldDocument: isLdDocumentSnapshot(entry.ldDocument) ? entry.ldDocument : undefined,
     activityId: entry.activityId as string,
     disciplineCode: entry.disciplineCode as DisciplineCode,

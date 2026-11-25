@@ -7,6 +7,7 @@ import {
   formatMinutes,
   formatSignedMinutes,
   isValidDuration,
+  timeRangeToMinutes,
   validateTimeEntry,
 } from './domain'
 
@@ -133,5 +134,13 @@ describe('validações e formatação', () => {
     expect(expandTimeEntryDates('2026-07-13', '2026-07-13')).toEqual(['2026-07-13'])
     expect(expandTimeEntryDates('2026-07-13', '2026-07-19')).toEqual(['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'])
     expect(expandTimeEntryDates('2026-07-13', '2026-07-19', false)).toHaveLength(7)
+  })
+  it('calcula a duração a partir de hora de início e fim', () => {
+    expect(timeRangeToMinutes('08:00', '17:30')).toBe(570)
+    expect(timeRangeToMinutes('08:00', '')).toBeNull()
+    expect(timeRangeToMinutes('17:30', '08:00')).toBeNull()
+  })
+  it('recusa um intervalo de horas incompleto', () => {
+    expect(validateTimeEntry({ ...validData, startTime: '08:00', endTime: '' }, demoActivities)).toMatchObject({ startTime: expect.any(String) })
   })
 })

@@ -118,6 +118,21 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
       )}
 
       <div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="start-time" className="text-sm font-bold ui-text">Hora de início</label>
+            <input id="start-time" name="startTime" type="time" value={controller.values.startTime} onChange={(event) => controller.setField('startTime', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.startTime)} aria-describedby={controller.errors.startTime ? 'start-time-error' : undefined} />
+          </div>
+          <div>
+            <label htmlFor="end-time" className="text-sm font-bold ui-text">Hora de fim</label>
+            <input id="end-time" name="endTime" type="time" value={controller.values.endTime} onChange={(event) => controller.setField('endTime', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.startTime)} aria-describedby={controller.errors.startTime ? 'start-time-error' : undefined} />
+          </div>
+        </div>
+        <p className="mt-2 text-xs ui-text-subtle">Esses horários são usados na geração do RDO e são opcionais no apontamento.</p>
+        <FieldError id="start-time-error" message={controller.errors.startTime} />
+      </div>
+
+      <div>
         <label htmlFor="details" className="text-sm font-bold ui-text">Detalhamento das atividades</label>
         <textarea id="details" name="details" rows={5} value={controller.values.details} onChange={(event) => controller.setField('details', event.target.value)} className={fieldClassName} placeholder="Descreva objetivamente o trabalho realizado" aria-invalid={Boolean(controller.errors.details)} aria-describedby={controller.errors.details ? 'details-error' : 'details-help'} />
         <p id="details-help" className="mt-1.5 text-xs ui-text-subtle">Opcional. Não inclua senhas, dados pessoais ou informações sensíveis.</p>

@@ -14,6 +14,8 @@ const baseData: CreateTimeEntryData = {
   primaryCode: 'PRIM-01',
   secondaryCode: 'SEC-02',
   funcaoContrato: 'Engenheiro de campo',
+  startTime: '08:00',
+  endTime: '16:00',
   activityId: 'activity-1',
   disciplineCode: 'E',
   documentTypeCode: 'DE',
@@ -44,10 +46,10 @@ describe('SupabaseTimeEntryService', () => {
     expect(rows()[0]).toMatchObject({
       collaborator_id: ME, entry_date: '2026-10-26', project_code: 'P-100', contractor_number: 'P-100',
       primary_code: 'PRIM-01', secondary_code: 'SEC-02', duration_minutes: 480, status: 'PENDING', assignment_snapshot: snapshot,
-      funcao_contrato: 'Engenheiro de campo',
+      funcao_contrato: 'Engenheiro de campo', start_time: '08:00', end_time: '16:00',
     })
     expect(rows()[0]).not.toHaveProperty('team_id', 'team-1')
-    expect(created).toMatchObject({ collaboratorId: ME, status: 'PENDING', version: 1, assignmentSnapshot: snapshot, funcaoContrato: 'Engenheiro de campo' })
+    expect(created).toMatchObject({ collaboratorId: ME, status: 'PENDING', version: 1, assignmentSnapshot: snapshot, funcaoContrato: 'Engenheiro de campo', startTime: '08:00', endTime: '16:00' })
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ type: 'TIME_ENTRY_CREATED', entityId: created.id }))
   })
 

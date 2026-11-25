@@ -31,6 +31,8 @@ export type Banco1TimeEntryRow = {
   primary_code?: string | null
   secondary_code?: string | null
   funcao_contrato?: string | null
+  start_time?: string | null
+  end_time?: string | null
   project_id?: string | null
   project_activity_id?: string | null
   ld_document: LdDocumentSnapshot | null
@@ -67,6 +69,8 @@ export function timeEntryFromRow(row: Banco1TimeEntryRow): TimeEntry {
     primaryCode: row.primary_code ?? undefined,
     secondaryCode: row.secondary_code ?? undefined,
     funcaoContrato: row.funcao_contrato ?? undefined,
+    startTime: row.start_time?.slice(0, 5) ?? undefined,
+    endTime: row.end_time?.slice(0, 5) ?? undefined,
     projectId: row.project_id ?? undefined,
     projectActivityId: row.project_activity_id ?? undefined,
     ldDocument: row.ld_document ?? undefined,
@@ -96,6 +100,8 @@ function contentColumns(data: CreateTimeEntryData) {
     primary_code: data.primaryCode?.trim() || null,
     secondary_code: data.secondaryCode?.trim() || null,
     funcao_contrato: data.funcaoContrato?.trim() || null,
+    start_time: data.startTime?.trim() || null,
+    end_time: data.endTime?.trim() || null,
     ld_document: null,
     activity_id: data.activityId,
     discipline_code: '—',
@@ -326,6 +332,8 @@ export class SupabaseTimeEntryService implements TimeEntryService {
       primaryCode: overrides.primaryCode ?? entry.primaryCode,
       secondaryCode: overrides.secondaryCode ?? entry.secondaryCode,
       funcaoContrato: overrides.funcaoContrato ?? entry.funcaoContrato,
+      startTime: overrides.startTime ?? entry.startTime,
+      endTime: overrides.endTime ?? entry.endTime,
       activityId: overrides.activityId ?? entry.activityId,
       durationMinutes: overrides.durationMinutes ?? entry.durationMinutes,
       details: overrides.details ?? entry.details,
