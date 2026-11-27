@@ -10,6 +10,8 @@ import { useSession } from '../session/useSession'
 import { areValidDurationParts, hoursAndMinutesToMinutes, timeRangeToMinutes, validateTimeEntry } from './domain'
 import { offlineQueueService } from '../offline/infrastructure/offlineQueueService'
 import type { ParsedRdoDay } from '../rdo/rdoParser'
+import { getCorporateDataClient } from '../corporate/corporateData'
+import { listProjectCodes } from './infrastructure/projectCatalog'
 
 export type TimeEntryFormValues = {
   startDate: string
@@ -80,6 +82,22 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isReusingLastEntry, setIsReusingLastEntry] = useState(false)
   const [reuseLastEntryMessage, setReuseLastEntryMessage] = useState<string | null>(null)
+  const [projectCodes, setProjectCodes] = useState<string[] | undefined>()
+  const [projectLoadError, setProjectLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!profile) return
+    const client = getCorporateDataClient()
+    if (!client) return
+    let active = true
+    setProjectCodes([])
+    listProjectCodes(client).then((codes) => {
+      if (active) { setProjectCodes(codes); setProjectLoadError(null) }
+    }).catch(() => {
+      if (active) setProjectLoadError('Não foi possível carregar os projetos. Tente novamente.')
+    })
+    return () => { active = false }
+  }, [profile])
 
   useEffect(() => {
     if (!profile || !sourceId) return
@@ -158,6 +176,10 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     const durationRemainderMinutes = Number(values.minutes || 0)
     const rangeDurationMinutes = timeRangeToMinutes(values.startTime, values.endTime)
     const projectNumber = values.contractorNumber.trim() || firstImportedRdoDay?.numeroObra?.trim() || ''
+    if (projectCodes && (projectLoadError || !projectCodes.includes(projectNumber))) {
+      setSubmitError(projectLoadError ?? 'Selecione um projeto disponível no catálogo sincronizado.')
+      return false
+    }
     const effectiveEntryDate = firstImportedRdoDay?.data ?? values.startDate
     const effectiveEndDate = hasImportedRdo ? effectiveEntryDate : mode === 'CREATE' ? values.endDate : values.startDate
     const effectiveWeekdaysOnly = hasImportedRdo ? false : mode === 'CREATE' ? values.weekdaysOnly : true
@@ -177,9 +199,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       startTime: values.startTime,
       endTime: values.endTime,
       activityId: values.activityId,
-      durationMinutes: hasImportedRdo && firstImportedRdoDay
+      durationMinutes: rangeDurationMinutes ?? (hasImportedRdo && firstImportedRdoDay
         ? hoursAndMinutesToMinutes(firstImportedRdoDay.horas, firstImportedRdoDay.minutos)
-        : rangeDurationMinutes ?? hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
+        : hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes)),
       details: hasImportedRdo && firstImportedRdoDay ? firstImportedRdoDay.detalhamento : values.details,
     }
     let canMutateDate = true
@@ -300,6 +322,8 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
     submitError,
     successMessage,
     reuseLastEntryMessage,
+    projectCodes,
+    projectLoadError,
     setField,
     reuseLastEntry,
     submit,

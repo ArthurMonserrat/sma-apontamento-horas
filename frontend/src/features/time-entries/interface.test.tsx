@@ -37,10 +37,13 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('text-base')
   })
 
-  it('não oferece cliente nem seleção de projeto cadastrada no formulário', () => {
-    const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
+  it('oferece os códigos sincronizados sem cliente nem descrição', () => {
+    const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" projectCodes={['OBRA-01', 'OBRA-02']} onChange={vi.fn()} />)
     expect(markup).not.toContain('name="clientName"')
     expect(markup).toContain('Número do projeto / obra')
+    expect(markup).toContain('OBRA-01')
+    expect(markup).toContain('OBRA-02')
+    expect(markup).toContain('Selecione um projeto')
     expect(markup).not.toContain('LD')
   })
 
@@ -73,7 +76,10 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('Detalhamento das atividades')
     expect(markup).toContain('Hora de início')
     expect(markup).toContain('Hora de fim')
-    expect(markup).toContain('Esses horários são usados na geração do RDO e são opcionais no apontamento.')
+    expect(markup).toContain('Esses horários definem a quantidade de horas apontada em cada dia.')
+    expect(markup).toMatch(/id="start-time"[^>]*required/)
+    expect(markup).toMatch(/id="end-time"[^>]*required/)
+    expect(markup).toContain('ui-file-input')
     expect(markup).toContain('Função do profissional de acordo com o contrato do cliente final')
     expect(markup).toContain('Gerar RDO (PDF)')
     expect(markup).toContain('Gerar RDO (Word)')

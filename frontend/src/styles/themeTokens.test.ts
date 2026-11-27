@@ -282,9 +282,11 @@ describe('tokens institucionais e contraste', () => {
   })
 
   it('define os utilitarios visuais compartilhados', () => {
-    for (const className of ['ui-card', 'ui-field', 'ui-button-primary', 'ui-button-secondary', 'ui-badge-primary', 'ui-badge-secondary', 'ui-alert-danger', 'ui-text-danger', 'brand-mark']) {
+    for (const className of ['ui-card', 'ui-field', 'ui-button-primary', 'ui-button-secondary', 'ui-file-input', 'ui-badge-primary', 'ui-badge-secondary', 'ui-alert-danger', 'ui-text-danger', 'brand-mark']) {
       expect(stylesheet).toContain(`.${className}`)
     }
+    expect(stylesheet).toContain('.ui-file-input::file-selector-button')
+    expect(stylesheet).toContain('color: var(--color-primary-contrast)')
   })
 
   it('define utilitários semânticos para rótulos institucionais e alertas', () => {

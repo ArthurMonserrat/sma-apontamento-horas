@@ -81,9 +81,9 @@ export function validateTimeEntry(
   if (!isValidDuration(data.durationMinutes)) errors.durationMinutes = 'A duração deve ser maior que zero e de no máximo 24 horas.'
   const hasStartTime = Boolean(data.startTime?.trim())
   const hasEndTime = Boolean(data.endTime?.trim())
-  if (hasStartTime !== hasEndTime) {
+  if (!hasStartTime || !hasEndTime) {
     errors.startTime = 'Informe a hora de início e a hora de fim.'
-  } else if (hasStartTime && timeRangeToMinutes(data.startTime, data.endTime) === null) {
+  } else if (timeRangeToMinutes(data.startTime, data.endTime) === null) {
     errors.startTime = 'Informe um intervalo de horas válido, com o fim posterior ao início.'
   }
   if (contractorNumber.length > 160) errors.contractorNumber = 'Use no máximo 160 caracteres.'

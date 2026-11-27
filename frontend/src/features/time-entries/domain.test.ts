@@ -61,6 +61,8 @@ describe('validações e formatação', () => {
     primaryCode: 'PRIM-01',
     secondaryCode: 'SEC-02',
     activityId: 'activity-project-design',
+    startTime: '08:00',
+    endTime: '17:00',
     durationMinutes: 60,
     details: 'Atividade corporativa',
   } as CreateTimeEntryData
@@ -116,6 +118,8 @@ describe('validações e formatação', () => {
       primaryCode: 'PRIM-01',
       secondaryCode: 'SEC-02',
       activityId: 'activity-project-design',
+      startTime: '08:00',
+      endTime: '17:00',
       durationMinutes: 60,
       details: 'Atividade corporativa',
     } as unknown as CreateTimeEntryData
@@ -139,6 +143,11 @@ describe('validações e formatação', () => {
     expect(timeRangeToMinutes('08:00', '17:30')).toBe(570)
     expect(timeRangeToMinutes('08:00', '')).toBeNull()
     expect(timeRangeToMinutes('17:30', '08:00')).toBeNull()
+  })
+  it('exige hora de início e hora de fim para cada apontamento', () => {
+    expect(validateTimeEntry({ ...validData, startTime: '', endTime: '' }, demoActivities)).toMatchObject({
+      startTime: 'Informe a hora de início e a hora de fim.',
+    })
   })
   it('recusa um intervalo de horas incompleto', () => {
     expect(validateTimeEntry({ ...validData, startTime: '08:00', endTime: '' }, demoActivities)).toMatchObject({ startTime: expect.any(String) })

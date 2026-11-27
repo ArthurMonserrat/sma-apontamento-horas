@@ -101,12 +101,12 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         </section>
       )}
 
-      <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} dateFieldsLocked={rdoDays.length > 0} onChange={controller.setField} />
+      <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} dateFieldsLocked={rdoDays.length > 0} projectCodes={controller.projectCodes} projectLoadError={controller.projectLoadError} onChange={controller.setField} />
 
       {controller.mode === 'CREATE' && (
         <section className="rounded-2xl border ui-border ui-surface-subtle p-4" aria-labelledby="rdo-import-title">
           <label id="rdo-import-title" htmlFor="rdo-upload" className="text-sm font-bold ui-text">Importar arquivo RDO para preenchimento automático</label>
-          <input id="rdo-upload" name="rdoUpload" type="file" accept=".pdf,application/pdf" onChange={(event) => void handleRdoImport(event)} disabled={rdoStatus === 'reading'} className={`${fieldClassName} file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-2 file:text-sm file:font-bold file:text-[#06241f] disabled:opacity-60`} />
+          <input id="rdo-upload" name="rdoUpload" type="file" accept=".pdf,application/pdf" onChange={(event) => void handleRdoImport(event)} disabled={rdoStatus === 'reading'} className={`${fieldClassName} ui-file-input disabled:opacity-60`} />
           <p className="mt-2 text-xs ui-text-subtle">O PDF é lido apenas neste navegador para preencher os campos. O arquivo não é salvo nem enviado.</p>
           {rdoMessage && <p className={`mt-2 text-sm font-semibold ${rdoStatus === 'error' ? 'ui-text-danger' : 'ui-accent'}`} role={rdoStatus === 'error' ? 'alert' : 'status'}>{rdoMessage}</p>}
           {rdoDays.length > 0 && (
@@ -121,14 +121,14 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="start-time" className="text-sm font-bold ui-text">Hora de início</label>
-            <input id="start-time" name="startTime" type="time" value={controller.values.startTime} onChange={(event) => controller.setField('startTime', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.startTime)} aria-describedby={controller.errors.startTime ? 'start-time-error' : undefined} />
+            <input id="start-time" name="startTime" type="time" required value={controller.values.startTime} onChange={(event) => controller.setField('startTime', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.startTime)} aria-describedby={controller.errors.startTime ? 'start-time-error' : undefined} />
           </div>
           <div>
             <label htmlFor="end-time" className="text-sm font-bold ui-text">Hora de fim</label>
-            <input id="end-time" name="endTime" type="time" value={controller.values.endTime} onChange={(event) => controller.setField('endTime', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.startTime)} aria-describedby={controller.errors.startTime ? 'start-time-error' : undefined} />
+            <input id="end-time" name="endTime" type="time" required value={controller.values.endTime} onChange={(event) => controller.setField('endTime', event.target.value)} className={fieldClassName} aria-invalid={Boolean(controller.errors.startTime)} aria-describedby={controller.errors.startTime ? 'start-time-error' : undefined} />
           </div>
         </div>
-        <p className="mt-2 text-xs ui-text-subtle">Esses horários são usados na geração do RDO e são opcionais no apontamento.</p>
+        <p className="mt-2 text-xs ui-text-subtle">Esses horários definem a quantidade de horas apontada em cada dia.</p>
         <FieldError id="start-time-error" message={controller.errors.startTime} />
       </div>
 
