@@ -59,6 +59,9 @@ jobs:
       - name: Verify Banco 1 project catalog and additive import
         run: psql "$DB_URL" --no-psqlrc --set ON_ERROR_STOP=1 --file supabase/tests/banco1_project_catalog_assertions.sql
 
+      - name: Verify Banco 1 required entry times
+        run: psql "$DB_URL" --no-psqlrc --set ON_ERROR_STOP=1 --file supabase/tests/banco1_entry_time_assertions.sql
+
       - name: Stop and discard local Supabase
         if: always()
         run: supabase stop --no-backup

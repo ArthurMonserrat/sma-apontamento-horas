@@ -199,9 +199,9 @@ export function useTimeEntryForm({ initialDate, entryId, duplicateId }: { initia
       startTime: values.startTime,
       endTime: values.endTime,
       activityId: values.activityId,
-      durationMinutes: hasImportedRdo && firstImportedRdoDay
+      durationMinutes: rangeDurationMinutes ?? (hasImportedRdo && firstImportedRdoDay
         ? hoursAndMinutesToMinutes(firstImportedRdoDay.horas, firstImportedRdoDay.minutos)
-        : rangeDurationMinutes ?? hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes),
+        : hoursAndMinutesToMinutes(durationHours, durationRemainderMinutes)),
       details: hasImportedRdo && firstImportedRdoDay ? firstImportedRdoDay.detalhamento : values.details,
     }
     let canMutateDate = true

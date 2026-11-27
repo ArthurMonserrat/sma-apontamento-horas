@@ -52,6 +52,8 @@ const validData: CreateTimeEntryData = {
   clientName: 'Cliente Industrial Alfa',
   projectCode: 'Ab-001/2.03',
   activityId: 'activity-project-design',
+  startTime: '08:00',
+  endTime: '09:00',
   disciplineCode: '—',
   documentTypeCode: '—',
   durationMinutes: 60,
@@ -69,6 +71,8 @@ describe('dados opcionais de LD e contratada', () => {
       primaryCode: 'PRIM-01',
       secondaryCode: 'SEC-02',
       activityId: 'activity-project-design',
+      startTime: '08:00',
+      endTime: '09:00',
       durationMinutes: 60,
       details: '',
     })

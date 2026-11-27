@@ -17,8 +17,8 @@ export function normalizeCreateData(data: CreateTimeEntryData): CreateTimeEntryD
   if ((data.funcaoContrato?.trim().length ?? 0) > 160) throw new Error('Função contratual inválida.')
   const startTime = data.startTime?.trim() || undefined
   const endTime = data.endTime?.trim() || undefined
-  if ((startTime && !endTime) || (!startTime && endTime)) throw new Error('Informe a hora de início e a hora de fim.')
-  if (startTime && timeRangeToMinutes(startTime, endTime) === null) throw new Error('Informe um intervalo de horas válido.')
+  if (!startTime || !endTime) throw new Error('Informe a hora de início e a hora de fim.')
+  if (timeRangeToMinutes(startTime, endTime) === null) throw new Error('Informe um intervalo de horas válido.')
   if (!Number.isInteger(data.durationMinutes) || data.durationMinutes <= 0 || data.durationMinutes > MAX_ENTRY_MINUTES) {
     throw new Error('Informe uma duração válida.')
   }
