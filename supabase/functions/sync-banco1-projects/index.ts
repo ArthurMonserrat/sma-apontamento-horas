@@ -1,4 +1,4 @@
-import { normalizeExternalProjectCodes } from './catalog.ts'
+import { normalizeExternalProjects } from './catalog.ts'
 
 const read = (name: string) => Deno.env.get(name)?.trim() || ''
 
@@ -14,7 +14,7 @@ Deno.serve(async (request) => {
   try {
     const url = new URL(sourceUrl)
     if (url.protocol !== 'https:') throw new Error('URL externa inválida.')
-    url.searchParams.set('select', 'pro_st_apelido')
+    url.searchParams.set('select', 'pro_st_apelido,pro_st_descricao')
     const rows: unknown[] = []
     const pageSize = 1000
     for (let offset = 0; offset < 100000; offset += pageSize) {
@@ -29,11 +29,11 @@ Deno.serve(async (request) => {
       if (page.length < pageSize) break
       if (offset + pageSize >= 100000) throw new Error('Catálogo excede o limite de segurança.')
     }
-    const codes = normalizeExternalProjectCodes(rows)
+    const projects = normalizeExternalProjects(rows)
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/banco1_import_project_codes`, {
       method: 'POST',
       headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ codes }),
+      body: JSON.stringify({ codes: projects }),
       signal: AbortSignal.timeout(15000),
     })
     if (!response.ok) throw new Error('Gravação do catálogo falhou.')
