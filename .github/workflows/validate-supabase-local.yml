@@ -56,6 +56,9 @@ jobs:
         shell: bash
         run: bash supabase/tests/local_auth_data_api.sh
 
+      - name: Verify Banco 1 project catalog and additive import
+        run: psql "$DB_URL" --no-psqlrc --set ON_ERROR_STOP=1 --file supabase/tests/banco1_project_catalog_assertions.sql
+
       - name: Stop and discard local Supabase
         if: always()
         run: supabase stop --no-backup

@@ -37,10 +37,13 @@ describe('markup acessível de apontamentos e histórico', () => {
     expect(markup).toContain('text-base')
   })
 
-  it('não oferece cliente nem seleção de projeto cadastrada no formulário', () => {
-    const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" onChange={vi.fn()} />)
+  it('oferece os códigos sincronizados sem cliente nem descrição', () => {
+    const markup = renderToStaticMarkup(<TimeEntryFields values={values} errors={{}} maxDate="2026-07-20" projectCodes={['OBRA-01', 'OBRA-02']} onChange={vi.fn()} />)
     expect(markup).not.toContain('name="clientName"')
     expect(markup).toContain('Número do projeto / obra')
+    expect(markup).toContain('OBRA-01')
+    expect(markup).toContain('OBRA-02')
+    expect(markup).toContain('Selecione um projeto')
     expect(markup).not.toContain('LD')
   })
 

@@ -15,10 +15,12 @@ type TimeEntryFieldsProps = {
   maxDate: string
   allowBatchMode?: boolean
   dateFieldsLocked?: boolean
+  projectCodes?: string[]
+  projectLoadError?: string | null
   onChange: <Key extends keyof TimeEntryFormValues>(field: Key, value: TimeEntryFormValues[Key]) => void
 }
 
-export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true, dateFieldsLocked = false, onChange }: TimeEntryFieldsProps) {
+export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true, dateFieldsLocked = false, projectCodes, projectLoadError, onChange }: TimeEntryFieldsProps) {
   return (
     <div className="grid gap-5 md:grid-cols-2">
       <div className="md:col-span-2">
@@ -44,8 +46,16 @@ export function TimeEntryFields({ values, errors, maxDate, allowBatchMode = true
 
       <div>
         <label htmlFor="project-code" className="text-sm font-bold ui-text">Número do projeto / obra</label>
-        <input id="project-code" name="projectCode" maxLength={80} value={values.contractorNumber ?? ''} onChange={(event) => onChange('contractorNumber', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} placeholder="Digite o número do projeto ou da obra" aria-invalid={Boolean(errors.contractorNumber)} aria-describedby={errors.contractorNumber ? 'project-code-error' : 'project-code-help'} />
-        <p id="project-code-help" className="mt-1.5 text-xs ui-text-subtle">Informe o projeto ou a obra vinculada ao apontamento.</p>
+        {projectCodes ? (
+          <select id="project-code" name="projectCode" value={values.contractorNumber ?? ''} onChange={(event) => onChange('contractorNumber', event.target.value)} className={fieldClassName} aria-invalid={Boolean(errors.contractorNumber)} disabled={Boolean(projectLoadError)}>
+            <option value="">Selecione um projeto</option>
+            {projectCodes.map((code) => <option key={code} value={code}>{code}</option>)}
+            {values.contractorNumber && !projectCodes.includes(values.contractorNumber) && <option value={values.contractorNumber}>{values.contractorNumber} (não consta no catálogo atual)</option>}
+          </select>
+        ) : (
+          <input id="project-code" name="projectCode" maxLength={80} value={values.contractorNumber ?? ''} onChange={(event) => onChange('contractorNumber', event.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={fieldClassName} placeholder="Digite o número do projeto ou da obra" aria-invalid={Boolean(errors.contractorNumber)} aria-describedby={errors.contractorNumber ? 'project-code-error' : 'project-code-help'} />
+        )}
+        {projectLoadError ? <p role="alert" className="mt-1.5 text-xs ui-text-danger">{projectLoadError}</p> : <p id="project-code-help" className="mt-1.5 text-xs ui-text-subtle">{projectCodes ? 'Projetos sincronizados com a fonte corporativa.' : 'Informe o projeto ou a obra vinculada ao apontamento.'}</p>}
         <FieldError id="project-code-error" message={errors.contractorNumber} />
       </div>
 
