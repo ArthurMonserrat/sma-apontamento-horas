@@ -1,6 +1,6 @@
 begin;
 
-create table public.banco1_project_catalog (
+create table if not exists public.banco1_project_catalog (
   code text primary key check (length(btrim(code)) between 1 and 80 and code = btrim(code)),
   first_seen_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now()
@@ -11,10 +11,11 @@ revoke all on public.banco1_project_catalog from public, anon, authenticated;
 grant select on public.banco1_project_catalog to authenticated;
 grant all on public.banco1_project_catalog to service_role;
 
+drop policy if exists banco1_project_catalog_select on public.banco1_project_catalog;
 create policy banco1_project_catalog_select on public.banco1_project_catalog
   for select to authenticated using (private.module_role('BANCO_1') is not null);
 
-create function public.banco1_import_project_codes(codes jsonb)
+create or replace function public.banco1_import_project_codes(codes jsonb)
 returns integer
 language plpgsql
 security definer
