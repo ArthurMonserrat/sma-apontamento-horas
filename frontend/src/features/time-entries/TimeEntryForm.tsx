@@ -101,7 +101,7 @@ export function TimeEntryForm({ entryId }: { entryId?: string }) {
         </section>
       )}
 
-      <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} dateFieldsLocked={rdoDays.length > 0} projectCodes={controller.projectCodes} projectLoadError={controller.projectLoadError} onChange={controller.setField} />
+      <TimeEntryFields values={controller.values} errors={controller.errors} maxDate={getCorporateToday()} allowBatchMode={controller.mode === 'CREATE'} dateFieldsLocked={rdoDays.length > 0} projectCatalog={controller.projectCatalog} projectCodes={controller.projectCodes} projectLoadError={controller.projectLoadError} onChange={controller.setField} />
 
       {controller.mode === 'CREATE' && (
         <section className="rounded-2xl border ui-border ui-surface-subtle p-4" aria-labelledby="rdo-import-title">

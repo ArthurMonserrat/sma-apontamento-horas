@@ -15,7 +15,7 @@ $$;
 
 set local role service_role;
 select public.banco1_import_project_codes('["OBRA-1", "OBRA-2"]'::jsonb);
-select public.banco1_import_project_codes('["OBRA-2", "OBRA-3"]'::jsonb);
+select public.banco1_import_project_codes('[{"code":"OBRA-2","title":"Título 2"}, {"code":"OBRA-3","title":"Título 3"}]'::jsonb);
 reset role;
 
 do $$
@@ -23,6 +23,14 @@ begin
   if (select array_agg(code order by code) from public.banco1_project_catalog)
      is distinct from array['OBRA-1','OBRA-2','OBRA-3'] then
     raise exception 'Importação aditiva de projetos falhou';
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if (select title from public.banco1_project_catalog where code = 'OBRA-2') is distinct from 'Título 2' then
+    raise exception 'Título reduzido do projeto não foi preservado';
   end if;
 end;
 $$;
